@@ -20,8 +20,8 @@ import java.util.Collections;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import tools.jackson.databind.annotation.JsonDeserialize;
+import tools.jackson.databind.annotation.JsonSerialize;
 import com.norconex.commons.lang.collection.CollectionUtil;
 import com.norconex.importer.ImporterRuntimeException;
 import com.norconex.importer.handler.DocHandlerContext;

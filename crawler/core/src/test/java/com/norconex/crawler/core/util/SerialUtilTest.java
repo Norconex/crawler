@@ -126,7 +126,7 @@ class SerialUtilTest {
         try (var gen = SerialUtil.jsonGenerator(os)) {
             assertThat(gen).isNotNull();
             gen.writeStartObject();
-            gen.writeStringField("key", "value");
+            gen.writeStringProperty("key", "value");
             gen.writeEndObject();
         }
         assertThat(os.toString(java.nio.charset.StandardCharsets.UTF_8))

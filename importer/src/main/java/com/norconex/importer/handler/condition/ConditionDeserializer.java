@@ -14,22 +14,20 @@
  */
 package com.norconex.importer.handler.condition;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.jsontype.TypeDeserializer;
+import tools.jackson.core.JsonParser;
+import tools.jackson.core.JsonToken;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.ValueDeserializer;
+import tools.jackson.databind.jsontype.TypeDeserializer;
 
 public class ConditionDeserializer
-        extends JsonDeserializer<Condition> {
+        extends ValueDeserializer<Condition> {
 
     @Override
-    public Condition deserialize(JsonParser p, DeserializationContext ctxt)
-            throws IOException {
+    public Condition deserialize(JsonParser p, DeserializationContext ctxt) {
         // Delegate to type-aware deserialization
         return deserializeWithType(p, ctxt, null);
     }
@@ -38,7 +36,7 @@ public class ConditionDeserializer
     public Condition deserializeWithType(
             JsonParser p,
             DeserializationContext ctxt,
-            TypeDeserializer typeDeserializer) throws IOException {
+            TypeDeserializer typeDeserializer) {
 
         var currentToken = p.currentToken();
         if (p.currentToken() == JsonToken.END_OBJECT) {
@@ -49,7 +47,7 @@ public class ConditionDeserializer
         if (currentToken == JsonToken.START_OBJECT) {
             p.nextToken(); // Move to the first field or END_OBJECT
 
-            if (p.currentToken() == JsonToken.FIELD_NAME) {
+            if (p.currentToken() == JsonToken.PROPERTY_NAME) {
                 var name = p.currentName();
 
                 if (!"class".equals(name)) {

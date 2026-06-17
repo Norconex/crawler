@@ -14,41 +14,39 @@
  */
 package com.norconex.importer.handler.condition;
 
-import java.io.IOException;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.databind.SerializationContext;
+import tools.jackson.databind.ValueSerializer;
+import tools.jackson.databind.jsontype.TypeSerializer;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.jsontype.TypeSerializer;
-
-public class ConditionSerializer extends JsonSerializer<Condition> {
+public class ConditionSerializer extends ValueSerializer<Condition> {
 
     @Override
     public void serialize(Condition value, JsonGenerator gen,
-            SerializerProvider serializers) throws IOException {
+            SerializationContext serializers) {
         //NOOP
     }
 
     @Override
     public void serializeWithType(Condition value, JsonGenerator gen,
-            SerializerProvider serializers, TypeSerializer typeSer)
-            throws IOException {
+            SerializationContext serializers, TypeSerializer typeSer) {
 
         if (value instanceof ConditionGroup group
                 && !group.conditions.isEmpty()) {
             gen.writeStartObject();
-            gen.writeFieldName(typeSer.getTypeIdResolver().idFromValue(value));
+            gen.writeName(typeSer.getTypeIdResolver()
+                    .idFromValue(serializers, value));
 
             gen.writeStartArray();
             for (Condition condition : group.conditions) {
                 if (condition != null) {
-                    serializers.defaultSerializeValue(condition, gen);
+                    gen.writePOJO(condition);
                 }
             }
             gen.writeEndArray();
             gen.writeEndObject();
         } else {
-            gen.writeObject(value);
+            gen.writePOJO(value);
         }
     }
 }

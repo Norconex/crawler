@@ -14,7 +14,6 @@
  */
 package com.norconex.crawler.core.util;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -24,79 +23,50 @@ import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.lang3.SerializationException;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.core.JsonEncoding;
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonParser.Feature;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 
 import lombok.NonNull;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.JsonEncoding;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.core.JsonParser;
+import tools.jackson.core.StreamReadFeature;
+import tools.jackson.core.TokenStreamFactory;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 //MAYBE: consider moving somewhere more generic if we see value.
 public final class SerialUtil {
 
-    private static final ObjectMapper mapper = new ObjectMapper();
-    static {
-        mapper.enable(
-                DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT);
-        mapper.configure(Feature.AUTO_CLOSE_SOURCE, false);
-        mapper.setSerializationInclusion(Include.NON_EMPTY);
-        mapper.registerModule(new ParameterNamesModule());
-        mapper.registerModule(new Jdk8Module());
-        mapper.registerModule(new JavaTimeModule());
-    }
+    private static final ObjectMapper mapper = JsonMapper.builder()
+            .enable(DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT)
+            .disable(StreamReadFeature.AUTO_CLOSE_SOURCE)
+            .changeDefaultPropertyInclusion(
+                    v -> v.withValueInclusion(JsonInclude.Include.NON_EMPTY))
+            .build();
 
     private SerialUtil() {
     }
-    //
-    //    public static String toBase64String(Serializable object) {
-    //        throw new UnsupportedOperationException(
-    //                "NOT IMPLEMENTED: SerialUtil.toBase64String");
-    //        //        try {
-    //        //            return Base64.getEncoder().encodeToString(
-    //        //                    Util.objectToByteBuffer(object));
-    //        //        } catch (Exception e) {
-    //        //            throw new SerializationException(
-    //        //                    "Failed to serialize object: " + object, e);
-    //        //        }
-    //    }
-    //
-    //    /**
-    //     * Deserializes a string previously obtained by invoking
-    //     * {@link #toBase64String(Serializable)}.
-    //     * @param str string to deserialize
-    //     * @return the deserialized object, or null if the string is null
-    //     */
-    //    public static Serializable fromBase64String(String str) {
-    //        throw new UnsupportedOperationException(
-    //                "NOT IMPLEMENTED: SerialUtil.fromBase64String");
-    //        //        if (StringUtils.isBlank(str)) {
-    //        //            return null;
-    //        //        }
-    //        //        try {
-    //        //            return Util.objectFromByteBuffer(Base64.getDecoder().decode(str));
-    //        //        } catch (Exception e) {
-    //        //            throw new SerializationException(
-    //        //                    "Failed to deserialize string: " + str, e);
-    //        //        }
-    //    }
 
-    public static JsonFactory jsonFactory() {
-        return new JsonFactory(mapper);
+    public static TokenStreamFactory jsonFactory() {
+        return mapper.tokenStreamFactory();
     }
 
     public static JsonGenerator jsonGenerator(@NonNull OutputStream os) {
+        return jsonGenerator(os, false);
+    }
+
+    public static JsonGenerator jsonGenerator(
+            @NonNull OutputStream os, boolean pretty) {
         try {
-            return jsonFactory().createGenerator(os, JsonEncoding.UTF8);
-        } catch (IOException e) {
+            var writer = pretty
+                    ? mapper.writer().withDefaultPrettyPrinter()
+                    : mapper.writer();
+            return writer.createGenerator(os, JsonEncoding.UTF8);
+        } catch (JacksonException e) {
             throw new SerializationException(
                     "Could not create JsonGenerator.", e);
         }
@@ -104,9 +74,9 @@ public final class SerialUtil {
 
     public static JsonParser jsonParser(@NonNull InputStream is) {
         try {
-            return jsonFactory().createParser(
+            return mapper.createParser(
                     new InputStreamReader(is, StandardCharsets.UTF_8));
-        } catch (IOException e) {
+        } catch (JacksonException e) {
             throw new SerializationException(
                     "Could not create JsonParser.", e);
         }
@@ -115,7 +85,7 @@ public final class SerialUtil {
     public static String toJsonString(@NonNull Object object) {
         try {
             return mapper.writeValueAsString(object);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new SerializationException(
                     "Could not serialize object to JSON: " + object, e);
         }
@@ -131,7 +101,7 @@ public final class SerialUtil {
         }
         try {
             return mapper.readValue(json, cls);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new SerializationException(
                     "Could not deserialize JSON %s to object of type: %s"
                             .formatted(json, cls.getName()),
@@ -142,7 +112,7 @@ public final class SerialUtil {
     public static <T> T fromJson(@NonNull Reader json, @NonNull Class<T> cls) {
         try {
             return mapper.readValue(json, cls);
-        } catch (IOException e) {
+        } catch (JacksonException e) {
             throw new SerializationException(
                     "Could not deserialize JSON reader to object." + json, e);
         }
@@ -152,7 +122,7 @@ public final class SerialUtil {
             @NonNull JsonParser json, @NonNull Class<T> cls) {
         try {
             return mapper.readValue(json, cls);
-        } catch (IOException e) {
+        } catch (JacksonException e) {
             throw new SerializationException(
                     "Could not deserialize JSON parser to object." + json, e);
         }
@@ -162,7 +132,7 @@ public final class SerialUtil {
             @NonNull JsonNode json, @NonNull Class<T> cls) {
         try {
             return mapper.treeToValue(json, cls);
-        } catch (IOException e) {
+        } catch (JacksonException e) {
             throw new SerializationException(
                     "Could not deserialize JSON node to object." + json, e);
         }

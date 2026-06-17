@@ -22,8 +22,8 @@ import java.util.List;
 
 import org.apache.commons.io.FileUtils;
 
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import tools.jackson.databind.annotation.JsonDeserialize;
+import tools.jackson.databind.annotation.JsonSerialize;
 import com.norconex.commons.lang.collection.CollectionUtil;
 import com.norconex.commons.lang.unit.DataUnit;
 import com.norconex.importer.handler.DocHandler;
