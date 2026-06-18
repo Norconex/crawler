@@ -19,6 +19,7 @@ import java.util.Collections;
 import java.util.List;
 
 import com.norconex.committer.core.fs.BaseFsCommitterConfig;
+import com.norconex.commons.lang.bean.jackson.JsonXmlCollection;
 import com.norconex.commons.lang.collection.CollectionUtil;
 
 import lombok.Data;
@@ -151,6 +152,7 @@ public class CsvFileCommitterConfig extends BaseFsCommitterConfig {
      */
     private String typeHeader;
     /** CSV columns to be written. */
+    @JsonXmlCollection(entryName = "column")
     private final List<CsvColumn> columns = new ArrayList<>();
 
     public List<CsvColumn> getColumns() {
