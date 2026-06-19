@@ -34,7 +34,7 @@
     <h2.version>2.4.240</h2.version>
     <hazelcast.version>5.7.0</hazelcast.version>
     <jdom2.version>2.0.6.1</jdom2.version>
-    <sulky-ulid.version>8.2.0</sulky-ulid.version>
+    <sulky-ulid.version>8.3.0</sulky-ulid.version>
     <mvstore.version>2.4.240</mvstore.version>
     <!--
     <log4j.version>2.20.0</log4j.version>
