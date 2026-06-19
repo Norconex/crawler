@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.List;
 
 import com.norconex.committer.core.batch.BaseBatchCommitterConfig;
+import com.norconex.commons.lang.bean.jackson.JsonXmlCollection;
 import com.norconex.commons.lang.collection.CollectionUtil;
 import com.norconex.commons.lang.security.Credentials;
 
@@ -45,6 +46,7 @@ public class ElasticsearchCommitterConfig extends BaseBatchCommitterConfig {
      * One or more Elasticsearch nodes to connect to.
      * Defaults to {@value ElasticsearchCommitterConfig#DEFAULT_NODE}
      */
+    @JsonXmlCollection(entryName = "node")
     private final List<String> nodes = new ArrayList<>(List.of(DEFAULT_NODE));
 
     /**
