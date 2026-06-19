@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.norconex.commons.lang.bean.jackson.JsonXmlCollection;
 import com.norconex.commons.lang.collection.CollectionUtil;
 import com.norconex.commons.lang.io.TextReader;
 import com.norconex.commons.lang.map.PropertySetter;
@@ -105,6 +106,7 @@ public class RegexTransformerConfig implements ChunkedTextSupport {
     private int maxReadSize = TextReader.DEFAULT_MAX_READ_SIZE;
     private Charset sourceCharset;
     private final TextMatcher fieldMatcher = new TextMatcher();
+    @JsonXmlCollection(entryName = "pattern")
     private final List<RegexFieldValueExtractor> patterns = new ArrayList<>();
 
     /**

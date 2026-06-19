@@ -18,6 +18,7 @@ import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.norconex.commons.lang.bean.jackson.JsonXmlCollection;
 import com.norconex.commons.lang.map.PropertySetter;
 
 import lombok.Data;
@@ -27,6 +28,7 @@ import lombok.NonNull;
 public class Constant {
 
     private final String name;
+    @JsonXmlCollection(entryName = "value")
     private final List<String> values;
     private final PropertySetter onSet;
 
