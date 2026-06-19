@@ -1,4 +1,4 @@
-/* Copyright 2025 Norconex Inc.
+/* Copyright 2025-2026 Norconex Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,15 @@
  */
 package com.norconex.importer.handler;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.jsontype.TypeDeserializer;
-import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import tools.jackson.core.JsonParser;
+import tools.jackson.core.JsonToken;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.ValueDeserializer;
+import tools.jackson.databind.jsontype.TypeDeserializer;
+import tools.jackson.dataformat.xml.deser.XmlDeserializationContext;
 import com.norconex.commons.lang.ClassUtil;
 import com.norconex.importer.handler.condition.AllOf;
 import com.norconex.importer.handler.condition.AnyOf;
@@ -35,12 +34,11 @@ import com.norconex.importer.handler.condition.IfNot;
 import com.norconex.importer.handler.condition.NoneOf;
 
 public class DocHandlerListDeserializer
-        extends JsonDeserializer<List<DocHandler>> {
+        extends ValueDeserializer<List<DocHandler>> {
 
     @Override
     public List<DocHandler> deserialize(JsonParser p,
-            DeserializationContext ctxt)
-            throws IOException {
+            DeserializationContext ctxt) {
         // Delegate to type-aware deserialization
         return deserializeWithType(p, ctxt, null);
     }
@@ -49,24 +47,24 @@ public class DocHandlerListDeserializer
     public List<DocHandler> deserializeWithType(
             JsonParser p,
             DeserializationContext ctxt,
-            TypeDeserializer typeDeserializer) throws IOException {
+            TypeDeserializer typeDeserializer) {
 
         if (p.currentToken() == JsonToken.END_OBJECT) {
             // Should not get here, but just in case, handle end of object
             return List.of();
         }
 
-        if (p.getCodec() instanceof XmlMapper) {
+        if (ctxt instanceof XmlDeserializationContext) {
             return readXmlDocHandlerList(p, ctxt);
         }
 
         if (p.currentToken() == JsonToken.START_ARRAY) {
             List<DocHandler> handlers = new ArrayList<>();
             while (p.nextToken() != JsonToken.END_ARRAY) {
-                // Process an arrary entry: either a handler of if/ifNot
+                // Process an array entry: either a handler or if/ifNot
                 if (p.currentToken() == JsonToken.START_OBJECT) {
                     p.nextToken(); // Move to the first field or END_OBJECT
-                    if (p.currentToken() == JsonToken.FIELD_NAME) {
+                    if (p.currentToken() == JsonToken.PROPERTY_NAME) {
                         var name = p.currentName();
                         if (If.NAME.equals(name)) {
                             var ifHandler = ctxt.readValue(p, If.class);
@@ -94,7 +92,7 @@ public class DocHandlerListDeserializer
 
     private List<DocHandler> readXmlDocHandlerList(
             JsonParser p,
-            DeserializationContext ctxt) throws IOException {
+            DeserializationContext ctxt) {
 
         List<DocHandler> handlers = new ArrayList<>();
         while (p.nextToken() != JsonToken.END_OBJECT) {
@@ -118,7 +116,7 @@ public class DocHandlerListDeserializer
     private ConditionalDocHandler readXmlConditionalHandler(
             Class<? extends ConditionalDocHandler> cls,
             JsonParser p,
-            DeserializationContext ctxt) throws IOException {
+            DeserializationContext ctxt) {
 
         ConditionalDocHandler condHandler = ClassUtil.newInstance(cls);
 
@@ -141,7 +139,7 @@ public class DocHandlerListDeserializer
 
     private Condition readXmlCondition(
             JsonParser p,
-            DeserializationContext ctxt) throws IOException {
+            DeserializationContext ctxt) {
 
         // next token is either a class or a condition group
         p.nextToken();
@@ -166,7 +164,7 @@ public class DocHandlerListDeserializer
     private Condition readXmlConditionGroup(
             Class<? extends ConditionGroup> cls,
             JsonParser p,
-            DeserializationContext ctxt) throws IOException {
+            DeserializationContext ctxt) {
 
         List<Condition> conditions = new ArrayList<>();
         p.nextToken(); // move to first child condition
