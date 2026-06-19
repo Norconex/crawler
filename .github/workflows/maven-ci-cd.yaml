@@ -130,7 +130,7 @@ jobs:
             contains(github.actor, '[bot]')
           )
         run: |
-          mvn clean install \
+          mvn -U clean install \
             -Dgpg.skip=true \
             -Dsonar.skip=true \
             -DskipITs=true \
@@ -150,7 +150,7 @@ jobs:
           github.event.pull_request.head.repo.full_name == github.repository &&
           !contains(github.actor, '[bot]')
         run: |
-          mvn clean install \
+          mvn -U clean install \
             -Dmaven.compiler.maxmem=3072m \
             -DargLine="-Xmx3g" \
             -Dgpg.skip=true \
@@ -190,7 +190,7 @@ jobs:
           github.event_name == 'push' && github.ref == 'refs/heads/main' &&
           endsWith(steps.get_version.outputs.version, '-SNAPSHOT')
         run: |
-          mvn clean deploy \
+          mvn -U clean deploy \
             -Dgpg.skip=true \
             -DskipITs=true \
             -Dmaven.javadoc.skip=true \
@@ -302,7 +302,7 @@ jobs:
           'refs/heads/release/') && !endsWith(steps.get_version.outputs.version,
           '-SNAPSHOT')
         run: |
-          mvn clean deploy \
+          mvn -U clean deploy \
             -Dmaven.compiler.maxmem=3072m \
             -DargLine="-Xmx3g" \
             -DskipITs=true \
@@ -345,7 +345,7 @@ jobs:
           )
         run: |
           echo "Branch/version mismatch detected; skipping deploy and running install only"
-          mvn clean install \
+          mvn -U clean install \
             -Dmaven.compiler.maxmem=3072m \
             -DargLine="-Xmx3g" \
             -Dgpg.skip=true \
