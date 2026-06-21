@@ -35,8 +35,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120  # 2-hour timeout for comprehensive tests
 
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+    permissions:
+      # write required for dependency submission
+      contents: write
+
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Set up JDK 21
         uses: actions/setup-java@v5
@@ -44,6 +53,14 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: maven
+
+      - name: Cache SonarCloud packages
+        if: env.SONAR_TOKEN != ''
+        uses: actions/cache@v5
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
 
       - name: Resolve Maven Dependencies
         run: |
@@ -58,7 +75,25 @@ jobs:
             -Dmaven.wagon.rss.buffer.size=2048 \
             -Dlog4j.configurationFile=${{ github.workspace }}/.github/log4j2-ci.xml \
             -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
+            -Pjacoco,parallel-tests \
             -C
+
+      # Persist exec files so CI builds can merge IT coverage into their unit-test
+      # reports, keeping Sonar coverage stable across builds.
+      - name: Upload JaCoCo exec files (for CI coverage merging)
+        uses: actions/upload-artifact@v7
+        with:
+          name: jacoco-nightly-exec
+          path: '**/target/jacoco.exec'
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Sonar analysis (nightly — parallel, gate all modules)
+        if: env.SONAR_TOKEN != ''
+        run: |
+          mvn -N -q -Psonar-parallel initialize \
+            -Dsonar.gate.mode=all \
+            -Dsonar.qualitygate.timeout=300
 
       - name: Upload Test Results
         if: always()
@@ -69,3 +104,11 @@ jobs:
             **/target/surefire-reports/
             **/target/failsafe-reports/
           retention-days: 30
+
+      # Uploads the resolved dependency graph (including transitives) to
+      # GitHub so Dependabot can alert on vulnerable transitive dependencies.
+      # Runs nightly rather than on every push to main to keep the CI/CD
+      # critical path lean.
+      - name: Update Maven dependency graph
+        if: github.repository == 'Norconex/crawler'
+        uses: advanced-security/maven-dependency-submission-action@v5

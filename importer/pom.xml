@@ -52,7 +52,7 @@
     <repository>
       <id>central-snapshots</id>
       <name>Central Portal Snapshot Repository</name>
-      <url>https://central.sonatype.com/repository/snapshots/</url>
+      <url>https://central.sonatype.com/repository/maven-snapshots/</url>
       <releases>
         <enabled>false</enabled>
       </releases>

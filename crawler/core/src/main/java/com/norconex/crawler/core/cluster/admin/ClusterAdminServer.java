@@ -131,8 +131,8 @@ public class ClusterAdminServer {
                     String.join(",", cluster.getNodeNames()));
         });
         endpoint(POST, Endpoint.CLUSTER_STOP, TEXT_PLAIN, exchange -> {
-            sendResponse(exchange, 200, "Stopping cluster");
             cluster.stop();
+            sendResponse(exchange, 200, "Stopping cluster");
         });
         httpServer.setExecutor(null); // Use default executor
         httpServer.start();

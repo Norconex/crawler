@@ -1,4 +1,4 @@
-/* Copyright 2010-2024 Norconex Inc.
+/* Copyright 2010-2026 Norconex Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,8 +22,8 @@ import java.util.List;
 
 import org.apache.commons.io.FileUtils;
 
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import tools.jackson.databind.annotation.JsonDeserialize;
+import tools.jackson.databind.annotation.JsonSerialize;
 import com.norconex.commons.lang.collection.CollectionUtil;
 import com.norconex.commons.lang.unit.DataUnit;
 import com.norconex.importer.handler.DocHandler;

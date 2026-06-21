@@ -102,6 +102,7 @@ class ClusterLateJoinPrototypeIT {
             harness.waitFor(CLUSTER_JOIN_WAIT).nodeToHaveFired(
                     initialNodeNames[0],
                     CrawlerEvent.DOCUMENT_PROCESSING_BEGIN);
+            assertThat(initialFuture.isDone()).isFalse();
 
             var lateFuture = harness.launchAsync(lateNodeName);
             harness.waitFor(CLUSTER_JOIN_WAIT).nodeToHaveFired(

@@ -17,7 +17,11 @@ The default `main` branch holds code for the upcoming version 4 crawler stack. I
 
 Until v4 is officially released, this branch should not be considered stable.
 
-## Projects
+# Contributing
+
+Contributions are welcome — whether it's a bug report, a fix, a new feature, or improved documentation. Before submitting a pull request, please read [CONTRIBUTING.md](CONTRIBUTING.md) for the sign-off and commit signing requirements that all contributions must meet.
+
+# Projects
 
 [![Java CI with Maven](https://github.com/Norconex/crawlers/actions/workflows/maven-ci-cd.yaml/badge.svg)](https://github.com/Norconex/crawlers/actions/workflows/maven-ci-cd.yaml)
 

@@ -27,7 +27,7 @@ import org.junit.jupiter.api.Timeout;
 import com.norconex.crawler.fs.FsTestUtil;
 
 @Timeout(30)
-class CmisAtomFileSystemTest {
+class CmisAtomFileSystemIT {
 
     @TempDir
     private Path tempDir;

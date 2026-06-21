@@ -23,11 +23,11 @@
   <workDir>/workdir</workDir>
   
   <eventListeners>
-    <listener class="UrlStatusCrawlerEventListener">
+    <eventListener class="UrlStatusCrawlerEventListener">
       <statusCodes>404</statusCodes>
       <outputDir>/tmp/path</outputDir>
       <fileNamePrefix>broken-links</fileNamePrefix>
-    </listener>
+    </eventListener>
   </eventListeners>
   
   <startReferences>
@@ -52,7 +52,11 @@
   </urlScopeResolver>
   <startReferencesAsync>true</startReferencesAsync>
 
-  <keepReferencedLinks>INSCOPE, OUTSCOPE, MAXDEPTH</keepReferencedLinks>
+  <keepReferencedLinks>
+    <keepReferencedLink>INSCOPE</keepReferencedLink>
+    <keepReferencedLink>OUTSCOPE</keepReferencedLink>
+    <keepReferencedLink>MAXDEPTH</keepReferencedLink>
+  </keepReferencedLinks>
   <maxDepth>99</maxDepth>
   <numThreads>1</numThreads>
   <maxDocuments>111</maxDocuments>
@@ -63,12 +67,14 @@
   <urlNormalizers>
     <urlNormalizer class="GenericUrlNormalizer">
       <normalizations>
-        lowerCaseSchemeHost, upperCaseEscapeSequence, 
-        decodeUnreservedCharacters, removeDefaultPort 
+        <normalization>LOWERCASE_SCHEME_HOST</normalization>
+        <normalization>UPPERCASE_ESCAPESEQUENCE</normalization>
+        <normalization>DECODE_UNRESERVED_CHARACTERS</normalization>
+        <normalization>REMOVE_DEFAULT_PORT</normalization>
       </normalizations>
       <replacements>
-        <replace><match>A</match><value>B</value></replace>
-        <replace><match>C</match></replace>
+        <replacement><match>A</match><value>B</value></replacement>
+        <replacement><match>C</match></replacement>
       </replacements>
     </urlNormalizer>
   </urlNormalizers>
@@ -118,8 +124,6 @@
       <forceContentTypeDetection>true</forceContentTypeDetection>
       <forceCharsetDetection>true</forceCharsetDetection>
       <headersPrefix>myprefix</headersPrefix>
-      <forceContentTypeDetection>true</forceContentTypeDetection>
-      <forceCharsetDetection>true</forceCharsetDetection>
       <redirectUrlProvider fallbackCharset="UTF-8"/>
       <cookieSpec>ignore</cookieSpec>
       <authentication>
@@ -195,7 +199,7 @@
   </fetchers>    
     
   <referenceFilters>
-    <filter class="ExtensionReferenceFilter">
+    <referenceFilter class="ExtensionReferenceFilter">
       <onMatch>exclude</onMatch>
       <ignoreCase>false</ignoreCase>
       <extensions>
@@ -203,16 +207,16 @@
        <extensions>pdf</extensions>
        <extensions>doc</extensions>
       </extensions>
-    </filter>
+    </referenceFilter>
 
-   <filter class="GenericReferenceFilter">
-     <onMatch>exclude</onMatch>
-     <valueMatcher ignoreCase="false" method="regex" pattern=".*example.com.*"/>
-   </filter>
-   <filter class="SegmentCountUrlFilter"
+    <referenceFilter class="GenericReferenceFilter">
+      <onMatch>exclude</onMatch>
+      <valueMatcher ignoreCase="false" method="regex" pattern=".*example.com.*"/>
+    </referenceFilter>
+    <referenceFilter class="SegmentCountUrlFilter"
             onMatch="exclude" count="5" duplicate="false">
       <separator>/</separator>
-    </filter>
+    </referenceFilter>
   </referenceFilters>    
 
 
@@ -240,25 +244,25 @@
   </recrawlableResolver>
 
   <metadataFilters>
-    <filter class="ExtensionReferenceFilter"
+    <metadataFilter class="ExtensionReferenceFilter"
         onMatch="exclude" ignoreCase="false">
       <extensions>
         <extension>xml</extension>
         <extension>pdf</extension>
         <extension>doc</extension>
       </extensions>
-    </filter>
-    <filter class="GenericReferenceFilter" onMatch="exclude">
+    </metadataFilter>
+    <metadataFilter class="GenericReferenceFilter" onMatch="exclude">
       <valueMatcher ignoreCase="true" method="regex" pattern=".*example.com.*"/>
-    </filter>
-    <filter class="GenericMetadataFilter" onMatch="include">
+    </metadataFilter>
+    <metadataFilter class="GenericMetadataFilter" onMatch="include">
       <valueMatcher ignoreCase="true" method="regex" pattern="Blah.*"/>
       <fieldMatcher>title</fieldMatcher>
-    </filter>
-    <filter class="SegmentCountUrlFilter"
+    </metadataFilter>
+    <metadataFilter class="SegmentCountUrlFilter"
             onMatch="exclude" count="5" duplicate="false">
       <separator>/</separator>
-    </filter>
+    </metadataFilter>
   </metadataFilters>
 
   <canonicalLinkDetector class="GenericCanonicalLinkDetector">
@@ -275,11 +279,13 @@
   </robotsMetaProvider>
 
   <linkExtractors>
-    <extractor class="HtmlLinkExtractor"
+    <linkExtractor class="HtmlLinkExtractor"
         maxURLLength="999" ignoreNofollow="false" 
         commentsEnabled="true" charset="UTF-8" >
       <contentTypeMatcher pattern="text/html"/>
-      <schemes>https</schemes>
+      <schemes>
+        <scheme>https</scheme>
+      </schemes>
       <tagAttribs>
         <tagAttrib name="a" attribute="href" />
         <tagAttrib name="frame" attribute="src" />
@@ -301,14 +307,14 @@
           <start>nostart2</start><end>noend2</end>
         </noExtractBetween>
       </extractBetweens>
-    </extractor>
-    <extractor class="HtmlLinkExtractor">
+    </linkExtractor>
+    <linkExtractor class="HtmlLinkExtractor">
       <tagAttribs>
         <tagAttrib name="a" attribute="href" />
         <tagAttrib name="script" attribute="src" />
       </tagAttribs>
-    </extractor>
-    <extractor class="RegexLinkExtractor"
+    </linkExtractor>
+    <linkExtractor class="RegexLinkExtractor"
         maxUrlLength="1234" charset="iso-8859-1">
       <restrictions>
         <restriction>
@@ -324,36 +330,36 @@
         <pattern><match>\[(.*?)\]</match><replace>$1</replace></pattern>
         <pattern><match>http://.*?\.html</match></pattern>
       </patterns>
-    </extractor>
-    <extractor class="XmlFeedLinkExtractor">
+    </linkExtractor>
+    <linkExtractor class="XmlFeedLinkExtractor">
       <contentTypeMatcher pattern=".*"/>
-    </extractor>      
+    </linkExtractor>      
   </linkExtractors>
 
   <documentFilters>
-    <filter class="ExtensionReferenceFilter"
+    <documentFilter class="ExtensionReferenceFilter"
         onMatch="exclude" ignoreCase="false">
       <extensions>
         <extension>xml</extension>
         <extension>pdf</extension>
         <extension>doc</extension>
       </extensions>
-    </filter>
-    <filter class="GenericReferenceFilter" onMatch="exclude">
+    </documentFilter>
+    <documentFilter class="GenericReferenceFilter" onMatch="exclude">
       <valueMatcher ignoreCase="true" method="regex" pattern=".*example.com.*"/>
-    </filter>
-    <filter class="GenericMetadataFilter" onMatch="include">
+    </documentFilter>
+    <documentFilter class="GenericMetadataFilter" onMatch="include">
       <fieldMatcher>title</fieldMatcher>
       <valueMatcher ignoreCase="true" method="regex" pattern="Blah.*"/>
-    </filter>
-    <filter class="SegmentCountUrlFilter"
+    </documentFilter>
+    <documentFilter class="SegmentCountUrlFilter"
             onMatch="exclude" count="5" duplicate="false">
       <separator>/</separator>
-    </filter>
+    </documentFilter>
   </documentFilters>
 
   <preImportConsumers>
-    <consumer class="FeaturedImageResolver">
+    <preImportConsumer class="FeaturedImageResolver">
        <pageContentTypePattern>text/html</pageContentTypePattern>
        <domSelector>dom dom</domSelector>
        <minDimensions>425x312</minDimensions>
@@ -372,7 +378,7 @@
        <storageDiskField>diskField</storageDiskField>
        <storageInlineField>inlineField</storageInlineField>
        <storageUrlField>urlField</storageUrlField>
-    </consumer>      
+    </preImportConsumer>      
   </preImportConsumers>
 
   <!-- Importer is purposely slim since the full config is tested in

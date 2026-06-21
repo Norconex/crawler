@@ -1,5 +1,41 @@
-import groovy.json.JsonSlurper
+//------------------------------------------------------------------------------
+// Copyright 2025-2026 Norconex Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//------------------------------------------------------------------------------
+//
+// Parallel Sonar orchestrator for the nx-crawler monorepo.
+//
+// Invoked once from the root via:
+//   mvn -N groovy:execute -Dsource=assembly/sonar/run-sonar-analysis.groovy \
+//       -Dsonar.gate.mode=changed \
+//       -Dsonar.base.sha=<base-git-ref>
+//
+// System properties:
+//   sonar.gate.mode           = changed (default) | all | none
+//   sonar.base.sha            = git ref to diff against when mode=changed
+//                               (default: HEAD~1)
+//   sonar.qualitygate.timeout = seconds to wait per gate poll (default: 300)
+//
+// PR decoration (optional, for SonarCloud inline PR comments):
+//   sonar.pullrequest.key     = pull request number
+//   sonar.pullrequest.branch  = PR head branch name
+//   sonar.pullrequest.base    = PR base branch name
+//
+// Environment:
+//   SONAR_TOKEN   required — SonarCloud authentication token
 
+import groovy.json.JsonSlurper
 import java.net.HttpURLConnection
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -7,184 +43,277 @@ import java.util.Base64
 import java.util.Properties
 import java.util.concurrent.*
 
-def sonarSkip = project.properties.get("sonar.skip") ?: "false"
-if (sonarSkip.toBoolean()) {
-    println "[Sonar] Skipping analysis for ${project.artifactId} (sonar.skip=true)"
+// ── Guard ─────────────────────────────────────────────────────────────────────
+
+def sonarToken = System.getenv("SONAR_TOKEN")
+if (!sonarToken) {
+    println "[Sonar] SONAR_TOKEN not set — skipping all analysis"
     return
 }
 
-def sonarLogin = System.getenv("SONAR_TOKEN")
-if (!sonarLogin) {
-    println "[Sonar] Environment variable SONAR_TOKEN not set — skipping analysis"
-    return
+// ── Configuration ─────────────────────────────────────────────────────────────
+
+def gateMode       = System.getProperty("sonar.gate.mode", "changed")
+def baseSha        = System.getProperty("sonar.base.sha", "HEAD~1")
+def timeoutSeconds = Long.parseLong(System.getProperty("sonar.qualitygate.timeout", "300"))
+def prKey          = System.getProperty("sonar.pullrequest.key", "")
+def prBranch       = System.getProperty("sonar.pullrequest.branch", "")
+def prBase         = System.getProperty("sonar.pullrequest.base", "")
+
+def mvnExec = System.getProperty("os.name", "").toLowerCase().contains("win") ? "mvn.cmd" : "mvn"
+def rootDir = project.basedir.canonicalFile
+
+// ── Module definitions ────────────────────────────────────────────────────────
+// dir: path from repo root (matches <module> entries in root pom.xml)
+// key: sonar.projectKey (groupId:artifactId as declared in each module's POM)
+
+def modules = [
+    [dir: "importer",                       key: "com.norconex.crawler:nx-importer"],
+    [dir: "crawler/core",                   key: "com.norconex.crawler:nx-crawler-core"],
+    [dir: "crawler/fs",                     key: "com.norconex.crawler:nx-crawler-fs"],
+    [dir: "crawler/web",                    key: "com.norconex.crawler:nx-crawler-web"],
+    [dir: "committer/core",                 key: "com.norconex.crawler:nx-committer-core"],
+    [dir: "committer/apachekafka",          key: "com.norconex.crawler:nx-committer-apachekafka"],
+    [dir: "committer/azurecognitivesearch", key: "com.norconex.crawler:nx-committer-azurecognitivesearch"],
+    [dir: "committer/elasticsearch",        key: "com.norconex.crawler:nx-committer-elasticsearch"],
+    [dir: "committer/idol",                 key: "com.norconex.crawler:nx-committer-idol"],
+    [dir: "committer/neo4j",               key: "com.norconex.crawler:nx-committer-neo4j"],
+    [dir: "committer/solr",                key: "com.norconex.crawler:nx-committer-solr"],
+    [dir: "committer/sql",                 key: "com.norconex.crawler:nx-committer-sql"],
+]
+
+println "[Sonar] Skipping committer/amazoncloudsearch from Sonar orchestration: deprecated module; Amazon CloudSearch is legacy/existing-customers-only."
+
+// ── Downstream dependency graph ───────────────────────────────────────────────
+// When a module dir is changed, gate-waiting also covers its downstream modules.
+// Only intra-monorepo compile-time dependencies are listed here.
+
+def allCommitters = [
+    "committer/core", "committer/apachekafka",
+    "committer/azurecognitivesearch", "committer/elasticsearch", "committer/idol",
+    "committer/neo4j", "committer/solr", "committer/sql"
+]
+def downstreamOf = [
+    "importer":      ["crawler/core", "crawler/fs", "crawler/web"] + allCommitters,
+    "crawler/core":  ["crawler/fs", "crawler/web"] + allCommitters,
+    "committer/core": allCommitters - ["committer/core"],
+]
+
+// ── Determine which modules need gate-waiting ─────────────────────────────────
+
+def gatedDirs = [] as Set
+
+if (gateMode == "all") {
+    gatedDirs = modules*.dir as Set
+    println "[Sonar] mode=all — gate-waiting all ${gatedDirs.size()} modules"
+
+} else if (gateMode == "changed") {
+    def gitResult = ["git", "diff", "--name-only", baseSha, "HEAD"].execute(null, rootDir)
+    def stdout = new StringWriter()
+    def stderr = new StringWriter()
+    gitResult.consumeProcessOutput(stdout, stderr)
+    gitResult.waitFor()
+    if (gitResult.exitValue() != 0) {
+        throw new IllegalStateException("[Sonar] git diff failed (baseSha=${baseSha}): ${stderr.toString().trim()}")
+    }
+    def changedFiles = stdout.toString().readLines()
+
+    def directlyChanged = [] as Set
+    changedFiles.each { file ->
+        modules.each { mod ->
+            if (file.startsWith(mod.dir + "/") || file.startsWith(mod.dir + "\\")) {
+                directlyChanged << mod.dir
+            }
+        }
+    }
+
+    directlyChanged.each { dir ->
+        gatedDirs << dir
+        downstreamOf[dir]?.each { gatedDirs << it }
+    }
+
+    if (gatedDirs.isEmpty()) {
+        println "[Sonar] mode=changed — no module source changes detected; scanning all for badge updates (no gate)"
+    } else {
+        def asyncDirs = (modules*.dir as Set) - gatedDirs
+        println "[Sonar] mode=changed — gate-waiting (${gatedDirs.size()}): ${gatedDirs.sort().join(', ')}"
+        if (asyncDirs) {
+            println "[Sonar] mode=changed — badge-only async (${asyncDirs.size()}): ${asyncDirs.sort().join(', ')}"
+        }
+    }
+
+} else {
+    // mode=none: scan everything for badge updates, gate nothing
+    println "[Sonar] mode=none — scanning all for badge updates (no gate)"
 }
 
-def projectKey = "${project.groupId}:${project.artifactId}"
-println "[Sonar] Running analysis for: $projectKey"
-
-def qualityGateWait = project.properties.get("sonar.qualitygate.wait")
-def qualityGateTimeout = project.properties.get("sonar.qualitygate.timeout")
-def shouldWaitForQualityGate = qualityGateWait?.toBoolean() ?: false
-def mvnExecutable = System.getProperty("os.name", "")
-    .toLowerCase()
-    .contains("win") ? "mvn.cmd" : "mvn"
+// ── Shared utilities ──────────────────────────────────────────────────────────
 
 def jsonSlurper = new JsonSlurper()
 
 def readJson = { String url ->
-    def connection = (HttpURLConnection) new URL(url).openConnection()
-    connection.setRequestProperty("Accept", "application/json")
-    connection.setRequestProperty(
-            "Authorization",
-            "Basic " + Base64.encoder.encodeToString(
-                    "${sonarLogin}:".getBytes(StandardCharsets.UTF_8)))
-    connection.setConnectTimeout(15_000)
-    connection.setReadTimeout(15_000)
-
-    def responseCode = connection.responseCode
-    def responseStream = responseCode >= 400
-            ? connection.errorStream
-            : connection.inputStream
-    def responseBody = responseStream?.getText(StandardCharsets.UTF_8.name()) ?: ""
-    if (responseCode >= 400) {
-        throw new IllegalStateException(
-                "[Sonar] API request failed (${responseCode}) for ${url}: ${responseBody}")
+    def conn = (HttpURLConnection) new URL(url).openConnection()
+    conn.setRequestProperty("Accept", "application/json")
+    conn.setRequestProperty("Authorization",
+        "Basic " + Base64.encoder.encodeToString("${sonarToken}:".getBytes(StandardCharsets.UTF_8)))
+    conn.connectTimeout = 15_000
+    conn.readTimeout    = 30_000
+    def code   = conn.responseCode
+    def stream = code >= 400 ? conn.errorStream : conn.inputStream
+    def body   = stream?.getText(StandardCharsets.UTF_8.name()) ?: ""
+    if (code >= 400) {
+        throw new IllegalStateException("[Sonar] API ${code} for ${url}: ${body}")
     }
-    jsonSlurper.parseText(responseBody)
+    jsonSlurper.parseText(body)
 }
 
 def formatConditions = { List conditions ->
-    if (!conditions) {
-        return "No failing conditions were returned by SonarCloud."
-    }
-    conditions.collect { condition ->
-        def status = condition.status ?: "UNKNOWN"
-        def metricKey = condition.metricKey ?: "unknown-metric"
-        def actualValue = condition.actualValue ?: "n/a"
-        def comparator = condition.comparator ?: ""
-        def errorThreshold = condition.errorThreshold ?: "n/a"
-        "- ${metricKey}: ${status} (actual=${actualValue} ${comparator} threshold=${errorThreshold})"
-    }.join(System.lineSeparator())
+    if (!conditions) return "  (no failing conditions returned)"
+    conditions.collect { c ->
+        "  - ${c.metricKey ?: 'unknown'}: ${c.status ?: 'UNKNOWN'} " +
+        "(actual=${c.actualValue ?: 'n/a'} ${c.comparator ?: ''} threshold=${c.errorThreshold ?: 'n/a'})"
+    }.join('\n')
 }
 
-def loadReportTask = {
-    def reportTaskFile = new File(project.build.directory, "sonar/report-task.txt")
-    if (!reportTaskFile.isFile()) {
-        throw new IllegalStateException(
-                "[Sonar] Missing scanner metadata: ${reportTaskFile}")
+def awaitQualityGate = { String moduleKey, String moduleDir, long timeout ->
+    def reportFile = new File(rootDir, "${moduleDir}/target/sonar/report-task.txt")
+    if (!reportFile.isFile()) {
+        throw new IllegalStateException("[Sonar] Missing ${reportFile.absolutePath}")
     }
+    def task = new Properties()
+    reportFile.withInputStream { task.load(it) }
 
-    def reportTask = new Properties()
-    reportTaskFile.withInputStream { reportTask.load(it) }
-    reportTask
-}
-
-def awaitQualityGate = { Properties reportTask, long timeoutSeconds ->
-    def ceTaskUrl = reportTask.getProperty("ceTaskUrl")
-    def dashboardUrl = reportTask.getProperty("dashboardUrl")
-    def serverUrl = reportTask.getProperty("serverUrl")
+    def ceTaskUrl    = task.getProperty("ceTaskUrl")
+    def dashboardUrl = task.getProperty("dashboardUrl") ?: ""
+    def serverUrl    = task.getProperty("serverUrl")
     if (!ceTaskUrl || !serverUrl) {
-        throw new IllegalStateException(
-                "[Sonar] Incomplete scanner metadata in report-task.txt for ${projectKey}")
+        throw new IllegalStateException("[Sonar] Incomplete report-task.txt for ${moduleKey}")
     }
 
-    def deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(timeoutSeconds)
+    def deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(timeout)
     while (true) {
-        def ceTaskResponse = readJson(ceTaskUrl)
-        def ceTask = ceTaskResponse.task ?: [:]
+        def ceTask = readJson(ceTaskUrl).task ?: [:]
         def ceStatus = ceTask.status ?: "UNKNOWN"
+
         if (ceStatus == "SUCCESS") {
             def analysisId = ceTask.analysisId
             if (!analysisId) {
                 throw new IllegalStateException(
-                        "[Sonar] Compute Engine task succeeded without analysisId for ${projectKey}")
+                    "[Sonar] Missing analysisId for ${moduleKey}" +
+                    (dashboardUrl ? " — ${dashboardUrl}" : ""))
             }
-
-            def projectStatusUrl = serverUrl + "/api/qualitygates/project_status?analysisId=" +
-                    URLEncoder.encode(analysisId, StandardCharsets.UTF_8)
-            def qualityGateResponse = readJson(projectStatusUrl)
-            def projectStatus = qualityGateResponse.projectStatus ?: [:]
+            def gateResp   = readJson(
+                "${serverUrl}/api/qualitygates/project_status?analysisId=" +
+                URLEncoder.encode(analysisId, StandardCharsets.UTF_8))
+            def projectStatus = gateResp.projectStatus ?: [:]
             def status = projectStatus.status ?: "UNKNOWN"
-            println "[Sonar] Quality Gate status for ${projectKey}: ${status}"
-            if (dashboardUrl) {
-                println "[Sonar] Dashboard: ${dashboardUrl}"
-            }
-
-            if (status == "NONE") {
-                println "[Sonar] Quality Gate not computed for ${projectKey}; continuing without failing the build."
-                return
-            }
+            println "[Sonar] Gate ${moduleKey}: ${status}${dashboardUrl ? ' — ' + dashboardUrl : ''}"
+            if (status == "NONE") return
             if (status != "OK") {
-                def msg = "[Sonar] Quality Gate failed for ${projectKey}: ${status}" +
-                    "${System.lineSeparator()}" +
-                    "${formatConditions(projectStatus.conditions as List)}"
-                if (dashboardUrl) {
-                    msg += "${System.lineSeparator()}Dashboard: ${dashboardUrl}"
-                }
-                throw new IllegalStateException(msg)
+                throw new IllegalStateException(
+                    "[Sonar] Gate FAILED for ${moduleKey}: ${status}\n" +
+                    formatConditions(projectStatus.conditions as List) +
+                    (dashboardUrl ? "\n  Dashboard: ${dashboardUrl}" : ""))
             }
             return
         }
 
         if (ceStatus in ["FAILED", "CANCELED"]) {
-            def msg = "[Sonar] Compute Engine task ended with status ${ceStatus} for ${projectKey}"
-            if (dashboardUrl) {
-                msg += "${System.lineSeparator()}Dashboard: ${dashboardUrl}"
-            }
-            throw new IllegalStateException(msg)
+            throw new IllegalStateException(
+                "[Sonar] Compute Engine task ${ceStatus} for ${moduleKey}" +
+                (dashboardUrl ? " — ${dashboardUrl}" : ""))
         }
-
         if (System.nanoTime() >= deadline) {
-            def msg = "[Sonar] Timed out waiting ${timeoutSeconds}s for SonarCloud analysis of ${projectKey}"
-            if (dashboardUrl) {
-                msg += "${System.lineSeparator()}Dashboard: ${dashboardUrl}"
-            }
-            throw new TimeoutException(msg)
+            throw new TimeoutException("[Sonar] Timed out (${timeout}s) for ${moduleKey}")
         }
         Thread.sleep(5_000)
     }
 }
 
-def mvnCmd = [
-    mvnExecutable, "sonar:sonar",
-    "-Dsonar.login=${sonarLogin}",
-    "-Dsonar.projectKey=${projectKey}"
-].collect { it.toString() }
+// ── Parallel scan uploads ─────────────────────────────────────────────────────
+// Cap concurrent Maven JVM processes to avoid OOM on CI runners (7 GB RAM).
 
-if (shouldWaitForQualityGate) {
-    mvnCmd << "-Dsonar.qualitygate.wait=false"
-} else if (qualityGateWait != null) {
-    mvnCmd << "-Dsonar.qualitygate.wait=${qualityGateWait}".toString()
-}
-if (qualityGateTimeout != null) {
-    mvnCmd << "-Dsonar.qualitygate.timeout=${qualityGateTimeout}".toString()
-}
+def uploadPool    = Executors.newFixedThreadPool(5)
+def uploadFutures = [:] as LinkedHashMap  // dir -> Future
 
-def procBuilder = new ProcessBuilder(mvnCmd)
-procBuilder.redirectErrorStream(true)
-procBuilder.directory(project.basedir)
-def process = procBuilder.start()
+modules.each { mod ->
+    uploadFutures[mod.dir] = uploadPool.submit({
+        println "[Sonar] Starting upload: ${mod.key}"
 
-def out = new BufferedReader(new InputStreamReader(process.inputStream))
-def outputLines = []
-out.eachLine {
-    outputLines << it
-    println it
-}
+        def cmd = [mvnExec, "sonar:sonar",
+                   "-Dsonar.login=${sonarToken}",
+                   "-Dsonar.projectKey=${mod.key}",
+                   "-Dsonar.qualitygate.wait=false",
+                   "-q",
+                   "-B"]
+        if (prKey)    cmd << "-Dsonar.pullrequest.key=${prKey}"
+        if (prBranch) cmd << "-Dsonar.pullrequest.branch=${prBranch}"
+        if (prBase)   cmd << "-Dsonar.pullrequest.base=${prBase}"
 
-def exitCode = process.waitFor()
-if (exitCode != 0) {
-    def tailSize = Math.min(60, outputLines.size())
-    def tail = outputLines.subList(outputLines.size() - tailSize, outputLines.size())
-            .join(System.lineSeparator())
-    def msg = "[Sonar] Analysis failed for $projectKey (exit code $exitCode). " +
-        "Last scanner output lines:\n$tail"
-    throw new IllegalStateException(msg)
-}
-
-        if (shouldWaitForQualityGate) {
-            def timeoutSeconds = qualityGateTimeout
-                ? Long.parseLong(qualityGateTimeout.toString())
-                : 300L
-            awaitQualityGate(loadReportTask(), timeoutSeconds)
+        def proc = new ProcessBuilder(cmd.collect { it.toString() })
+            .redirectErrorStream(true)
+            .directory(new File(rootDir, mod.dir))
+            .start()
+        def output   = proc.inputStream.text
+        def exitCode = proc.waitFor()
+        if (exitCode != 0) {
+            def tail = output.readLines().takeRight(50).join('\n')
+            throw new IllegalStateException(
+                "[Sonar] Upload failed for ${mod.key} (exit ${exitCode}):\n${tail}")
         }
+        println "[Sonar] Upload done: ${mod.key}"
+    } as Callable)
+}
+
+def uploadErrors = [:] as LinkedHashMap
+uploadFutures.each { dir, future ->
+    try { future.get() }
+    catch (ExecutionException e) { uploadErrors[dir] = e.cause ?: e }
+}
+uploadPool.shutdown()
+
+// ── Parallel gate-waiting ─────────────────────────────────────────────────────
+// Gate-waiting is cheap (just HTTP polling), so no parallelism cap needed.
+
+def gateErrors = [:] as LinkedHashMap
+
+if (gatedDirs) {
+    def gatePool    = Executors.newFixedThreadPool(gatedDirs.size())
+    def gateFutures = [:] as LinkedHashMap
+
+    gatedDirs.each { dir ->
+        def mod = modules.find { it.dir == dir }
+        if (!mod || uploadErrors.containsKey(dir)) return
+        gateFutures[dir] = gatePool.submit({
+            awaitQualityGate(mod.key, dir, timeoutSeconds)
+        } as Callable)
+    }
+
+    gateFutures.each { dir, future ->
+        try { future.get() }
+        catch (ExecutionException e) { gateErrors[dir] = e.cause ?: e }
+    }
+    gatePool.shutdown()
+}
+
+// ── Result reporting ──────────────────────────────────────────────────────────
+
+def warnOnlyAsyncUploads = gateMode == "changed" && !gatedDirs.isEmpty()
+
+// Non-gated upload failures are warnings only — don't block CI.
+if (warnOnlyAsyncUploads) {
+    uploadErrors.findAll { dir, _ -> !gatedDirs.contains(dir) }.each { dir, err ->
+        println "[Sonar] WARNING — async upload failed for ${dir}: ${err.message}"
+    }
+}
+
+// Gated failures (upload or gate) block the build.
+def buildFailures = (warnOnlyAsyncUploads
+        ? uploadErrors.findAll { dir, _ -> gatedDirs.contains(dir) }
+        : uploadErrors) + gateErrors
+if (buildFailures) {
+    def detail = buildFailures.collect { dir, err -> "  ${dir}: ${err.message}" }.join('\n')
+    throw new IllegalStateException("[Sonar] Build failed — quality gate(s) did not pass:\n${detail}")
+}
+
+println "[Sonar] Done. ${modules.size()} modules scanned, ${gatedDirs.size()} gated."

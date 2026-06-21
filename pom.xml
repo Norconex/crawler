@@ -61,10 +61,11 @@
     <commons-text.version>1.15.0</commons-text.version>
     
     <!-- Other dependencies -->
-    <ant.version>1.10.15</ant.version>
+    <ant.version>1.10.17</ant.version>
     <h2.version>2.4.240</h2.version>
     <httpclient5.version>5.6</httpclient5.version>
     <jackson.version>2.18.6</jackson.version>
+    <jackson-annotations.version>2.20</jackson-annotations.version>
     <jakarta-activation.version>2.1.3</jakarta-activation.version>
     <jakarta-el-api.version>6.0.1</jakarta-el-api.version>
     <jaxb-runtime.version>2.3.5</jaxb-runtime.version>
@@ -87,12 +88,12 @@
     <!-- Test/Provided dependencies -->
     <assertj.version>3.27.7</assertj.version>
     <easy-random.version>5.0.0</easy-random.version>
-    <junit-jupiter.version>6.0.3</junit-jupiter.version>
+    <junit-jupiter.version>6.1.0</junit-jupiter.version>
     <junit-platform.version>6.1.0</junit-platform.version>
     <mockito.version>5.23.0</mockito.version>
     <!-- Must match byte-buddy-agent version bundled with Mockito; Hazelcast pulls in
          an older 1.12.21 which lacks ClassFileVersion.JAVA_V21, breaking inline mocking -->
-    <bytebuddy.version>1.18.8</bytebuddy.version>
+    <bytebuddy.version>1.18.10</bytebuddy.version>
     <mockserver.version>6.0.0</mockserver.version>
     <testcontainers.version>2.0.5</testcontainers.version>
     <!--
@@ -145,6 +146,66 @@
   </distributionManagement>
 
   <profiles>
+    <!-- Enables JUnit 5 parallel class execution for unit tests (Surefire only).
+         Integration tests (Failsafe) are intentionally left sequential.
+         Classes that bind ports or use shared state are annotated @Isolated
+         so JUnit 5 pulls them out of the parallel pool automatically.
+         Usage: add -Pparallel-tests to any Maven command. -->
+    <profile>
+      <id>parallel-tests</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <properties>
+                <configurationParameters>
+                  junit.jupiter.execution.parallel.enabled=true
+                  junit.jupiter.execution.parallel.mode.default=same_thread
+                  junit.jupiter.execution.parallel.mode.classes.default=concurrent
+                  junit.jupiter.execution.parallel.config.strategy=dynamic
+                  junit.jupiter.execution.parallel.config.dynamic.factor=1
+                </configurationParameters>
+              </properties>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <!-- Invoked explicitly from CI/CD steps to run the parallel Sonar
+         orchestrator at the root level only. Usage:
+           mvn -N -q -Psonar-parallel initialize -Dsonar.gate.mode=... -->
+    <profile>
+      <id>sonar-parallel</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.gmavenplus</groupId>
+            <artifactId>gmavenplus-plugin</artifactId>
+            <version>${gmavenplus-plugin.version}</version>
+            <executions>
+              <execution>
+                <?m2e ignore?>
+                <id>run-sonar-parallel</id>
+                <phase>initialize</phase>
+                <goals>
+                  <goal>execute</goal>
+                </goals>
+                <configuration>
+                  <scripts>
+                    <script>${maven.multiModuleProjectDirectory}/assembly/sonar/run-sonar-analysis.groovy</script>
+                  </scripts>
+                </configuration>
+                <inherited>false</inherited>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
     <!-- IDEs do not always know what to do with the Jacoco @{argLine}
      placeholder typically required for Jacoco codecoverage to integrate
      with Surefire. So by default we don't have it. When we want to include
@@ -298,7 +359,7 @@
       <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
         <artifactId>jackson-annotations</artifactId>
-        <version>${jackson.version}</version>
+        <version>${jackson-annotations.version}</version>
       </dependency>
       <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
@@ -912,19 +973,6 @@
               <configuration>
                 <scripts>
                   <script>${maven.multiModuleProjectDirectory}/assembly/licenses/copy-licenses.groovy</script>
-                </scripts>
-              </configuration>
-            </execution>
-            <execution>
-              <?m2e ignore?>
-              <id>verify-sonar</id>
-              <goals>
-                <goal>execute</goal>
-              </goals>
-              <phase>verify</phase> 
-              <configuration>
-                <scripts>
-                  <script>${maven.multiModuleProjectDirectory}/assembly/sonar/run-sonar-analysis.groovy</script>
                 </scripts>
               </configuration>
             </execution>

@@ -184,7 +184,6 @@ public class DateConditionConfig {
      * @param valueMatcher date matcher
      * @return date matcher
      */
-    @JsonAlias("valueMatcherStart")
     private DateValueMatcher valueMatcher;
 
     /**
@@ -193,7 +192,6 @@ public class DateConditionConfig {
      * @param valueMatcherRangeEnd end of range date matcher
      * @return end of range date matcher
      */
-    @JsonAlias("valueMatcherEnd")
     private DateValueMatcher valueMatcherRangeEnd;
 
     /**
@@ -212,11 +210,59 @@ public class DateConditionConfig {
     private ZoneId docZoneId;
 
     /**
+     * Default time zone id applied to condition dates that do not specify
+     * their own (i.e., value matchers without an explicit {@code zoneId} and
+     * whose date string carries no zone). A zone set directly on a value
+     * matcher takes precedence. When neither is set, condition dates default
+     * to UTC.
+     * @param conditionZoneId condition zone id
+     * @return condition zone id
+     */
+    private ZoneId conditionZoneId;
+
+    /**
      * Sets the text matcher of field names. Copies it.
      * @param fieldMatcher text matcher
      */
     public DateConditionConfig setFieldMatcher(TextMatcher fieldMatcher) {
         this.fieldMatcher.copyFrom(fieldMatcher);
         return this;
+    }
+
+    public DateConditionConfig setConditionZoneId(ZoneId conditionZoneId) {
+        this.conditionZoneId = conditionZoneId;
+        valueMatcher = applyConditionZoneId(valueMatcher);
+        valueMatcherRangeEnd = applyConditionZoneId(valueMatcherRangeEnd);
+        return this;
+    }
+
+    @JsonAlias("valueMatcherStart")
+    public DateConditionConfig setValueMatcher(DateValueMatcher valueMatcher) {
+        this.valueMatcher = applyConditionZoneId(valueMatcher);
+        return this;
+    }
+
+    @JsonAlias("valueMatcherEnd")
+    public DateConditionConfig setValueMatcherRangeEnd(
+            DateValueMatcher valueMatcherRangeEnd) {
+        this.valueMatcherRangeEnd = applyConditionZoneId(valueMatcherRangeEnd);
+        return this;
+    }
+
+    /**
+     * Re-resolves a value matcher's date using {@link #conditionZoneId} when
+     * the matcher did not specify its own zone. Returns the matcher unchanged
+     * when there is nothing to apply.
+     */
+    private DateValueMatcher applyConditionZoneId(DateValueMatcher matcher) {
+        if (matcher == null
+                || conditionZoneId == null
+                || matcher.getExplicitZoneId() != null) {
+            return matcher;
+        }
+        return new DateValueMatcher(
+                matcher.getOperator(),
+                matcher.getDateExpression(),
+                conditionZoneId);
     }
 }

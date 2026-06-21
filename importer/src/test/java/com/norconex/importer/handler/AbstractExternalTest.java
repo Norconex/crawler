@@ -173,7 +173,18 @@ public abstract class AbstractExternalTest {
 
     private void assertMetadata(Properties meta, boolean testReference) {
         Assertions.assertEquals("StdoutBefore", meta.getString("field1"));
-        Assertions.assertEquals("StdoutAfter", meta.getString("field2"));
+        var field2 = meta.getString("field2");
+        var maxAttempts = 10;
+        while (field2 == null && --maxAttempts >= 0) {
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+            field2 = meta.getString("field2");
+        }
+        Assertions.assertEquals("StdoutAfter", field2);
         Assertions.assertEquals(
                 "field3 StdErrBefore",
                 meta.getString("field3"));

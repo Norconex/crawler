@@ -31,7 +31,7 @@ import com.norconex.crawler.fs.fetch.impl.AbstractFileFetcherTest;
 
 @Testcontainers(disabledWithoutDocker = true)
 @Timeout(30)
-class SftpFetcherTest extends AbstractFileFetcherTest {
+class SftpFetcherIT extends AbstractFileFetcherTest {
 
     @SuppressWarnings("resource")
     @Container

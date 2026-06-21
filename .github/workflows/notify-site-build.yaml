@@ -49,7 +49,8 @@ jobs:
                       "source_ref": "${{ github.ref }}",
                       "source_sha": "${{ github.sha }}",
                       "site_docs_dir": "docs/site",
-                      "reference_source_dir": "docs/reference-source"
+                      "reference_source_dir": "docs/reference-source",
+                      "changes_type": "docs-only"
                     }
                   }
                   EOF

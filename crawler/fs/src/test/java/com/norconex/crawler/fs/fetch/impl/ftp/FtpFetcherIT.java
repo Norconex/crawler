@@ -26,13 +26,13 @@ import com.norconex.crawler.core.fetch.Fetcher;
 import com.norconex.crawler.fs.fetch.impl.AbstractFileFetcherTest;
 
 @Timeout(30)
-class FtpsFetcherTest extends AbstractFileFetcherTest {
+class FtpFetcherIT extends AbstractFileFetcherTest {
 
     private static MockFtpServer server;
 
     @BeforeAll
     static void beforeAll(@TempDir File tempDir) throws IOException {
-        server = new MockFtpServer(tempDir, true);
+        server = new MockFtpServer(tempDir, false);
         server.start();
     }
 

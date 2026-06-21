@@ -1,0 +1,38 @@
+name: "DCO Enforcement"
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  verify-dco:
+    name: "DCO Sign-off Check"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "DCO Check"
+        uses: KineticCafe/actions-dco@v3.1.0
+        with:
+          config: |
+            # Keep humans accountable for DCO while allowing known automation bots.
+            bot.policy = "well-known"
+            bot.categories = ["dependency-updaters", "ci-cd", "release"]
+
+            # Extra safety allowlist for bot author emails that may not map cleanly.
+            exempt-authors = [
+              "49699333+dependabot[bot]@users.noreply.github.com",
+              "19733683+snyk-bot@users.noreply.github.com"
+            ]
+
+      - name: "DCO Sign-off Guidance"
+        if: failure()
+        run: |
+          echo "::error::One or more commits are missing a Signed-off-by line. See CONTRIBUTING.md for setup and fix instructions: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/main/CONTRIBUTING.md"
+          echo "### DCO Sign-off Required" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "One or more commits are missing a \`Signed-off-by:\` line." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "See [CONTRIBUTING.md]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/main/CONTRIBUTING.md) to learn how to sign off commits and fix existing ones." >> $GITHUB_STEP_SUMMARY

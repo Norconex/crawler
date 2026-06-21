@@ -207,6 +207,10 @@ A list of pluggable providers that supply the initial references to crawl, used 
 
 One or more sitemap XML URLs to use as starting points for crawling. The sitemap resolver will process these to extract the URLs to crawl.
 
+### stopOnExceptions
+
+A list of fully qualified exception class names which, when encountered, will stop the crawler.
+
 ### urlNormalizers
 
 One or more URL normalizers that convert URLs to a canonical form to prevent the same page from being crawled multiple times under different URL variations. Executed in order. Defaults to `GenericUrlNormalizer`.

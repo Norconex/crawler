@@ -31,7 +31,7 @@ on:
     # Only run this workflow if one or more files were changed and not part of
     # 'paths-ignore'.
     paths-ignore:
-      - ./V4_MIGRATION.md
+      - "V4_MIGRATION.md"
       - "**/README.md"
       - "**/TODO.txt"
       - "docs/**"
@@ -42,7 +42,7 @@ on:
     # Unfortunately GitHub actions does not yet support Yaml anchors and aliases
     # so we have to repeat the paths-ignore here.
     paths-ignore:
-      - ./V4_MIGRATION.md
+      - "V4_MIGRATION.md"
       - "**/README.md"
       - "**/TODO.txt"
       - "docs/**"
@@ -54,12 +54,9 @@ jobs:
     # Env. vars. defined here are available to all steps.
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      SHOULD_UPDATE_DEPENDENCY_GRAPH:
-        ${{ github.repository == 'Norconex/crawlers' &&
-        github.event_name == 'push' && (github.ref == 'refs/heads/main' ||
-        startsWith(github.ref, 'refs/heads/release/')) }}
 
     permissions:
+      actions: read
       id-token: write
       # write is required for release tagging and dependency submission
       contents: write
@@ -68,18 +65,11 @@ jobs:
       #--- Step ------------------------------------------------------------------
 
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           # depth 0 means checkout all commits... we need that
           # in case there are many commits in a push/PR
           fetch-depth: 0
-
-      #--- Step ------------------------------------------------------------------
-      - name: Get project version
-        id: get_version
-        run: |
-          version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-          echo "version=$version" >> $GITHUB_OUTPUT
 
       #--- Step ------------------------------------------------------------------
 
@@ -111,6 +101,16 @@ jobs:
 
       #--- Step ------------------------------------------------------------------
 
+      # Runs after setup-java so it benefits from the JDK and Maven cache.
+      # -N (non-recursive): only the root POM is needed for the version.
+      - name: Get project version
+        id: get_version
+        run: |
+          version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout -N)
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      #--- Step ------------------------------------------------------------------
+
       - name: Cache SonarCloud packages
         if: env.SONAR_TOKEN != ''
         uses: actions/cache@v5
@@ -118,20 +118,6 @@ jobs:
           path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
-
-      #--- Step ------------------------------------------------------------------
-
-      # Resolving before other mvn commands will fail early if there is an issue.
-      # Downloaded items won't be downloaded again in this workflow.
-      # We use :go-offline instead of :resolve to warm the cache.
-      # This prefetch is best effort only: transient snapshot repository
-      # access errors must not fail the entire workflow before the real build.
-      - name: Resolve Maven Dependencies
-        continue-on-error: true
-        run: |
-          mvn dependency:go-offline -nsu \
-            -Dmaven.wagon.rss.buffer.size=2048 \
-            -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
 
       #--- Step ------------------------------------------------------------------
 
@@ -144,7 +130,7 @@ jobs:
             contains(github.actor, '[bot]')
           )
         run: |
-          mvn clean install \
+          mvn -U clean install \
             -Dgpg.skip=true \
             -Dsonar.skip=true \
             -DskipITs=true \
@@ -158,13 +144,13 @@ jobs:
 
       #--- Step ------------------------------------------------------------------
 
-      - name: Build, test and analyze (same-repo PR)
+      - name: Build and test (same-repo PR)
         if: >
           github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name == github.repository &&
           !contains(github.actor, '[bot]')
         run: |
-          mvn clean install \
+          mvn -U clean install \
             -Dmaven.compiler.maxmem=3072m \
             -DargLine="-Xmx3g" \
             -Dgpg.skip=true \
@@ -174,8 +160,7 @@ jobs:
             -Dmaven.wagon.rss.buffer.size=2048 \
             -Dlog4j.configurationFile=${{ github.workspace }}/.github/log4j2-ci.xml \
             -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
-            -Pjacoco \
-            -Dsonar.qualitygate.wait=false \
+            -Pjacoco,parallel-tests \
             -C \
             -B
         env:
@@ -184,12 +169,28 @@ jobs:
 
       #--- Step ------------------------------------------------------------------
 
-      - name: Build, publish and analyze snapshot (push to main)
+      - name: Sonar analysis (PR — parallel, gate changed modules)
+        if: >
+          env.SONAR_TOKEN != '' &&
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          !contains(github.actor, '[bot]')
+        run: |
+          mvn -N -q -Psonar-parallel initialize \
+            -Dsonar.gate.mode=changed \
+            "-Dsonar.base.sha=${{ github.event.pull_request.base.sha }}" \
+            "-Dsonar.pullrequest.key=${{ github.event.number }}" \
+            "-Dsonar.pullrequest.branch=${{ github.head_ref }}" \
+            "-Dsonar.pullrequest.base=${{ github.base_ref }}"
+
+      #--- Step ------------------------------------------------------------------
+
+      - name: Build and publish snapshot (push to main)
         if: >
           github.event_name == 'push' && github.ref == 'refs/heads/main' &&
           endsWith(steps.get_version.outputs.version, '-SNAPSHOT')
         run: |
-          mvn clean deploy \
+          mvn -U clean deploy \
             -Dgpg.skip=true \
             -DskipITs=true \
             -Dmaven.javadoc.skip=true \
@@ -197,9 +198,7 @@ jobs:
             -Dmaven.wagon.rss.buffer.size=2048 \
             -Dlog4j.configurationFile=${{ github.workspace }}/.github/log4j2-ci.xml \
             -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
-            -Pjacoco \
-            -Dsonar.qualitygate.wait=true \
-            -Dsonar.qualitygate.timeout=900 \
+            -Pjacoco,parallel-tests \
             -C \
             -B
         env:
@@ -211,13 +210,99 @@ jobs:
 
       #--- Step ------------------------------------------------------------------
 
-      - name: Build, publish and analyze release (push to release/*)
+      # Download the latest successful nightly's JaCoCo exec files so we can
+      # merge IT coverage into the unit-test-only exec files produced above.
+      # Skipped silently on first run (no nightly artifact exists yet).
+      - name: Download latest nightly IT exec coverage
+        id: dl-nightly
+        if: >
+          github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+          endsWith(steps.get_version.outputs.version, '-SNAPSHOT')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LATEST_RUN=$(gh run list \
+            --repo ${{ github.repository }} \
+            --workflow=nightly-tests.yaml \
+            --status=success \
+            --limit=1 \
+            --json=databaseId \
+            -q '.[0].databaseId' 2>/dev/null || echo "")
+
+          if [ -n "$LATEST_RUN" ]; then
+            gh run download "$LATEST_RUN" \
+              --repo ${{ github.repository }} \
+              --name jacoco-nightly-exec \
+              --dir .nightly-exec 2>/dev/null \
+              && echo "result=downloaded" >> $GITHUB_OUTPUT \
+              || echo "result=skipped" >> $GITHUB_OUTPUT
+          else
+            echo "No successful nightly run found — skipping IT coverage merge"
+            echo "result=skipped" >> $GITHUB_OUTPUT
+          fi
+
+      #--- Step ------------------------------------------------------------------
+
+      # For each module that has both a CI unit-test exec and a nightly IT exec,
+      # merge them using the JaCoCo CLI so Sonar sees combined coverage.
+      # Then regenerate the XML reports that Sonar reads.
+      - name: Merge nightly IT coverage into unit test reports
+        if: steps.dl-nightly.outputs.result == 'downloaded'
+        run: |
+          JACOCO_VERSION=$(mvn help:evaluate \
+            -Dexpression=jacoco-maven-plugin.version -q -DforceStdout -N)
+          mvn dependency:copy \
+            -Dartifact="org.jacoco:org.jacoco.cli:${JACOCO_VERSION}:jar:nodeps" \
+            -DoutputDirectory=/tmp/jacoco-cli/ \
+            -q -B
+          JACOCO_CLI="/tmp/jacoco-cli/org.jacoco.cli-${JACOCO_VERSION}-nodeps.jar"
+
+          MODULES=(
+            importer
+            crawler/core crawler/fs crawler/web
+            committer/core committer/amazoncloudsearch committer/apachekafka
+            committer/azurecognitivesearch committer/elasticsearch committer/idol
+            committer/neo4j committer/solr committer/sql
+          )
+          for MODULE in "${MODULES[@]}"; do
+            CI_EXEC="${MODULE}/target/jacoco.exec"
+            NIGHTLY_EXEC=".nightly-exec/${MODULE}/target/jacoco.exec"
+            if [ -f "$CI_EXEC" ] && [ -f "$NIGHTLY_EXEC" ]; then
+              java -jar "$JACOCO_CLI" merge "$CI_EXEC" "$NIGHTLY_EXEC" \
+                --destfile "$CI_EXEC"
+              echo "[coverage] Merged IT data: $MODULE"
+            fi
+          done
+
+          # Regenerate XML reports from the merged exec files so Sonar reads
+          # combined UT+IT coverage instead of unit-test-only coverage.
+          mvn jacoco:report \
+            -Djacoco.formats=XML \
+            -B -q \
+            -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
+
+      #--- Step ------------------------------------------------------------------
+
+      - name: Sonar analysis (main push — parallel, gate changed modules)
+        if: >
+          env.SONAR_TOKEN != '' &&
+          github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+          endsWith(steps.get_version.outputs.version, '-SNAPSHOT')
+        run: |
+          mvn -N -q -Psonar-parallel initialize \
+            -Dsonar.gate.mode=changed \
+            -Dsonar.base.sha=${{ github.event.before }} \
+            -Dsonar.qualitygate.timeout=300
+
+      #--- Step ------------------------------------------------------------------
+
+      - name: Build and publish release (push to release/*)
         if: >
           github.event_name == 'push' && startsWith(github.ref,
           'refs/heads/release/') && !endsWith(steps.get_version.outputs.version,
           '-SNAPSHOT')
         run: |
-          mvn clean deploy \
+          mvn -U clean deploy \
             -Dmaven.compiler.maxmem=3072m \
             -DargLine="-Xmx3g" \
             -DskipITs=true \
@@ -227,7 +312,6 @@ jobs:
             -Dlog4j.configurationFile=${{ github.workspace }}/.github/log4j2-ci.xml \
             -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
             -Pjacoco \
-            -Dsonar.qualitygate.wait=false \
             -C \
             -B
         env:
@@ -236,6 +320,20 @@ jobs:
           MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
           MAVEN_CENTRAL_TOKEN: ${{ secrets.OSSRH_TOKEN }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+
+      #--- Step ------------------------------------------------------------------
+
+      # Release builds gate all modules — a release should be fully clean.
+      - name: Sonar analysis (release — parallel, gate all modules)
+        if: >
+          env.SONAR_TOKEN != '' &&
+          github.event_name == 'push' &&
+          startsWith(github.ref, 'refs/heads/release/') &&
+          !endsWith(steps.get_version.outputs.version, '-SNAPSHOT')
+        run: |
+          mvn -N -q -Psonar-parallel initialize \
+            -Dsonar.gate.mode=all \
+            -Dsonar.qualitygate.timeout=300
 
       #--- Step ------------------------------------------------------------------
 
@@ -247,7 +345,7 @@ jobs:
           )
         run: |
           echo "Branch/version mismatch detected; skipping deploy and running install only"
-          mvn clean install \
+          mvn -U clean install \
             -Dmaven.compiler.maxmem=3072m \
             -DargLine="-Xmx3g" \
             -Dgpg.skip=true \
@@ -389,16 +487,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "chore(release): bump to next development version ${NEXT_SNAPSHOT}"
+          git commit -s -m "chore(release): bump to next development version ${NEXT_SNAPSHOT}"
           git push
         env:
           # PAT required so this commit triggers CI for the new SNAPSHOT version.
           GITHUB_TOKEN: ${{ secrets.RELEASE_PAT }}
 
-      #--- Step ------------------------------------------------------------------
-
-      # Uploads the full dependency graph to GitHub to improve the quality
-      # of Dependabot alerts this repository can receive
-      - name: Update Maven dependency graph
-        if: ${{ env.SHOULD_UPDATE_DEPENDENCY_GRAPH == 'true' }}
-        uses: advanced-security/maven-dependency-submission-action@v5

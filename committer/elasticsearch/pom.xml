@@ -26,7 +26,7 @@
   <name>Norconex Committer Elasticsearch</name>
 
   <properties>
-    <elasticsearch.version>9.4.1</elasticsearch.version>
+    <elasticsearch.version>9.4.2</elasticsearch.version>
     <sonar.skip>false</sonar.skip>
     <sonar.projectKey>${project.groupId}:${project.artifactId}</sonar.projectKey>    
   </properties>

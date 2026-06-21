@@ -14,6 +14,11 @@
 - [ ] Documentation update
 - [ ] Internal/maintenance (CI, formatting, refactoring with no user impact)
 
+## Contributor Agreement
+
+- [ ] I have read [CONTRIBUTING.md](../CONTRIBUTING.md) and agree to the DCO
+- [ ] All commits in this PR are signed off (`-s`) and GPG-signed (`-S`)
+
 ## Testing
 
 <!-- How has this been tested? -->
@@ -30,4 +35,4 @@ or
 
 ---
 
-**Note:** When a release is prepared, the changelog file (`changelogs/changelog-X.Y.Z.md`) will be created on the release branch based on merged PRs and release notes provided. See `changelogs/README.md` for the format and naming convention.
+**Note:** When a release is prepared, the changelog file will be built from merged PRs and the release notes provided above.

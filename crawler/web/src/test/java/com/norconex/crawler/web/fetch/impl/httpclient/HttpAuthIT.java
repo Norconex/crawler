@@ -40,7 +40,7 @@ import com.norconex.crawler.web.mocks.MockWebsite;
 
 @MockServerSettings
 @Timeout(60)
-class HttpAuthTest {
+class HttpAuthIT {
 
     private final String loginFormPath = "/loginForm.html";
     private final String loginFormActionPath = "/loginFormAction";

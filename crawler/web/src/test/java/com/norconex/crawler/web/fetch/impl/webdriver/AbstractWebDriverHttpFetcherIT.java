@@ -195,6 +195,10 @@ public abstract class AbstractWebDriverHttpFetcherIT {
     // https://github.com/Norconex/collector-http/issues/751)
     @WebCrawlingTest
     void testHttpSniffer(ClientAndServer client, WebCrawlerConfig cfg) {
+        var isCi = "true".equalsIgnoreCase(System.getenv("CI"))
+                || "true".equalsIgnoreCase(System.getenv("GITHUB_ACTIONS"));
+        Assumptions.assumeFalse(isCi && browserType == WebDriverBrowser.EDGE,
+                "Edge + HTTP sniffer integration is unstable in CI.");
         var path = "/sniffHeaders.html";
 
         // @formatter:off

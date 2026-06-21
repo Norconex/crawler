@@ -1,7 +1,0 @@
-#!/bin/bash
-#
-# Run the class and data file arguments
-set -e
-
-# Command to run Solr and keep the verbose logs so the docker remains running
-crawl-web.sh start -c ${COLLECTOR_HOME}/configs/${COLLECTOR_CONFIG_FILE}

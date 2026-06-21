@@ -18,6 +18,7 @@ import static java.util.Optional.ofNullable;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -33,6 +34,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.collections4.OrderedMap;
 import org.apache.commons.collections4.map.ListOrderedMap;
@@ -69,6 +71,7 @@ public class CrawlerTestHarness implements Closeable {
     private static final int SCHEMA_DROP_RETRY_COUNT = 4;
     private static final Duration SCHEMA_DROP_RETRY_DELAY =
             Duration.ofMillis(250);
+    private static final int MIN_HAZELCAST_PORT_RANGE_SIZE = 8;
 
     // Shared across all harness instances: started once per JVM, never
     // stopped mid-run (Testcontainers Ryuk / JVM-shutdown hook cleans it
@@ -99,6 +102,7 @@ public class CrawlerTestHarness implements Closeable {
             new ListOrderedMap<>();
     private final ExecutorService executor =
             Executors.newVirtualThreadPerTaskExecutor();
+    private final AtomicInteger activeCrawlerCount = new AtomicInteger();
 
     public CompletableFuture<CrawlerTestHarnessResult> launchAsync(
             @NonNull String... nodeNames) {
@@ -124,9 +128,24 @@ public class CrawlerTestHarness implements Closeable {
                 createSchema(schemaName);
             }
 
+            // For subsequent runs (crash/resume tests), wait for all Hazelcast
+            // threads from the previous run to terminate before selecting new
+            // ports. hazelcastInstance.shutdown() may return while its internal
+            // daemon threads (e.g. partition-operation) are still running and
+            // holding OS server-socket resources, which would cause BindException
+            // if the same port range is reused immediately.
+            if (hazelcastPortBase != null
+                    && activeCrawlerCount.get() == 0) {
+                awaitHazelcastThreadsTerminated();
+            }
+
             // Pick an isolated port range for this harness instance so repeated
             // invocations (e.g., parameterized tests) don't collide on 5701+.
-            hazelcastPortCount = Math.max(2, nodeNames.length);
+            // Keep a wider bind range than the node count so clustered tests
+            // can still start when one or more ports in the range are
+            // temporarily occupied by other test processes.
+            hazelcastPortCount = Math.max(MIN_HAZELCAST_PORT_RANGE_SIZE,
+                    nodeNames.length);
             hazelcastPortBase = findFreeLocalPortRangeBase(hazelcastPortCount);
 
             LOG.info("Postgres ready: id='{}', schema='{}', jdbcUrl='{}'",
@@ -147,9 +166,18 @@ public class CrawlerTestHarness implements Closeable {
 
             var testCrawler = new TestCrawler(instrument);
             nodeCrawlers.put(nodeName, testCrawler);
+            activeCrawlerCount.incrementAndGet();
 
-            var future = CompletableFuture.supplyAsync(
-                    testCrawler::crawl, executor);
+            CompletableFuture<CrawlerTestNodeOutput> future;
+            try {
+                future = CompletableFuture.supplyAsync(
+                        testCrawler::crawl, executor)
+                        .whenComplete((result, thrown) -> activeCrawlerCount
+                                .decrementAndGet());
+            } catch (RuntimeException e) {
+                activeCrawlerCount.decrementAndGet();
+                throw e;
+            }
 
             futures.put(nodeName, future);
             LOG.debug("Launched \"{}\".", nodeName);
@@ -415,6 +443,59 @@ public class CrawlerTestHarness implements Closeable {
                     configurer.getJdbcUrl());
         }
         return instrument;
+    }
+
+    /**
+     * Polls until all Hazelcast platform threads associated with this harness's
+     * cluster (prefix {@code "hz.<clusterName>-"}) have terminated, or until a
+     * 30-second timeout elapses. This is necessary because
+     * {@code HazelcastInstance.shutdown()} can return while internal daemon
+     * threads (e.g. partition-operation, IO acceptor) are still active and
+     * holding the server-socket for their port. Selecting new ports before those
+     * threads finish may cause a {@code BindException} in crash/resume tests.
+     */
+    private void awaitHazelcastThreadsTerminated() {
+        var prefix = "hz." + hazelcastClusterName + "-";
+        var timeoutMs = 30_000L;
+        var pollIntervalMs = 100L;
+        var deadlineNanos = System.nanoTime() + timeoutMs * 1_000_000L;
+        var mxBean = ManagementFactory.getThreadMXBean();
+        while (System.nanoTime() < deadlineNanos) {
+            var threadIds = mxBean.getAllThreadIds();
+            var infos = mxBean.getThreadInfo(threadIds, 0);
+            var stillRunning = false;
+            for (var info : infos) {
+                if (info != null
+                        && info.getThreadName() != null
+                        && info.getThreadName().startsWith(prefix)) {
+                    stillRunning = true;
+                    break;
+                }
+            }
+            if (!stillRunning) {
+                LOG.info(
+                        "All Hazelcast threads with prefix '{}' have terminated.",
+                        prefix);
+                return;
+            }
+            // Not a timing-based test assertion — this polls real JVM thread
+            // liveness (Hazelcast's own internal daemon threads, which are not
+            // mockable) to know when their server sockets are released before
+            // reusing the port range. A deliberate poll back-off, not a flaky
+            // wait-for-async-result sleep.
+            try {
+                Thread.sleep(pollIntervalMs); //NOSONAR
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException(
+                        "Interrupted while waiting for Hazelcast threads to terminate",
+                        e);
+            }
+        }
+        throw new IllegalStateException(
+                "Hazelcast threads with prefix '" + prefix
+                        + "' did not all terminate within " + timeoutMs
+                        + "ms; refusing to continue to avoid BindException on next run");
     }
 
     private static int findFreeLocalPortRangeBase(int rangeSize) {

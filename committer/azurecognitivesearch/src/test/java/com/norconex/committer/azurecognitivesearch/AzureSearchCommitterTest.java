@@ -34,6 +34,7 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.parallel.Isolated;
 import org.mockserver.integration.ClientAndServer;
 import org.mockserver.junit.jupiter.MockServerExtension;
 
@@ -54,6 +55,7 @@ import com.norconex.commons.lang.security.Credentials;
  * @author Pascal Essiembre
  * @author Harinder Hanjan
  */
+@Isolated
 @ExtendWith(MockServerExtension.class)
 @TestInstance(Lifecycle.PER_CLASS)
 @Timeout(30)

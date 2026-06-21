@@ -38,7 +38,7 @@ import com.norconex.crawler.fs.fetch.impl.AbstractFileFetcherTest;
 
 @Testcontainers(disabledWithoutDocker = true)
 @Timeout(30)
-class WebDavFetcherTest extends AbstractFileFetcherTest {
+class WebDavFetcherIT extends AbstractFileFetcherTest {
 
     @SuppressWarnings("resource")
     @Container

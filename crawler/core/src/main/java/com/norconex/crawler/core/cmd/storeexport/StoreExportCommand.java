@@ -112,35 +112,32 @@ public class StoreExportCommand implements Command {
             OutputStream out) throws IOException {
 
         var name = serialCache.getCacheName();
-        var writer = SerialUtil.jsonGenerator(out);
-        if (pretty) {
-            writer.useDefaultPrettyPrinter();
-        }
-
+        var writer = SerialUtil.jsonGenerator(out, pretty);
         var cnt = 0L;
 
         LOG.info("Exporting \"{}\" cache entries...", name);
 
         writer.writeStartObject();
-        writer.writeStringField("crawler", session.getCrawlerId());
-        writer.writeStringField("store", name);
-        writer.writeStringField("type", serialCache.getClassName());
-        writer.writeStringField("cacheType", serialCache.getCacheType().name());
-        writer.writeFieldName("records");
+        writer.writeStringProperty("crawler", session.getCrawlerId());
+        writer.writeStringProperty("store", name);
+        writer.writeStringProperty("type", serialCache.getClassName());
+        writer.writeStringProperty("cacheType",
+                serialCache.getCacheType().name());
+        writer.writeName("records");
         writer.writeStartArray();
 
         for (var entry : serialCache) {
             try {
                 writer.writeStartObject();
-                writer.writeStringField("id", entry.getKey());
-                writer.writePOJOField("object", entry.getJson());
+                writer.writeStringProperty("id", entry.getKey());
+                writer.writePOJOProperty("object", entry.getJson());
                 writer.writeEndObject();
                 cnt++;
                 if (cnt % 1000 == 0) {
                     LOG.info(" Exported {} \"{}\" records.",
                             NumberFormat.getNumberInstance().format(cnt), name);
                 }
-            } catch (IOException e) {
+            } catch (RuntimeException e) {
                 throw new CrawlerException(
                         "Could not export " + entry.getKey(), e);
             }
