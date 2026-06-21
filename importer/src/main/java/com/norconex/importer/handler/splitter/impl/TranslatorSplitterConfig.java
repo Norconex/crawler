@@ -18,7 +18,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.norconex.commons.lang.bean.jackson.JsonXmlCollection;
 import com.norconex.commons.lang.collection.CollectionUtil;
 import com.norconex.commons.lang.text.TextMatcher;
 import com.norconex.importer.handler.splitter.BaseDocumentSplitterConfig;
@@ -182,7 +181,6 @@ public class TranslatorSplitterConfig extends BaseDocumentSplitterConfig {
      * @param targetLanguages languages to translate to
      * @return languages to translate to
      */
-    @JsonXmlCollection(entryName = "language")
     private final List<String> targetLanguages = new ArrayList<>();
 
     // Microsoft

@@ -18,7 +18,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.norconex.commons.lang.bean.jackson.JsonXmlCollection;
 import com.norconex.commons.lang.collection.CollectionUtil;
 import com.norconex.commons.lang.map.PropertySetter;
 
@@ -67,7 +66,6 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class ConstantTransformerConfig {
 
-    @JsonXmlCollection(entryName = "constant")
     private final List<Constant> constants = new ArrayList<>();
     /**
      * Default property setter when a constant does not specify one.

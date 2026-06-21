@@ -19,7 +19,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.norconex.commons.lang.bean.jackson.JsonXmlCollection;
 import com.norconex.commons.lang.collection.CollectionUtil;
 import com.norconex.commons.lang.text.TextMatcher;
 import com.norconex.importer.response.ImporterResponse;
@@ -97,12 +96,9 @@ public class EmbeddedConfig implements Serializable { //{
 
     private static final long serialVersionUID = 1L;
 
-    @JsonXmlCollection(entryName = "matcher")
     private final List<TextMatcher> splitContentTypes = new ArrayList<>();
-    @JsonXmlCollection(entryName = "matcher")
     private final List<TextMatcher> skipEmbeddedOfContentTypes =
             new ArrayList<>();
-    @JsonXmlCollection(entryName = "matcher")
     private final List<TextMatcher> skipEmbeddedContentTypes =
             new ArrayList<>();
 

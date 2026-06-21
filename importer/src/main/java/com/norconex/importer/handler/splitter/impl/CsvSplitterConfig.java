@@ -18,7 +18,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.norconex.commons.lang.bean.jackson.JsonXmlCollection;
 import com.norconex.commons.lang.collection.CollectionUtil;
 import com.norconex.commons.lang.text.TextMatcher;
 import com.norconex.importer.handler.splitter.BaseDocumentSplitterConfig;
@@ -139,7 +138,6 @@ public class CsvSplitterConfig extends BaseDocumentSplitterConfig {
      */
     private String referenceColumn;
 
-    @JsonXmlCollection(entryName = "column")
     private final List<String> contentColumns = new ArrayList<>();
 
     /**

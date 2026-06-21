@@ -18,6 +18,12 @@ on:
   push:
     tags:
       - "v[0-9]*.[0-9]*.[0-9]*"
+  # Edge (main) images are gated on a successful CI/CD run rather than building
+  # directly on push, so a red build never produces a published edge image.
+  workflow_run:
+    workflows: ["Maven CI/CD Workflow"]
+    types:
+      - completed
     branches:
       - main
   schedule:
@@ -45,6 +51,11 @@ jobs:
   publish:
     name: ${{ matrix.image }}
     runs-on: ubuntu-latest
+    # On the workflow_run (edge) path, only publish when the upstream CI/CD
+    # succeeded. Release tag, schedule, and manual dispatch are unaffected.
+    if: >-
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
     strategy:
       fail-fast: false
       matrix:
@@ -62,6 +73,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          # For workflow_run (edge), build the exact commit CI validated rather
+          # than the default-branch tip. Falls back to the normal ref otherwise.
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
 
       # Determine whether this is a release (DockerHub + GHCR) or edge (GHCR) build,
       # and compute the Docker tags accordingly.
@@ -167,7 +182,7 @@ jobs:
         run: |
           TYPE=${{ matrix.crawler_type }}
           # Default build (no profile) produces the full distribution.
-          mvn --batch-mode package -DskipTests -q -pl crawler/${TYPE} -am
+          mvn --batch-mode -U package -DskipTests -q -pl crawler/${TYPE} -am
           mkdir -p docker-context
           # Exclude the -standard ZIP; keep only the full distribution.
           find crawler/${TYPE}/target -name "nx-crawler-${TYPE}-*.zip" \
@@ -179,7 +194,7 @@ jobs:
         run: |
           MODULES=$(echo $COMMITTERS | tr ' ' '\n' \
             | sed 's|^|committer/|' | paste -sd ',')
-          mvn --batch-mode package -DskipTests -q -pl "$MODULES" -am
+          mvn --batch-mode -U package -DskipTests -q -pl "$MODULES" -am
           mkdir -p docker-context/committers
           for COMMITTER in $COMMITTERS; do
             find committer/${COMMITTER}/target -name "*.zip" \

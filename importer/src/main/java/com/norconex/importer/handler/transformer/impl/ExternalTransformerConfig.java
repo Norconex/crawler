@@ -20,8 +20,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import com.norconex.commons.lang.bean.jackson.JsonXmlCollection;
-import com.norconex.commons.lang.bean.jackson.JsonXmlMap;
 import com.norconex.commons.lang.collection.CollectionUtil;
 import com.norconex.commons.lang.map.PropertySetter;
 import com.norconex.commons.lang.text.RegexFieldValueExtractor;
@@ -257,7 +255,6 @@ public class ExternalTransformerConfig {
      */
     private String command;
 
-    @JsonXmlCollection(entryName = "pattern")
     private final List<RegexFieldValueExtractor> extractionPatterns =
             new ArrayList<>();
 
@@ -269,7 +266,6 @@ public class ExternalTransformerConfig {
      * @return environment variables or {@code null} if using the current
      *         process environment variables
      */
-    @JsonXmlMap(entryName = "variable")
     private Map<String, String> environmentVariables = null;
 
     /*

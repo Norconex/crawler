@@ -22,7 +22,6 @@ import java.util.Set;
 import org.neo4j.driver.internal.value.NullValue;
 
 import com.norconex.committer.core.batch.BaseBatchCommitterConfig;
-import com.norconex.commons.lang.bean.jackson.JsonXmlCollection;
 import com.norconex.commons.lang.collection.CollectionUtil;
 import com.norconex.commons.lang.security.Credentials;
 
@@ -95,7 +94,6 @@ public class Neo4jCommitterConfig
      * creating the query. They will be set to {@link NullValue}) to avoid
      * client exception for missing parameters.
      */
-    @JsonXmlCollection(entryName = "parameter")
     private final Set<String> optionalParameters = new HashSet<>();
 
     public void setCredentials(Credentials credentials) {

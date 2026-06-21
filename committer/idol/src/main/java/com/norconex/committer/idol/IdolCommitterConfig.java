@@ -19,7 +19,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.norconex.committer.core.batch.BaseBatchCommitterConfig;
-import com.norconex.commons.lang.bean.jackson.JsonXmlMap;
 
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -40,13 +39,11 @@ public class IdolCommitterConfig extends BaseBatchCommitterConfig
     /**
      * Gets the <code>DREADDDATA</code> optional URL parameters.
      */
-    @JsonXmlMap(entryName = "param")
     private final Map<String, String> dreAddDataParams = new HashMap<>();
 
     /**
      * The <code>DREDELETEREF</code> optional URL parameters.
      */
-    @JsonXmlMap(entryName = "param")
     private final Map<String, String> dreDeleteRefParams = new HashMap<>();
 
     /**

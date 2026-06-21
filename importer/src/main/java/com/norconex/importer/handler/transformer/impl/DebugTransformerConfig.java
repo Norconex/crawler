@@ -18,7 +18,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.norconex.commons.lang.bean.jackson.JsonXmlCollection;
 import com.norconex.commons.lang.collection.CollectionUtil;
 
 import lombok.Data;
@@ -65,7 +64,6 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class DebugTransformerConfig {
 
-    @JsonXmlCollection(entryName = "field")
     private final List<String> logFields = new ArrayList<>();
     private boolean logContent;
     private String logLevel;

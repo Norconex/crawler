@@ -19,7 +19,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
-import com.norconex.commons.lang.bean.jackson.JsonXmlCollection;
 import com.norconex.commons.lang.collection.CollectionUtil;
 import com.norconex.commons.lang.map.PropertySetter;
 import com.norconex.commons.lang.time.ZonedDateTimeParser;
@@ -102,7 +101,6 @@ public class DateFormatTransformerConfig {
 
     private String fromField;
     private String toField;
-    @JsonXmlCollection(entryName = "format")
     private final List<String> fromFormats = new ArrayList<>();
     private String toFormat;
     /**

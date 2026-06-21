@@ -19,7 +19,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.norconex.commons.lang.bean.jackson.JsonXmlCollection;
 import com.norconex.commons.lang.collection.CollectionUtil;
 import com.norconex.commons.lang.io.TextReader;
 import com.norconex.commons.lang.text.TextMatcher;
@@ -191,7 +190,6 @@ public class LanguageTransformerConfig implements ChunkedTextSupport {
      */
     private boolean keepProbabilities;
 
-    @JsonXmlCollection(entryName = "language")
     private final List<String> languages = new ArrayList<>();
 
     private final TextMatcher fieldMatcher = new TextMatcher();

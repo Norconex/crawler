@@ -14,6 +14,8 @@
  */
 package com.norconex.crawler.core.doc.operations.filter;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 /**
  * Tells the collector that a filter is of "OnMatch" type.  This means
  * if one or more filters of type "include" exist in a set of filters,
@@ -28,5 +30,10 @@ public interface OnMatchFilter {
      * Gets the the on match action (exclude or include).
      * @return on match (exclude or include)
      */
+    // Derived convenience accessor backed by the implementer's configuration.
+    // Ignored for (de)serialization so it does not duplicate the config's own
+    // (unwrapped) onMatch property — which would otherwise emit two onMatch
+    // elements and fail to read back (array vs scalar).
+    @JsonIgnore
     OnMatch getOnMatch();
 }
