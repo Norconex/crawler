@@ -478,8 +478,13 @@ public class CrawlerTestHarness implements Closeable {
                         prefix);
                 return;
             }
+            // Not a timing-based test assertion — this polls real JVM thread
+            // liveness (Hazelcast's own internal daemon threads, which are not
+            // mockable) to know when their server sockets are released before
+            // reusing the port range. A deliberate poll back-off, not a flaky
+            // wait-for-async-result sleep.
             try {
-                Thread.sleep(pollIntervalMs);
+                Thread.sleep(pollIntervalMs); //NOSONAR
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 throw new IllegalStateException(
