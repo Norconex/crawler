@@ -65,7 +65,7 @@ jobs:
       #--- Step ------------------------------------------------------------------
 
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           # depth 0 means checkout all commits... we need that
           # in case there are many commits in a push/PR
