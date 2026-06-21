@@ -20,7 +20,7 @@ jobs:
           echo "check=$(jq -r '.pull_request.user.login' "$GITHUB_EVENT_PATH" | grep -c dependabot)" >> $GITHUB_OUTPUT
                   
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         if: steps.check_dependabot.outputs.check == '0'
         with:
           fetch-depth: 0
