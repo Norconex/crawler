@@ -86,7 +86,7 @@ class Neo4jCommitterIT {
         session = driver.session();
         session.run("""
                 MATCH (n)
-                DETACH DELETE n""");
+                DETACH DELETE n""").consume();
     }
 
     @AfterEach

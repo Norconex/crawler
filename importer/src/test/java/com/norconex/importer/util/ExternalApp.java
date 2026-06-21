@@ -110,6 +110,8 @@ public class ExternalApp {
 
         printEnvToStdout(ENV_STDOUT_AFTER);
         printEnvToStderr(ENV_STDERR_AFTER);
+        System.out.flush();
+        System.err.flush();
         if (output != System.out) {
             output.close();
         }

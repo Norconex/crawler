@@ -24,8 +24,8 @@ import org.apache.commons.collections4.Bag;
 import org.apache.commons.collections4.bag.TreeBag;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
+import tools.jackson.databind.annotation.JsonDeserialize;
+import tools.jackson.databind.annotation.JsonPOJOBuilder;
 import com.norconex.crawler.core.cluster.CacheNames;
 import com.norconex.crawler.core.session.CrawlerRunInfo;
 import com.norconex.crawler.core.session.CrawlerRunInfoResolver;

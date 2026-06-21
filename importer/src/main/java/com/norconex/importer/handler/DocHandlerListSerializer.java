@@ -1,4 +1,4 @@
-/* Copyright 2025 Norconex Inc.
+/* Copyright 2025-2026 Norconex Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,30 +14,30 @@
  */
 package com.norconex.importer.handler;
 
-import java.io.IOException;
 import java.util.List;
 
 import javax.xml.namespace.QName;
 
 import org.apache.commons.text.WordUtils;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.dataformat.xml.ser.ToXmlGenerator;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.databind.SerializationContext;
+import tools.jackson.databind.ValueSerializer;
+import tools.jackson.dataformat.xml.ser.ToXmlGenerator;
 import com.norconex.importer.handler.condition.Condition;
 import com.norconex.importer.handler.condition.ConditionGroup;
 import com.norconex.importer.handler.condition.ConditionalDocHandler;
 import com.norconex.importer.handler.condition.If;
 import com.norconex.importer.handler.condition.IfNot;
 
-public class DocHandlerListSerializer extends JsonSerializer<List<DocHandler>> {
+public class DocHandlerListSerializer
+        extends ValueSerializer<List<DocHandler>> {
 
     @Override
     public void serialize(
             List<DocHandler> handlers,
             JsonGenerator gen,
-            SerializerProvider sp) throws IOException {
+            SerializationContext sp) {
 
         if (gen instanceof ToXmlGenerator xmlGen) {
             writeXmlDocHandlerList(handlers, xmlGen, true);
@@ -47,11 +47,11 @@ public class DocHandlerListSerializer extends JsonSerializer<List<DocHandler>> {
         gen.writeStartArray();
         for (var handler : handlers) {
             if ((handler instanceof If) || (handler instanceof IfNot)) {
-                gen.writeObject(handler);
+                gen.writePOJO(handler);
             } else {
                 gen.writeStartObject();
-                gen.writeFieldName(DocHandler.NAME);
-                gen.writeObject(handler);
+                gen.writeName(DocHandler.NAME);
+                gen.writePOJO(handler);
                 gen.writeEndObject();
             }
         }
@@ -61,8 +61,7 @@ public class DocHandlerListSerializer extends JsonSerializer<List<DocHandler>> {
     private void writeXmlDocHandlerList(
             List<DocHandler> handlers,
             ToXmlGenerator gen,
-            boolean isRoot)
-            throws IOException {
+            boolean isRoot) {
         var first = true;
         for (var handler : handlers) {
             if ((handler instanceof ConditionalDocHandler condHandler)) {
@@ -71,11 +70,11 @@ public class DocHandlerListSerializer extends JsonSerializer<List<DocHandler>> {
             } else {
                 // no idea why, but first field name can't be written.
                 if (!isRoot || !first) {
-                    gen.writeFieldName(DocHandler.NAME);
+                    gen.writeName(DocHandler.NAME);
                 } else {
                     gen.setNextName(QName.valueOf(DocHandler.NAME));
                 }
-                gen.writeObject(handler);
+                gen.writePOJO(handler);
             }
             first = false;
         }
@@ -83,8 +82,7 @@ public class DocHandlerListSerializer extends JsonSerializer<List<DocHandler>> {
 
     private void writeXmlConditionalHandler(
             String tagName, ConditionalDocHandler condHandler,
-            ToXmlGenerator gen)
-            throws IOException {
+            ToXmlGenerator gen) {
         gen.writeRaw("<%s>".formatted(tagName));
         gen.flush();
 
@@ -103,14 +101,12 @@ public class DocHandlerListSerializer extends JsonSerializer<List<DocHandler>> {
             gen.writeRaw("</else>");
             gen.flush();
         }
-        //
         gen.writeRaw("</%s>".formatted(tagName));
         gen.flush();
     }
 
     private void writeXmlCondition(
-            Condition condition, ToXmlGenerator gen)
-            throws IOException {
+            Condition condition, ToXmlGenerator gen) {
         if (condition instanceof ConditionGroup condGroup) {
             var tag = WordUtils
                     .uncapitalize(condGroup.getClass().getSimpleName());
@@ -118,7 +114,7 @@ public class DocHandlerListSerializer extends JsonSerializer<List<DocHandler>> {
             gen.writeRaw("<%s>".formatted(tag));
             gen.flush();
             for (var cond : condGroup.getConditions()) {
-                gen.writeFieldName("condition");
+                gen.writeName("condition");
                 writeXmlCondition(cond, gen);
             }
             gen.writeRaw("</%s>".formatted(tag));
@@ -126,7 +122,7 @@ public class DocHandlerListSerializer extends JsonSerializer<List<DocHandler>> {
             gen.flush();
         } else {
             gen.setNextName(QName.valueOf("condition"));
-            gen.writeObject(condition);
+            gen.writePOJO(condition);
         }
     }
 }

@@ -1,0 +1,42 @@
+FROM eclipse-temurin:21-jre-jammy
+
+ARG VERSION=edge
+
+ENV NORCONEX_HOME=/opt/norconex \
+    COLLECTOR_HOME=/opt/norconex/crawler \
+    COLLECTOR_CONFIG_DIR=/opt/norconex/crawler/configs \
+    COLLECTOR_LOG_DIR=/opt/norconex/crawler/logs \
+    COLLECTOR_CONFIG_FILE=crawler-config.xml \
+    # Playwright stores browser binaries here; baking into the image avoids runtime downloads.
+    PLAYWRIGHT_BROWSERS_PATH=/opt/norconex/browsers \
+    PATH="/opt/norconex/crawler:$PATH"
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR ${NORCONEX_HOME}
+
+# Extract the crawler distribution; the ZIP contains a single top-level directory.
+COPY crawler.zip .
+RUN unzip -q crawler.zip -d /tmp/crawler-dist \
+    && mv /tmp/crawler-dist/nx-crawler-* ${COLLECTOR_HOME} \
+    && chmod +x ${COLLECTOR_HOME}/crawl-web.* \
+    && rm -rf /tmp/crawler-dist crawler.zip
+
+# Committer JARs — all bundled; unused committers are dormant via lazy classloading.
+COPY committers/ ${COLLECTOR_HOME}/lib/
+
+# Playwright is 'provided' scope in the crawler POM (too large for standard distributions).
+# Downloaded separately by the CI workflow and bundled only in this image variant.
+COPY playwright-libs/ ${COLLECTOR_HOME}/lib/
+
+# Install Playwright's Chromium browser and its OS-level dependencies.
+# Only Chromium is installed (not Firefox/WebKit) to keep the image lean.
+# --with-deps installs the required OS packages via apt-get.
+RUN java -cp "${COLLECTOR_HOME}/lib/*" com.microsoft.playwright.CLI install --with-deps chromium
+
+VOLUME ["/opt/norconex/crawler/configs", "/opt/norconex/crawler/logs"]
+
+ENTRYPOINT ["sh", "-c", \
+    "exec crawl-web.sh start -c \"${COLLECTOR_CONFIG_DIR}/${COLLECTOR_CONFIG_FILE}\" \"$@\"", "--"]

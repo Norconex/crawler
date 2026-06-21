@@ -32,7 +32,10 @@
 	<multiValuesJoiner>/</multiValuesJoiner>
 	<nodeIdProperty>docId</nodeIdProperty>
 	<nodeContentProperty>docContent</nodeContentProperty>
-	<optionalParameters>param1, param2</optionalParameters>
+	<optionalParameters>
+		<parameter>param1</parameter>
+		<parameter>param2</parameter>
+	</optionalParameters>
 
 	<restrictions>
 		<restriction>

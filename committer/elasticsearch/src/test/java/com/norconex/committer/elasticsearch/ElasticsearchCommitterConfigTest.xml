@@ -18,7 +18,10 @@
 
 <committer class="com.norconex.committer.elasticsearch.ElasticsearchCommitter">
 	<indexName>index</indexName>
-	<nodes>host1, host2</nodes>
+	<nodes>
+		<node>host1</node>
+		<node>host2</node>
+	</nodes>
 	<ignoreResponseErrors>true</ignoreResponseErrors>
 	<discoverNodes>true</discoverNodes>
 	<dotReplacement>_</dotReplacement>

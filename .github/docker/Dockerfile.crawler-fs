@@ -1,0 +1,29 @@
+FROM eclipse-temurin:21-jre-alpine
+
+ARG VERSION=edge
+
+ENV NORCONEX_HOME=/opt/norconex \
+    COLLECTOR_HOME=/opt/norconex/crawler \
+    COLLECTOR_CONFIG_DIR=/opt/norconex/crawler/configs \
+    COLLECTOR_LOG_DIR=/opt/norconex/crawler/logs \
+    COLLECTOR_CONFIG_FILE=crawler-config.xml \
+    PATH="/opt/norconex/crawler:$PATH"
+
+RUN apk add --no-cache unzip
+
+WORKDIR ${NORCONEX_HOME}
+
+# Extract the crawler distribution; the ZIP contains a single top-level directory.
+COPY crawler.zip .
+RUN unzip -q crawler.zip -d /tmp/crawler-dist \
+    && mv /tmp/crawler-dist/nx-crawler-* ${COLLECTOR_HOME} \
+    && chmod +x ${COLLECTOR_HOME}/crawl-fs.* \
+    && rm -rf /tmp/crawler-dist crawler.zip
+
+# Committer JARs — all bundled; unused committers are dormant via lazy classloading.
+COPY committers/ ${COLLECTOR_HOME}/lib/
+
+VOLUME ["/opt/norconex/crawler/configs", "/opt/norconex/crawler/logs"]
+
+ENTRYPOINT ["sh", "-c", \
+    "exec crawl-fs.sh start -c \"${COLLECTOR_CONFIG_DIR}/${COLLECTOR_CONFIG_FILE}\" \"$@\"", "--"]

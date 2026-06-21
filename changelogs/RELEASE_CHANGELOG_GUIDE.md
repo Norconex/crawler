@@ -59,7 +59,7 @@ The process combines:
 
 ```
 .github/
-  PULL_REQUEST_TEMPLATE.md        ← Reminds contributors about release notes
+  PULL_REQUEST_TEMPLATE.md        ← Contributor Agreement (DCO) and release notes reminder
   workflows/
     release.yaml                   ← Enforces changelog validation
 changelogs/
@@ -198,6 +198,5 @@ These are not required now but could be valuable later:
 
 ## Questions?
 
-- See `README.md` for directory guide and best practices.
 - See `TEMPLATE.md` for a changelog template and examples.
 - Check `.github/PULL_REQUEST_TEMPLATE.md` for PR guidelines.

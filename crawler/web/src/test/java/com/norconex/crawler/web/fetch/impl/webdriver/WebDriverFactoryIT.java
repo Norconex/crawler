@@ -27,7 +27,7 @@ import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 import com.norconex.crawler.core.CrawlerException;
 
 @Timeout(300)
-class WebDriverFactoryTest {
+class WebDriverFactoryIT {
 
     @Test
     void testCreate() throws Exception {

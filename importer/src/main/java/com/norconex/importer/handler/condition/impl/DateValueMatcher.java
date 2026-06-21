@@ -31,7 +31,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.norconex.commons.lang.Operator;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NonNull;
+import lombok.ToString;
 
 /**
  * Immutable date-value matcher, supporting both date expressions and
@@ -44,11 +46,29 @@ public class DateValueMatcher implements Predicate<ZonedDateTime> {
     @JsonIgnore
     private final DateProvider dateProvider;
 
+    /**
+     * Original date expression and explicitly-supplied zone id (if any),
+     * retained so a condition-level default zone can be applied later to
+     * matchers that did not specify their own. Excluded from equality and
+     * serialization (the {@code date}/{@code zoneId} JSON properties handle
+     * that).
+     */
+    @JsonIgnore
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private final String dateExpression;
+    @JsonIgnore
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private final ZoneId explicitZoneId;
+
     public DateValueMatcher(
             Operator operator,
             @NonNull DateProvider dateProvider) {
         this.operator = operator;
         this.dateProvider = dateProvider;
+        dateExpression = dateProvider.toString();
+        explicitZoneId = dateProvider.getZoneId();
     }
 
     @JsonCreator
@@ -57,6 +77,8 @@ public class DateValueMatcher implements Predicate<ZonedDateTime> {
             @JsonProperty("date") String dateTimeExpression,
             @JsonProperty("zoneId") ZoneId zoneId) {
         this.operator = operator;
+        dateExpression = dateTimeExpression;
+        explicitZoneId = zoneId;
         dateProvider =
                 DateProviderFactory.create(dateTimeExpression, zoneId);
     }

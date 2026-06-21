@@ -37,7 +37,7 @@ import com.norconex.crawler.fs.FsTestUtil;
 import com.norconex.crawler.fs.fetch.impl.ftp.MockFtpServer;
 
 @Timeout(value = 60, unit = TimeUnit.SECONDS)
-class ArchiveFetcherTest {
+class ArchiveFetcherIT {
 
     // Per-test instance workdir
     @TempDir

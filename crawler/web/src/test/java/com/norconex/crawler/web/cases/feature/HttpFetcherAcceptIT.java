@@ -48,7 +48,7 @@ import com.norconex.crawler.web.stubs.CrawlerConfigStubs;
 //Related to https://github.com/Norconex/collector-http/issues/654
 @MockServerSettings
 @Timeout(30)
-class HttpFetcherAcceptTest {
+class HttpFetcherAcceptIT {
     /**
      * Waits until the MockServer responds with 200 OK for the given path, or times out after 2 seconds.
      */

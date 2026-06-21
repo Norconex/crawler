@@ -126,7 +126,7 @@ class SerialUtilTest {
         try (var gen = SerialUtil.jsonGenerator(os)) {
             assertThat(gen).isNotNull();
             gen.writeStartObject();
-            gen.writeStringField("key", "value");
+            gen.writeStringProperty("key", "value");
             gen.writeEndObject();
         }
         assertThat(os.toString(java.nio.charset.StandardCharsets.UTF_8))
@@ -154,5 +154,61 @@ class SerialUtilTest {
         var restored = SerialUtil.fromJson(node, CrawlerEntry.class);
         assertThat(restored.getReference()).isEqualTo("ref://from-node");
         assertThat(restored.getDepth()).isEqualTo(3);
+    }
+
+    @Test
+    void jsonGenerator_pretty_producesIndentedOutput() throws Exception {
+        var os = new java.io.ByteArrayOutputStream();
+        try (var gen = SerialUtil.jsonGenerator(os, true)) {
+            gen.writeStartObject();
+            gen.writeStringProperty("key", "value");
+            gen.writeEndObject();
+        }
+        var out = os.toString(java.nio.charset.StandardCharsets.UTF_8);
+        // Pretty printing inserts line breaks between members; the compact
+        // form would be a single line.
+        assertThat(out).contains("\"key\"").contains("\n");
+    }
+
+    @Test
+    void fromJson_invalidReader_throwsException() {
+        var reader = new java.io.StringReader("{invalid}");
+        assertThatThrownBy(
+                () -> SerialUtil.fromJson(reader, CrawlerEntry.class))
+                        .isInstanceOf(SerializationException.class);
+    }
+
+    @Test
+    void fromJson_invalidParser_throwsException() throws Exception {
+        var is = new java.io.ByteArrayInputStream(
+                "{invalid}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        try (var parser = SerialUtil.jsonParser(is)) {
+            assertThatThrownBy(
+                    () -> SerialUtil.fromJson(parser, CrawlerEntry.class))
+                            .isInstanceOf(SerializationException.class);
+        }
+    }
+
+    @Test
+    void fromJson_mismatchedJsonNode_throwsException() {
+        // A JSON array cannot be mapped onto the CrawlerEntry bean.
+        var node = SerialUtil.getMapper().createArrayNode().add("nope");
+        assertThatThrownBy(
+                () -> SerialUtil.fromJson(node, CrawlerEntry.class))
+                        .isInstanceOf(SerializationException.class);
+    }
+
+    @Test
+    void toJsonString_unserializableObject_throwsException() {
+        // A getter that throws makes Jackson fail serialization, which
+        // SerialUtil must wrap as a SerializationException.
+        var bad = new Object() {
+            @SuppressWarnings("unused")
+            public String getValue() {
+                throw new IllegalStateException("boom");
+            }
+        };
+        assertThatThrownBy(() -> SerialUtil.toJsonString(bad))
+                .isInstanceOf(SerializationException.class);
     }
 }
