@@ -1,0 +1,50 @@
+#-------------------------------------------------------------------------------
+# Copyright 2026 Norconex Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#-------------------------------------------------------------------------------
+
+# Companion to "maven-ci-cd.yaml".
+#
+# The "build" job is a REQUIRED status check on protected branches. When a pull
+# request changes ONLY files excluded from the build (the "paths" list below
+# mirrors the "paths-ignore" list in maven-ci-cd.yaml), the real workflow is
+# skipped and never reports a "build" status. GitHub then leaves the PR stuck on
+# "Expected - Waiting for status to be reported" forever (a required check has no
+# timeout). This lightweight workflow reports a successful "build" check for such
+# documentation-only PRs so they are not blocked indefinitely.
+#
+# maven-ci-cd.yaml (paths-ignore) and this file (paths) are mutually exclusive
+# for any PR that changes at least one buildable file, so the real build is never
+# masked. The job name MUST remain "build" to satisfy the required status check.
+name: Maven CI/CD Workflow (no-build)
+
+on:
+  pull_request:
+    branches:
+      - "*"
+    types: [opened, synchronize, reopened]
+    paths:
+      - "V4_MIGRATION.md"
+      - "**/README.md"
+      - "**/TODO.txt"
+      - "docs/**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report build not required
+        run: >
+          echo "Only build-excluded files changed;
+          reporting required 'build' check as successful."
