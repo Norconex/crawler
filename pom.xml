@@ -64,7 +64,7 @@
     <ant.version>1.10.17</ant.version>
     <h2.version>2.4.240</h2.version>
     <httpclient5.version>5.6</httpclient5.version>
-    <jackson.version>3.0.4</jackson.version>
+    <jackson.version>3.2.0</jackson.version>
     <!-- Jackson 2.x line, used ONLY by transitive test/benchmark deps (MockServer,
          benchmark harness). Keep its annotations generation matched to what Jackson 3
          (${jackson.version}) requires so jackson-annotations resolves consistently
