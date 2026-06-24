@@ -33,7 +33,7 @@
       
     <guava.version>33.6.0-jre</guava.version>
     <littleproxy.version>2.7.0</littleproxy.version>
-    <netty.version>4.2.14.Final</netty.version>
+    <netty.version>4.2.15.Final</netty.version>
 
     <mockserver.version>5.15.0</mockserver.version>      
     <playwright.version>1.59.0</playwright.version>
