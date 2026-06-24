@@ -17,6 +17,10 @@ Evaluates to true when a matching document date field falls within a specified d
 
 ## Properties
 
+### conditionZoneId
+
+The default time zone applied to condition dates that do not specify their own. This applies to the dates supplied in `valueMatcher` and `valueMatcherRangeEnd` when those date expressions carry no explicit zone. A zone set directly on a value matcher takes precedence over this value, and document field values keep their own zone (use `docZoneId` to force one on them instead). When neither a matcher zone nor this value is set, condition dates default to UTC. Accepts any IANA time zone id (for example, `America/New_York`) or a zone offset.
+
 ### docZoneId
 
 TODO: Add documentation for this property.
