@@ -171,7 +171,7 @@
       <artifactId>jcl-over-slf4j</artifactId>
     </dependency>
 
-    <!-- === Test + provided dependencies: === -->
+    <!-- === Test and provided dependencies: === -->
     <dependency>
       <groupId>com.norconex.crawler</groupId>
       <artifactId>nx-crawler-core</artifactId>
