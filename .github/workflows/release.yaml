@@ -178,7 +178,7 @@ jobs:
       contents: read
 
     env:
-      TARGET_REPOSITORY: Norconex/crawlers-website
+      TARGET_REPOSITORY: Norconex/crawler-website
 
     steps:
       - name: Validate dispatch secret

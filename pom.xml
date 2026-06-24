@@ -64,12 +64,15 @@
     <ant.version>1.10.17</ant.version>
     <h2.version>2.4.240</h2.version>
     <httpclient5.version>5.6</httpclient5.version>
-    <jackson.version>3.0.4</jackson.version>
+    <jackson.version>3.2.0</jackson.version>
+    <!-- Shared jackson-annotations pin (Jackson 2 AND Jackson 3 use this single 2.x
+         artifact). Must satisfy the newest Jackson on the classpath; see the
+         dependencyManagement note. Match to the Jackson 3 line: 3.0.x -> 2.20, 3.2.x -> 2.22. -->
+    <jackson-annotations.version>2.22</jackson-annotations.version>
     <!-- Jackson 2.x line, used ONLY by transitive test/benchmark deps (MockServer,
-         benchmark harness). Keep its annotations generation matched to what Jackson 3
-         (${jackson.version}) requires so jackson-annotations resolves consistently
-         WITHOUT an explicit pin: Jackson 3.0.x -> annotations 2.20; 3.2.x -> 2.22. -->
-    <jackson2.version>2.20.2</jackson2.version>
+         benchmark harness). Keep aligned with the Jackson 3 line's annotations
+         generation: Jackson 3.0.x -> 2.20.x; 3.2.x -> 2.22.x. -->
+    <jackson2.version>2.22.0</jackson2.version>
     <jakarta-activation.version>2.1.3</jakarta-activation.version>
     <jakarta-el-api.version>6.0.1</jakarta-el-api.version>
     <jaxb-runtime.version>2.3.5</jaxb-runtime.version>
@@ -353,10 +356,21 @@
         <version>${project.version}</version>
       </dependency>
 
-      <!-- Jackson 3 (tools.jackson) - primary runtime serialization.
-           jackson-annotations is intentionally NOT pinned here: Jackson 3 still
-           uses the com.fasterxml.jackson.core:jackson-annotations 2.x artifact
-           (there is no tools.jackson annotations), and it resolves transitively. -->
+      <!-- jackson-annotations: the ONE artifact shared by BOTH Jackson 2 and
+           Jackson 3 (there is no tools.jackson annotations). It MUST be pinned to
+           satisfy the NEWEST Jackson on the classpath: Jackson 3.2.0 databind needs
+           2.22 (e.g. com.fasterxml.jackson.annotation.JsonApplyView, new in 2.22),
+           but transitive deps such as jackson-module-jakarta-xmlbind-annotations
+           drag in 2.21, which Maven's nearest-wins would otherwise pick -> runtime
+           NoClassDefFoundError. Keep matched to the Jackson 3 line:
+           3.0.x -> 2.20, 3.2.x -> 2.22. -->
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-annotations</artifactId>
+        <version>${jackson-annotations.version}</version>
+      </dependency>
+
+      <!-- Jackson 3 (tools.jackson) - primary runtime serialization. -->
       <dependency>
         <groupId>tools.jackson.core</groupId>
         <artifactId>jackson-databind</artifactId>

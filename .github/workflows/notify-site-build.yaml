@@ -17,8 +17,8 @@ jobs:
             contents: read
 
         env:
-            DISPATCH_SECRET_NAME: CRAWLERS_WEBSITE_DISPATCH_TOKEN
-            TARGET_REPOSITORY: Norconex/crawlers-website
+          DISPATCH_SECRET_NAME: CRAWLERS_WEBSITE_DISPATCH_TOKEN
+          TARGET_REPOSITORY: Norconex/crawler-website
 
         steps:
             - name: Validate dispatch secret

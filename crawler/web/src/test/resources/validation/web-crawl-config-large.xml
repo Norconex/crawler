@@ -222,8 +222,7 @@
 
   <robotsTxtProvider
      class="StandardRobotsTxtProvider"/>
-  <sitemapResolver lenient="true" class="GenericSitemapResolver">
-  </sitemapResolver>
+  <sitemapResolver lenient="true" class="GenericSitemapResolver"/>
   <sitemapLocator class="GenericSitemapLocator" robotsTxtSitemapDisabled="true">
     <paths>
       <path>/path1/</path>
@@ -287,11 +286,11 @@
         <scheme>https</scheme>
       </schemes>
       <tagAttribs>
-        <tagAttrib name="a" attribute="href" />
-        <tagAttrib name="frame" attribute="src" />
-        <tagAttrib name="iframe" attribute="src" />
-        <tagAttrib name="img" attribute="src" />
-        <tagAttrib name="meta" attribute="http-equiv" />
+        <a>href</a>
+        <frame>src</frame>
+        <iframe>src</iframe>
+        <img>src</img>
+        <meta>http-equiv</meta>
       </tagAttribs>
       <extractBetweens>
         <extractBetween ignoreCase="false">
@@ -310,8 +309,8 @@
     </linkExtractor>
     <linkExtractor class="HtmlLinkExtractor">
       <tagAttribs>
-        <tagAttrib name="a" attribute="href" />
-        <tagAttrib name="script" attribute="src" />
+        <a>href</a>
+        <script>src</script>
       </tagAttribs>
     </linkExtractor>
     <linkExtractor class="RegexLinkExtractor"
@@ -416,9 +415,9 @@
       class="GenericSpoiledReferenceStrategizer"
       fallbackStrategy="DELETE">
     <mappings>
-      <mapping state="NOT_FOUND" strategy="DELETE" />
-      <mapping state="BAD_STATUS" strategy="DELETE" />
-      <mapping state="ERROR" strategy="IGNORE" />
+      <NOT_FOUND>DELETE</NOT_FOUND>
+      <BAD_STATUS>DELETE</BAD_STATUS>
+      <ERROR>IGNORE</ERROR>
     </mappings>
   </spoiledReferenceStrategizer>
 
