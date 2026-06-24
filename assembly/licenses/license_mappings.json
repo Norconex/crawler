@@ -46,6 +46,16 @@
       "patterns": ["^bsd 3 clause license w nuclear disclaimer$"]
     },
     {
+      "spdx_id": "CC0-1.0",
+      "full_name": "Creative Commons Zero v1.0 Universal",
+      "patterns": [
+        "^cc0$",
+        "^cc0 1( 0)?$",
+        "^creative commons zero( v ?1( 0)?)?( universal)?$",
+        "^public domain cc0$"
+      ]
+    },
+    {
       "spdx_id": "CDDL-1.0",
       "full_name": "Common Development and Distribution License 1.0",
       "patterns": [
