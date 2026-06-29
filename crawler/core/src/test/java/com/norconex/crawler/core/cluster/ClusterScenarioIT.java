@@ -138,7 +138,7 @@ class ClusterScenarioIT {
                         .setRecordCaches(true)
                         .setConfigModifier(cfg -> {
                             baseConfig(numOfRefs,
-                                    100).accept(cfg);
+                                    250).accept(cfg);
                             cfg.setId("scenario-stop-resume-"
                                     + numOfRefs
                                     + "-n"
@@ -163,7 +163,8 @@ class ClusterScenarioIT {
                                                 .getCount(
                                                         CrawlerEvent.DOCUMENT_IMPORTED);
                                         return imported > 0
-                                                && imported < numOfRefs;
+                                                && imported
+                                                        < (numOfRefs / 2);
                                     },
                                     CLUSTER_JOIN_WAIT,
                                     Duration.ofMillis(
