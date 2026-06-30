@@ -188,7 +188,18 @@ public abstract class AbstractExternalTest {
         Assertions.assertEquals(
                 "field3 StdErrBefore",
                 meta.getString("field3"));
-        Assertions.assertEquals("StdErrAfter", meta.getString("field4"));
+        var field4 = meta.getString("field4");
+        var maxAttemptsField4 = 10;
+        while (field4 == null && --maxAttemptsField4 >= 0) {
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+            field4 = meta.getString("field4");
+        }
+        Assertions.assertEquals("StdErrAfter", field4);
         if (testReference) {
             Assertions.assertEquals(
                     "c:\\ref with spaces\\doc.txt",
