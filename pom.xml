@@ -13,32 +13,22 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>com.norconex.commons</groupId>
-    <artifactId>norconex-commons-maven-parent</artifactId>
-    <version>1.2.0</version>
-  </parent>  
-  <groupId>com.norconex.collectors</groupId>
+    <groupId>com.norconex.collectors.v3</groupId>
+    <artifactId>norconex-collector-parent</artifactId>
+    <version>3.2.0-SNAPSHOT</version>
+  </parent>
+  <groupId>com.norconex.collectors.v3</groupId>
   <artifactId>norconex-collector-http</artifactId>
   <name>Norconex HTTP Collector</name>
   <version>3.2.0-SNAPSHOT</version>
-
   <properties>
     <maven.compiler.source>17</maven.compiler.source>
     <maven.compiler.target>17</maven.compiler.target>
     <java.version>17</java.version>
-
-    <norconex-committer-core.version>3.0.0</norconex-committer-core.version>
-    <norconex-collector-core.version>2.2.0-SNAPSHOT</norconex-collector-core.version>
-    <norconex-importer.version>3.2.0-SNAPSHOT</norconex-importer.version>
-
-
     <commons-lang3.version>3.18.0</commons-lang3.version>
-      
     <bc.version>1.79</bc.version>
     <littleproxy.version>2.4.0</littleproxy.version>
     <guava.version>33.0.0-jre</guava.version>
@@ -47,7 +37,6 @@
     <netty.version>4.1.96.Final</netty.version>
     <selenium.version>4.31.0</selenium.version>
     <okhttp.version>4.11.0</okhttp.version>
-    
     <commons-compress.version>1.21</commons-compress.version>
     <cxf.version>3.4.5</cxf.version>
     <h2.version>2.2.220</h2.version>
@@ -56,9 +45,7 @@
     <jsoup.version>1.21.1</jsoup.version>
     <mongodb.version>4.3.2</mongodb.version>
   </properties>
-
   <inceptionYear>2009</inceptionYear>
-
   <dependencyManagement>
     <dependencies>
       <dependency>
@@ -113,9 +100,7 @@
       </dependency>
     </dependencies>
   </dependencyManagement>
-
   <dependencies>
-  
     <dependency>
       <groupId>com.norconex.commons</groupId>
       <artifactId>norconex-commons-lang</artifactId>
@@ -127,9 +112,8 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>com.norconex.collectors</groupId>
+      <groupId>com.norconex.collectors.v3</groupId>
       <artifactId>norconex-collector-core</artifactId>
-      <version>${norconex-collector-core.version}</version>
       <exclusions>
         <exclusion>
           <groupId>commons-logging</groupId>
@@ -137,12 +121,11 @@
         </exclusion>
       </exclusions>
     </dependency>
-
     <dependency>
       <groupId>org.imgscalr</groupId>
       <artifactId>imgscalr-lib</artifactId>
       <version>${imgscalr.version}</version>
-    </dependency>  
+    </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-webapp</artifactId>
@@ -153,7 +136,6 @@
       <artifactId>jetty-proxy</artifactId>
       <version>${jetty.version}</version>
     </dependency>
-    
     <!-- About Web Driver Dependencies:
          You could download drivers separately instead, with
          just the "selenimum-support" artifact if you are not using many 
@@ -167,16 +149,13 @@
       <artifactId>selenium-java</artifactId>
       <version>${selenium.version}</version>
     </dependency>
-
     <!-- For capturing http headers: -->
     <dependency>
       <groupId>io.github.littleproxy</groupId>
       <artifactId>littleproxy</artifactId>
       <version>${littleproxy.version}</version>
     </dependency>
-    
     <!-- Logging dependencies: -->
-
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-slf4j2-impl</artifactId>
@@ -192,9 +171,7 @@
       <artifactId>jcl-over-slf4j</artifactId>
       <scope>test</scope>
     </dependency>
-
     <!-- Test + provided dependencies: -->
-
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
@@ -206,21 +183,19 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-        <groupId>com.norconex.commons</groupId>
-        <artifactId>norconex-commons-lang</artifactId>
-        <classifier>resources</classifier>
-        <type>zip</type>
-        <scope>provided</scope>
+      <groupId>com.norconex.commons</groupId>
+      <artifactId>norconex-commons-lang</artifactId>
+      <classifier>resources</classifier>
+      <type>zip</type>
+      <scope>provided</scope>
     </dependency>
   </dependencies>
-  
   <build>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-assembly-plugin</artifactId>
       </plugin>
-
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
@@ -230,14 +205,14 @@
                getting a ClassNotFoundException. -->
           <tagletArtifacts combine.children="append">
             <tagletArtifact>
-              <groupId>com.norconex.collectors</groupId>
+              <groupId>com.norconex.collectors.v3</groupId>
               <artifactId>norconex-importer</artifactId>
-              <version>${norconex-importer.version}</version>
+              <version>${project.version}</version>
             </tagletArtifact>
             <tagletArtifact>
-              <groupId>com.norconex.collectors</groupId>
+              <groupId>com.norconex.collectors.v3</groupId>
               <artifactId>norconex-collector-core</artifactId>
-              <version>${norconex-collector-core.version}</version>
+              <version>${project.version}</version>
             </tagletArtifact>
           </tagletArtifacts>
           <failOnError>false</failOnError>
@@ -248,28 +223,23 @@
           </options>
         </configuration>
       </plugin>
-
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
       </plugin>
-    
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
       </plugin>
-      
       <!--  Use VM argument -Dgpg.skip=true to disable GPG signing. -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-gpg-plugin</artifactId>
       </plugin>
-
       <plugin>
         <groupId>org.sonatype.central</groupId>
         <artifactId>central-publishing-maven-plugin</artifactId>
       </plugin>
-      
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
@@ -290,10 +260,8 @@
           </execution>
         </executions>
       </plugin>
-
     </plugins>
   </build>
-  
   <!-- Only used to publish javadoc with "site:deploy", 
        after they were generated -->
   <distributionManagement>
@@ -302,7 +270,6 @@
       <url>${site.baseurl}/crawlers/web/v3</url>
     </site>
   </distributionManagement>
-
   <url>https://opensource.norconex.com/crawlers/web</url>
   <description>Norconex HTTP Collector is a web spider, or crawler that aims to be very flexible, easy to extend, and portable</description>
   <issueManagement>
