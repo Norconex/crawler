@@ -193,7 +193,10 @@ The initial set of document references (URLs or file paths) from which the crawl
 
 ### startReferencesAsync
 
-When enabled, start references are provided and consumed asynchronously, allowing the crawl to begin before all start references are available.
+When enabled, start references are provided and consumed asynchronously, allowing the crawl 
+to begin before all start references are available. While this may speed up crawling,
+it may have an unexpected effect on the accuracy of the established page "depth". Usage of
+this option is only recommended when start URLs take a significant time to load.
 
 ### startReferencesFiles
 
