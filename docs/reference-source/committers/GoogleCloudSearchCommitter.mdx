@@ -1,0 +1,112 @@
+---
+component: GoogleCloudSearchCommitter
+module: committer/googlecloudsearch
+locale: en
+propertyCoverage: all
+---
+
+# GoogleCloudSearchCommitter
+
+## Summary
+
+Commit documents to Google Cloud Search.
+
+## Notes
+
+Commits crawled documents to a Google Cloud Search data source using the Cloud Search Indexing API, authenticating with a Google service account key. Documents can be uploaded as extracted plain text (default) or as their original raw content, and metadata fields can optionally be mapped to Google Cloud Search ACL principals with support for ACL inheritance from a parent item.
+
+## Properties
+
+### aclInheritance
+
+Declares which metadata field holds a parent item reference to use for Google Cloud Search ACL inheritance, along with the inheritance type to apply.
+
+### aclMappings
+
+Mappings of metadata fields to Google Cloud Search ACL principals (readers, denied readers, or owners), each specifying the principal type (user, group, or customer).
+
+### apiEndpoint
+
+Overrides the Google Cloud Search API root URL. Mainly useful for testing against a local mock server.
+
+### applicationName
+
+The application name sent to Google Cloud Search. Default is "Norconex Google Cloud Search Committer".
+
+### connectorName
+
+The connector name sent with indexing requests. Defaults to the application name when not set.
+
+### containerNameField
+
+Metadata field mapped to the Google Cloud Search item container name.
+
+### contentLanguageField
+
+Metadata field mapped to the Google Cloud Search item content language.
+
+### dataSourceId
+
+The Google Cloud Search data source ID to index documents into.
+
+### fieldMappings
+
+Mapping of source fields to target ones (Google Cloud Search structured data field names).
+
+### keepSourceIdField
+
+Whether to keep the source ID field in the document metadata after it has been extracted.
+
+### objectTypeField
+
+Metadata field mapped to the Google Cloud Search item object type. Default is "objectType".
+
+### queue
+
+Configures the committer queue used to batch documents before sending them to the target system. Adjust queue settings to tune throughput and memory usage.
+
+### restrictions
+
+Defines filter conditions that restrict which documents this committer processes. Documents not matching the restrictions are ignored by this committer.
+
+### secretKeyPath
+
+Path to the Google service account JSON key file, with access to the Cloud Search indexing API.
+
+### sourceIdField
+
+Metadata field holding the value to use as the document unique identifier. Defaults to the document reference.
+
+### sourceRepositoryUrlField
+
+Metadata field mapped to the Google Cloud Search item source repository URL. Defaults to the document reference.
+
+### titleField
+
+Metadata field mapped to the Google Cloud Search item title. Default is "title".
+
+### updateTimeField
+
+Metadata field mapped to the Google Cloud Search item update time. Default is "Last-Modified".
+
+### uploadFormat
+
+The format used to upload document content: "RAW" (the original, unparsed content, captured ahead of time into a metadata field, e.g., using a `BinaryContentTransformer` pre-parse handler) or "TEXT" (the extracted plain-text content). Default is "RAW".
+
+## Examples
+
+The following example uses the minimum required settings to configure the Google Cloud Search Committer.
+
+<ConfigBlock
+  json={{
+    "class": "GoogleCloudSearchCommitter",
+    "secretKeyPath": "/path/to/google-service-account.json",
+    "dataSourceId": "your-datasource-id"
+  }}
+  xml={`
+    <committer>
+      <class>GoogleCloudSearchCommitter</class>
+      <secretKeyPath>/path/to/google-service-account.json</secretKeyPath>
+      <dataSourceId>your-datasource-id</dataSourceId>
+    </committer>`}
+/>

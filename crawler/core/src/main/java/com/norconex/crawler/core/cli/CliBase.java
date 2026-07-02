@@ -20,9 +20,9 @@ import java.nio.file.Path;
 
 import com.norconex.commons.lang.ExceptionUtil;
 import com.norconex.commons.lang.config.ConfigurationLoader;
+import com.norconex.crawler.core.Crawler;
 import com.norconex.crawler.core.CrawlerConfig;
 import com.norconex.crawler.core.CrawlerDriver;
-import com.norconex.crawler.core.Crawler;
 
 import jakarta.validation.ConstraintViolationException;
 import lombok.EqualsAndHashCode;

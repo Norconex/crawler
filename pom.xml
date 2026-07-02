@@ -1396,6 +1396,7 @@
     <module>committer/elasticsearch</module>
     <module>committer/idol</module>
     <module>committer/amazoncloudsearch</module>
+    <module>committer/googlecloudsearch</module>
     <module>committer/sql</module>
     <module>committer/neo4j</module>
     <module>committer/azurecognitivesearch</module>

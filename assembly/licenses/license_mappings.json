@@ -37,6 +37,7 @@
         "^edl 1$",
         "^bsd 3 clause$",
         "^(the )?new bsd license$",
+        "^bsd new licen[sc]e$",
         "^bsd license 3$"
       ]
     },

@@ -1,0 +1,40 @@
+---
+component: BinaryContentTransformer
+module: importer
+locale: en
+propertyCoverage: all
+---
+
+# BinaryContentTransformer
+
+## Summary
+
+Captures the document's original, unparsed content and stores it, Base64-encoded, in a metadata field.
+
+## Notes
+
+This is meant for consumers that need access to the raw document bytes after parsing has taken place (parsing normally discards the original content), such as a committer uploading the original file content rather than the extracted text.
+
+Must be used as a pre-parse handler: the document is still in its original format at that point. Using it post-parse raises an error since the original content is no longer available by then.
+
+## Properties
+
+### fieldName
+
+Name of the metadata field to store the Base64-encoded content in. Default is "binaryContent".
+
+## Examples
+
+The following example captures the original document content into a field named "binaryContent".
+
+<ConfigBlock
+  json={{
+    "handler": {
+      "class": "BinaryContentTransformer"
+    }
+  }}
+  xml={`
+    <handler>
+      <class>BinaryContentTransformer</class>
+    </handler>`}
+/>

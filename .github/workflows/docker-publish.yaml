@@ -155,10 +155,10 @@ jobs:
         run: |
           VERSION=${{ steps.ctx.outputs.version }}
           TYPE=${{ matrix.crawler_type }}
-          mkdir -p docker-context
+          mkdir -p target/docker-context
           gh release download "v${VERSION}" \
             --pattern "nx-crawler-${TYPE}-${VERSION}-full.zip" \
-            --output docker-context/crawler.zip
+            --output target/docker-context/crawler.zip
 
       - name: Download and extract committer ZIPs from GitHub release
         if: steps.ctx.outputs.mode == 'release'
@@ -166,13 +166,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION=${{ steps.ctx.outputs.version }}
-          mkdir -p docker-context/committers /tmp/committer-zips
+          mkdir -p target/docker-context/committers /tmp/committer-zips
           for COMMITTER in $COMMITTERS; do
             gh release download "v${VERSION}" \
               --pattern "nx-committer-${COMMITTER}-${VERSION}.zip" \
               --dir /tmp/committer-zips/
             unzip -n -j "/tmp/committer-zips/nx-committer-${COMMITTER}-${VERSION}.zip" \
-              "*/lib/*.jar" -d docker-context/committers/
+              "*/lib/*.jar" -d target/docker-context/committers/
           done
 
       # ── EDGE: build ZIPs from source ───────────────────────────────────────
@@ -183,11 +183,11 @@ jobs:
           TYPE=${{ matrix.crawler_type }}
           # Default build (no profile) produces the full distribution.
           mvn --batch-mode -U package -DskipTests -q -pl crawler/${TYPE} -am
-          mkdir -p docker-context
+          mkdir -p target/docker-context
           # Exclude the -standard ZIP; keep only the full distribution.
           find crawler/${TYPE}/target -name "nx-crawler-${TYPE}-*.zip" \
             ! -name "*-standard*" \
-            -exec cp {} docker-context/crawler.zip \;
+            -exec cp {} target/docker-context/crawler.zip \;
 
       - name: Build and extract committer JARs from source (edge)
         if: steps.ctx.outputs.mode == 'edge'
@@ -195,10 +195,10 @@ jobs:
           MODULES=$(echo $COMMITTERS | tr ' ' '\n' \
             | sed 's|^|committer/|' | paste -sd ',')
           mvn --batch-mode -U package -DskipTests -q -pl "$MODULES" -am
-          mkdir -p docker-context/committers
+          mkdir -p target/docker-context/committers
           for COMMITTER in $COMMITTERS; do
             find committer/${COMMITTER}/target -name "*.zip" \
-              -exec unzip -n -j {} "*/lib/*.jar" -d docker-context/committers/ \;
+              -exec unzip -n -j {} "*/lib/*.jar" -d target/docker-context/committers/ \;
           done
 
       # ── Playwright JARs (playwright image only, both modes) ─────────────────
@@ -228,17 +228,17 @@ jobs:
             </dependencies>
           </project>
           EOF
-          mkdir -p docker-context/playwright-libs
+          mkdir -p target/docker-context/playwright-libs
           mvn --batch-mode -f /tmp/pw-pom.xml dependency:copy-dependencies \
-            -DoutputDirectory="$PWD/docker-context/playwright-libs"
-          test -f "docker-context/playwright-libs/playwright-${PW_VERSION}.jar"
+            -DoutputDirectory="$PWD/target/docker-context/playwright-libs"
+          test -f "target/docker-context/playwright-libs/playwright-${PW_VERSION}.jar"
 
       # ── Build and push ──────────────────────────────────────────────────────
 
       - name: Build and push
         uses: docker/build-push-action@v7
         with:
-          context: docker-context
+          context: target/docker-context
           file: .github/docker/Dockerfile.${{ matrix.image }}
           push: true
           tags: ${{ steps.ctx.outputs.tags }}
