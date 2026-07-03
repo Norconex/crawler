@@ -14,13 +14,15 @@
  */
 package com.norconex.importer.handler.splitter;
 
+import com.norconex.importer.handler.BaseDocHandlerConfig;
+
 import lombok.Data;
 import lombok.experimental.Accessors;
 
 @SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
-public class BaseDocumentSplitterConfig {
+public class BaseDocumentSplitterConfig extends BaseDocHandlerConfig {
 
     /**
      * Whether to discard the original document after it was split. Only
