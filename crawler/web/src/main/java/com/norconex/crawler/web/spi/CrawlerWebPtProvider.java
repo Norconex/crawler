@@ -43,6 +43,7 @@ import com.norconex.crawler.web.doc.operations.url.WebUrlNormalizer;
 import com.norconex.crawler.web.fetch.impl.httpclient.HttpClientFetcher;
 import com.norconex.crawler.web.fetch.impl.playwright.PlaywrightFetcher;
 import com.norconex.crawler.web.fetch.impl.webdriver.WebDriverFetcher;
+import com.norconex.crawler.web.fetch.util.RedirectUrlProvider;
 
 /**
  * <p>
@@ -75,6 +76,7 @@ public class CrawlerWebPtProvider implements PolymorphicTypeProvider {
         addPolyType(map, DocumentConsumer.class,
                 OPERATIONS_BASE_PKG + ".image");
         addPolyType(map, RecrawlableResolver.class);
+        addPolyType(map, RedirectUrlProvider.class);
         addPolyType(map, RobotsTxtProvider.class);
         addPolyType(map, RobotsMetaProvider.class);
         addPolyType(map, SitemapLocator.class);
