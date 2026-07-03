@@ -18,10 +18,9 @@ import java.io.IOException;
 
 import org.apache.commons.lang3.StringUtils;
 
-import com.norconex.commons.lang.config.Configurable;
 import com.norconex.commons.lang.io.IoUtil;
 import com.norconex.importer.handler.DocHandlerContext;
-import com.norconex.importer.handler.condition.Condition;
+import com.norconex.importer.handler.condition.ConfigurableCondition;
 
 import lombok.Data;
 import lombok.Getter;
@@ -76,7 +75,7 @@ import lombok.experimental.FieldNameConstants;
 @FieldNameConstants
 @Data
 public class BlankCondition
-        implements Condition, Configurable<BlankConditionConfig> {
+        implements ConfigurableCondition<BlankConditionConfig> {
 
     @Getter
     private final BlankConditionConfig configuration =

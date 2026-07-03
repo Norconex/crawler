@@ -16,7 +16,6 @@ package com.norconex.importer.handler;
 
 import org.apache.commons.lang3.StringUtils;
 
-import com.norconex.commons.lang.config.Configurable;
 import com.norconex.importer.handler.condition.Condition;
 
 import lombok.Data;
@@ -27,7 +26,7 @@ import lombok.Data;
  * {@link Condition}, information about the condition will also be logged.
  */
 @Data
-public class Reject implements DocHandler, Configurable<RejectConfig> {
+public class Reject implements ConfigurableDocHandler<RejectConfig> {
 
     private final RejectConfig configuration = new RejectConfig();
 

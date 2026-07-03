@@ -19,6 +19,7 @@ import java.time.format.DateTimeFormatter;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.norconex.commons.lang.text.TextMatcher;
+import com.norconex.importer.handler.condition.BaseConditionConfig;
 
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -169,7 +170,7 @@ import lombok.experimental.Accessors;
 @SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
-public class DateConditionConfig {
+public class DateConditionConfig extends BaseConditionConfig {
 
     /**
      * Field name(s) text matcher.

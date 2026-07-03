@@ -17,6 +17,7 @@ package com.norconex.importer.handler.parser.impl;
 import java.nio.file.Path;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.norconex.importer.handler.BaseDocHandlerConfig;
 
 import lombok.Data;
 import lombok.NonNull;
@@ -31,7 +32,7 @@ import lombok.experimental.Accessors;
  */
 @Data
 @Accessors(chain = true)
-public class DefaultParserConfig {
+public class DefaultParserConfig extends BaseDocHandlerConfig {
     private Path errorsSaveDir;
 
     @JsonProperty("ocr")

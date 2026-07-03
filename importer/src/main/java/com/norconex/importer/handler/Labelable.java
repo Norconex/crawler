@@ -15,7 +15,7 @@
 package com.norconex.importer.handler;
 
 /**
- * An importer flow node or configuration bean that supports an optional
+ * An importer flow node or configuration bean that exposes an optional
  * user-supplied label.
  */
 public interface Labelable {
@@ -25,10 +25,4 @@ public interface Labelable {
      * @return label or {@code null}
      */
     String getLabel();
-
-    /**
-     * Sets an optional user-supplied label.
-     * @param label label to set
-     */
-    void setLabel(String label);
 }
