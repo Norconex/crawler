@@ -14,6 +14,8 @@
  */
 package com.norconex.importer.handler.transformer.impl;
 
+import com.norconex.importer.handler.BaseDocHandlerConfig;
+
 import java.nio.charset.Charset;
 
 import com.norconex.commons.lang.io.TextReader;
@@ -94,7 +96,8 @@ import lombok.experimental.Accessors;
 @SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
-public class UrlExtractorTransformerConfig implements ChunkedTextSupport {
+public class UrlExtractorTransformerConfig extends BaseDocHandlerConfig
+        implements ChunkedTextSupport {
 
     private final TextMatcher fieldMatcher = new TextMatcher();
     private String toField;

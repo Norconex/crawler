@@ -38,6 +38,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
 
 import com.norconex.commons.lang.config.Configurable;
+import com.norconex.importer.handler.ConfigurableDocHandler;
 import com.norconex.commons.lang.exec.SystemCommand;
 import com.norconex.commons.lang.exec.SystemCommandException;
 import com.norconex.commons.lang.io.CachedStream;
@@ -260,7 +261,7 @@ import lombok.extern.slf4j.Slf4j;
 @Data
 @Slf4j
 public class ExternalTransformer
-        implements DocHandler, Configurable<ExternalTransformerConfig> {
+        implements ConfigurableDocHandler<ExternalTransformerConfig> {
 
     private final ExternalTransformerConfig configuration =
             new ExternalTransformerConfig();

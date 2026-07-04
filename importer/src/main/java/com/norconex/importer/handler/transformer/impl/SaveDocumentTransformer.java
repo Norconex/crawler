@@ -24,6 +24,7 @@ import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
 
 import com.norconex.commons.lang.config.Configurable;
+import com.norconex.importer.handler.ConfigurableDocHandler;
 import com.norconex.commons.lang.file.FileUtil;
 import com.norconex.commons.lang.text.StringUtil;
 import com.norconex.importer.handler.DocHandler;
@@ -84,7 +85,7 @@ import lombok.extern.slf4j.Slf4j;
 @Data
 @Slf4j
 public class SaveDocumentTransformer
-        implements DocHandler, Configurable<SaveDocumentTransformerConfig> {
+        implements ConfigurableDocHandler<SaveDocumentTransformerConfig> {
 
     private final SaveDocumentTransformerConfig configuration =
             new SaveDocumentTransformerConfig();

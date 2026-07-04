@@ -14,6 +14,8 @@
  */
 package com.norconex.importer.handler.transformer.impl;
 
+import com.norconex.importer.handler.BaseDocHandlerConfig;
+
 import java.nio.charset.Charset;
 
 import com.norconex.commons.lang.io.TextReader;
@@ -113,7 +115,8 @@ import lombok.experimental.Accessors;
 @SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
-public class TitleGeneratorTransformerConfig implements ChunkedTextSupport {
+public class TitleGeneratorTransformerConfig extends BaseDocHandlerConfig
+        implements ChunkedTextSupport {
 
     public static final String DEFAULT_TO_FIELD =
             DocMetaConstants.GENERATED_TITLE;

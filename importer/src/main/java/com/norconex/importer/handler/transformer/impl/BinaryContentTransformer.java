@@ -20,6 +20,7 @@ import java.util.Base64;
 import org.apache.commons.io.IOUtils;
 
 import com.norconex.commons.lang.config.Configurable;
+import com.norconex.importer.handler.ConfigurableDocHandler;
 import com.norconex.importer.handler.DocHandler;
 import com.norconex.importer.handler.DocHandlerContext;
 import com.norconex.importer.handler.DocHandlerException;
@@ -56,7 +57,7 @@ import lombok.Data;
 @SuppressWarnings("javadoc")
 @Data
 public class BinaryContentTransformer
-        implements DocHandler, Configurable<BinaryContentTransformerConfig> {
+        implements ConfigurableDocHandler<BinaryContentTransformerConfig> {
 
     private final BinaryContentTransformerConfig configuration =
             new BinaryContentTransformerConfig();

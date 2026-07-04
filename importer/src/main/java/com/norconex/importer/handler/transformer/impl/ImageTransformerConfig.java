@@ -14,6 +14,8 @@
  */
 package com.norconex.importer.handler.transformer.impl;
 
+import com.norconex.importer.handler.BaseDocHandlerConfig;
+
 import com.norconex.commons.lang.convert.DimensionConverter;
 import com.norconex.commons.lang.text.TextMatcher;
 import com.norconex.importer.ImporterConfig;
@@ -85,7 +87,7 @@ import lombok.experimental.Accessors;
 @SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
-public class ImageTransformerConfig {
+public class ImageTransformerConfig extends BaseDocHandlerConfig {
 
     public static final String DEFAULT_TARGET_FORMAT = "png";
 

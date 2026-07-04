@@ -14,6 +14,8 @@
  */
 package com.norconex.importer.handler.transformer.impl;
 
+import com.norconex.importer.handler.BaseDocHandlerConfig;
+
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -235,7 +237,7 @@ import lombok.experimental.Accessors;
 @SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
-public class ExternalTransformerConfig {
+public class ExternalTransformerConfig extends BaseDocHandlerConfig {
     public static final String TOKEN_INPUT = "${INPUT}";
     public static final String TOKEN_OUTPUT = "${OUTPUT}";
     public static final String TOKEN_INPUT_META = "${INPUT_META}";

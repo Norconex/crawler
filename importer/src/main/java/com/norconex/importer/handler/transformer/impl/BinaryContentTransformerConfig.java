@@ -14,6 +14,8 @@
  */
 package com.norconex.importer.handler.transformer.impl;
 
+import com.norconex.importer.handler.BaseDocHandlerConfig;
+
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -24,7 +26,7 @@ import lombok.experimental.Accessors;
  */
 @Data
 @Accessors(chain = true)
-public class BinaryContentTransformerConfig {
+public class BinaryContentTransformerConfig extends BaseDocHandlerConfig {
 
     /** Default metadata field name. */
     public static final String DEFAULT_FIELD_NAME = "binaryContent";

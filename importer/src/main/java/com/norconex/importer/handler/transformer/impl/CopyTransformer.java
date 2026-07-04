@@ -22,6 +22,7 @@ import java.util.List;
 import org.apache.commons.io.IOUtils;
 
 import com.norconex.commons.lang.config.Configurable;
+import com.norconex.importer.handler.ConfigurableDocHandler;
 import com.norconex.commons.lang.map.PropertySetter;
 import com.norconex.importer.handler.DocHandler;
 import com.norconex.importer.handler.DocHandlerContext;
@@ -71,7 +72,7 @@ import lombok.Data;
 @SuppressWarnings("javadoc")
 @Data
 public class CopyTransformer
-        implements DocHandler, Configurable<CopyTransformerConfig> {
+        implements ConfigurableDocHandler<CopyTransformerConfig> {
 
     private final CopyTransformerConfig configuration =
             new CopyTransformerConfig();
