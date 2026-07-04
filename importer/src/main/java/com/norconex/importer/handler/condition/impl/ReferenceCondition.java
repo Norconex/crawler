@@ -16,10 +16,9 @@ package com.norconex.importer.handler.condition.impl;
 
 import java.io.IOException;
 
-import com.norconex.commons.lang.config.Configurable;
 import com.norconex.commons.lang.text.TextMatcher;
 import com.norconex.importer.handler.DocHandlerContext;
-import com.norconex.importer.handler.condition.Condition;
+import com.norconex.importer.handler.condition.ConfigurableCondition;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -53,7 +52,7 @@ import lombok.ToString;
 @EqualsAndHashCode
 @ToString
 public class ReferenceCondition
-        implements Condition, Configurable<ReferenceConditionConfig> {
+        implements ConfigurableCondition<ReferenceConditionConfig> {
 
     @Getter
     private final ReferenceConditionConfig configuration =

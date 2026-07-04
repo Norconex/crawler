@@ -20,6 +20,7 @@ import com.norconex.commons.lang.io.TextReader;
 import com.norconex.commons.lang.map.Properties;
 import com.norconex.commons.lang.text.TextMatcher;
 import com.norconex.importer.handler.ScriptRunner;
+import com.norconex.importer.handler.condition.BaseConditionConfig;
 
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -108,7 +109,7 @@ import lombok.experimental.Accessors;
 @SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
-public class ScriptConditionConfig {
+public class ScriptConditionConfig extends BaseConditionConfig {
 
     private String engineName;
     private String script;

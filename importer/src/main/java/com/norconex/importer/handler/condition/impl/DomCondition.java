@@ -23,10 +23,9 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
-import com.norconex.commons.lang.config.Configurable;
 import com.norconex.importer.handler.CommonMatchers;
 import com.norconex.importer.handler.DocHandlerContext;
-import com.norconex.importer.handler.condition.Condition;
+import com.norconex.importer.handler.condition.ConfigurableCondition;
 import com.norconex.importer.util.DomUtil;
 import com.norconex.importer.util.chunk.ChunkedTextReader;
 import com.optimaize.langdetect.text.TextFilter;
@@ -145,7 +144,7 @@ import lombok.experimental.Accessors;
 @Data
 @Accessors(chain = true)
 public class DomCondition
-        implements Condition, Configurable<DomConditionConfig> {
+        implements ConfigurableCondition<DomConditionConfig> {
 
     private final DomConditionConfig configuration =
             new DomConditionConfig();

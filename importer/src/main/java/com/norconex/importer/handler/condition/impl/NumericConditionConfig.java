@@ -16,6 +16,7 @@ package com.norconex.importer.handler.condition.impl;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.norconex.commons.lang.text.TextMatcher;
+import com.norconex.importer.handler.condition.BaseConditionConfig;
 
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -80,7 +81,7 @@ import lombok.experimental.Accessors;
  */
 @Data
 @Accessors(chain = true)
-public class NumericConditionConfig {
+public class NumericConditionConfig extends BaseConditionConfig {
 
     private final TextMatcher fieldMatcher = new TextMatcher();
     @JsonAlias("valueMatcherStart")

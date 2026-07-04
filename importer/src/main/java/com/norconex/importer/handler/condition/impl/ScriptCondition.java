@@ -15,17 +15,16 @@
 package com.norconex.importer.handler.condition.impl;
 
 import java.io.IOException;
-
-import org.apache.commons.lang3.StringUtils;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.commons.lang3.StringUtils;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.norconex.commons.lang.config.Configurable;
 import com.norconex.commons.lang.map.Properties;
 import com.norconex.importer.handler.DocHandlerContext;
 import com.norconex.importer.handler.DocHandlerException;
 import com.norconex.importer.handler.ScriptRunner;
-import com.norconex.importer.handler.condition.Condition;
+import com.norconex.importer.handler.condition.ConfigurableCondition;
 import com.norconex.importer.util.chunk.ChunkedTextReader;
 import com.norconex.importer.util.chunk.TextChunk;
 
@@ -120,7 +119,7 @@ import lombok.extern.slf4j.Slf4j;
 @EqualsAndHashCode
 @Slf4j
 public class ScriptCondition
-        implements Condition, Configurable<ScriptConditionConfig> {
+        implements ConfigurableCondition<ScriptConditionConfig> {
 
     //TODO consider using composition so most of the logic
     // can be shared with other ScriptXXX classes.
