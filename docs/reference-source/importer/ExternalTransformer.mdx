@@ -59,6 +59,10 @@ Defines environment variables to set when executing the external command.
 
 Pattern only used when `metadataOutputFormat` is not specified
 
+### label
+
+An optional, user-supplied label for this step in the importer pipeline. It has no effect on processing — it exists purely to help identify this step, for example in large configurations or in the visual configurator.
+
 ### metadataInputFormat
 
 Sets the format of the metadata input file sent to the external application. One of `json` (default), `xml`, or `properties` is expected. Only applicable when the `${INPUT_META}` token is part of the command.

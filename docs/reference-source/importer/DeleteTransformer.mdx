@@ -25,6 +25,10 @@ This functionality can be applied as either a `pre-parse` or `post-parse` handle
 
 Matches document fields based on specified patterns and methods. Use this to restrict the handler to operate only on fields whose names satisfy the matcher criteria.
 
+### label
+
+An optional, user-supplied label for this step in the importer pipeline. It has no effect on processing — it exists purely to help identify this step, for example in large configurations or in the visual configurator.
+
 ## Examples
 
 The following example deletes all metadata fields starting with "X-".
