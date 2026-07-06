@@ -1,4 +1,4 @@
-/* Copyright 2019-2024 Norconex Inc.
+/* Copyright 2019-2026 Norconex Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,9 +21,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
+import java.nio.file.NoSuchFileException;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.vfs2.FileSystemException;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -46,21 +46,25 @@ public class CmisAtomSession {
     private String objectByPathTemplate;
     private String queryTemplate;
 
-    public Xml getDocumentByPath(String path) throws FileSystemException {
+    public Xml getDocumentByPath(String path) throws IOException {
         return getDocument(
                 objectByPathTemplate.replace(
                         "{path}",
                         URLEncoder.encode(path, UTF_8)));
     }
 
-    public Xml getDocument(String fullURL) throws FileSystemException {
+    public Xml getDocument(String fullURL) throws IOException {
         return new Xml(new InputStreamReader(getStream(fullURL), UTF_8));
     }
 
-    public InputStream getStream(String fullURL) throws FileSystemException {
+    public InputStream getStream(String fullURL) throws IOException {
         try {
             var resp = httpClient.execute(new HttpGet(fullURL));
-            if (resp.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
+            var statusCode = resp.getStatusLine().getStatusCode();
+            if (statusCode == HttpStatus.SC_NOT_FOUND) {
+                throw new NoSuchFileException(fullURL);
+            }
+            if (statusCode != HttpStatus.SC_OK) {
                 var consumedContent = IOUtils.toString(
                         resp.getEntity().getContent(), UTF_8);
                 LOG.debug(
@@ -71,20 +75,18 @@ public class CmisAtomSession {
                                 + resp.getStatusLine() + "\" from " + fullURL);
             }
             return resp.getEntity().getContent();
-        } catch (UnsupportedOperationException | IOException e) {
-            throw new FileSystemException(
+        } catch (UnsupportedOperationException e) {
+            throw new IOException(
                     "Could not get stream from " + fullURL, e);
         }
     }
 
     public void close() {
-        if (httpClient instanceof CloseableHttpClient) {
-            try {
-                httpClient.close();
-            } catch (IOException e) {
-                throw new UncheckedIOException(
-                        "Error closing CMIS Atom HTTP client", e);
-            }
+        try {
+            httpClient.close();
+        } catch (IOException e) {
+            throw new UncheckedIOException(
+                    "Error closing CMIS Atom HTTP client", e);
         }
     }
 }
