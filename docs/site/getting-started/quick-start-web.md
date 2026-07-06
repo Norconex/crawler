@@ -43,6 +43,20 @@ This crawl will:
 
 You'll see log output as pages are fetched, filtered, and committed.
 
+### Docker alternative
+
+If you prefer running with Docker, mount your config and logs, then run:
+
+```bash
+docker run --rm \
+  -v "${PWD}:/opt/norconex/crawler/configs" \
+  -v "${PWD}/logs:/opt/norconex/crawler/logs" \
+  -e COLLECTOR_CONFIG_FILE=my-web-crawl.yaml \
+  norconex/crawler-web:latest
+```
+
+For Docker Compose examples and release-tag guidance, see [Docker](./docker.md).
+
 ## Step 3 — Stop and resume
 
 Stop the crawl at any time:
@@ -60,13 +74,13 @@ Norconex saves its state to disk automatically. Resume exactly where you left of
 To clear the crawler state before your next run, you can issue this command:
 
 ```bash
-./crawl-fs.sh clean -config=my-web-crawl.yaml
+./crawl-web.sh clean -config=my-web-crawl.yaml
 ```
 
 Alternatively, you can combine "clean" with the start command:
 
 ```bash
-./crawl-fs.sh start -clean -config=my-web-crawl.yaml
+./crawl-web.sh start -clean -config=my-web-crawl.yaml
 ```
 
 ## Step 4 — Send to a real target
@@ -92,6 +106,11 @@ committers:
 
 See the [Integrations](/integrations) page for all available committers and their configuration.
 
+When using ZIP distributions, external committers are downloaded separately as
+`nx-committer-<name>-<version>.zip` and their `lib/*.jar` files must be copied into
+the crawler `lib/` directory. Built-in committers such as `LogCommitter` do not
+require this extra step.
+
 ## CLI reference
 
 | Command                | Description                                |
@@ -104,4 +123,4 @@ See the [Integrations](/integrations) page for all available committers and thei
 
 - Use the [Visual Configurator](https://crawlerconfig.norconex.com) to build your config visually
 - Read [Concepts: Crawl Pipeline](../concepts/crawl-pipeline) to understand how documents are processed
-- Read [Concepts: Sessions](../concepts/sessions) to understand resume, deduplication, and scheduling
+- Read [Concepts: Sessions](../concepts/sessions) to understand resume, deduplication, recrawl policy, and external run scheduling

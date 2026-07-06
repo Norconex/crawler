@@ -56,6 +56,20 @@ referenceFilters:
 
 You'll see log output as files are fetched, filtered, and committed.
 
+### Docker alternative
+
+If you prefer running with Docker, mount your config and logs, then run:
+
+```bash
+docker run --rm \
+  -v "${PWD}:/opt/norconex/crawler/configs" \
+  -v "${PWD}/logs:/opt/norconex/crawler/logs" \
+  -e COLLECTOR_CONFIG_FILE=my-fs-crawl.yaml \
+  norconex/crawler-fs:latest
+```
+
+For Docker Compose examples and release-tag guidance, see [Docker](./docker.md).
+
 ## Step 4 — Stop and resume
 
 Stop the crawl at any time:
@@ -122,6 +136,11 @@ startReferences:
 Replace the `LogCommitter` with your actual destination. See the
 [Integrations](/integrations) page for all available committers and their configuration.
 
+When using ZIP distributions, external committers are downloaded separately as
+`nx-committer-<name>-<version>.zip` and their `lib/*.jar` files must be copied into
+the crawler `lib/` directory. Built-in committers such as `LogCommitter` do not
+require this extra step.
+
 ## CLI reference
 
 | Command                | Description                                |
@@ -134,4 +153,4 @@ Replace the `LogCommitter` with your actual destination. See the
 
 - Use the [Visual Configurator](https://crawlerconfig.norconex.com) to build your config visually
 - Read [Concepts: Crawl Pipeline](../concepts/crawl-pipeline) to understand how documents are processed
-- Read [Concepts: Sessions](../concepts/sessions) to understand resume, deduplication, and scheduling
+- Read [Concepts: Sessions](../concepts/sessions) to understand resume, deduplication, recrawl policy, and external run scheduling

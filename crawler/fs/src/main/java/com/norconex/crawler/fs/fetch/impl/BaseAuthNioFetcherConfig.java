@@ -12,31 +12,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.norconex.crawler.fs.fetch.impl.sftp;
+package com.norconex.crawler.fs.fetch.impl;
 
-import java.io.File;
-import java.time.Duration;
-
-import com.norconex.crawler.fs.fetch.impl.BaseAuthNioFetcherConfig;
+import com.norconex.commons.lang.security.Credentials;
+import com.norconex.crawler.core.fetch.BaseFetcherConfig;
 
 import lombok.Data;
 import lombok.experimental.Accessors;
 
 /**
  * <p>
- * Configuration for {@link SftpFetcher}.
- * SFTP fetcher.
+ * Extension of {@link AbstractNioFetcher}, adding authentication support.
  * </p>
  */
 @Data
 @Accessors(chain = true)
-public class SftpFetcherConfig extends BaseAuthNioFetcherConfig {
+public abstract class BaseAuthNioFetcherConfig extends BaseFetcherConfig {
 
-    private String compression;
-    private String fileNameEncoding;
-    private File knownHosts;
-    private String preferredAuthentications;
-    private String strictHostKeyChecking = "no";
-    private Duration connectTimeout;
-    private boolean userDirIsRoot;
+    private final Credentials credentials = new Credentials();
+    private String domain;
 }

@@ -6,7 +6,8 @@ title: Crawl Sessions
 
 A **crawl session** is a single named run of the crawler, backed by persistent
 on-disk state. Sessions are what give Norconex Crawler its enterprise
-reliability characteristics: you can stop, resume, and reschedule crawls
+reliability characteristics: you can stop and resume crawls,
+and run them repeatedly over time,
 without losing progress or recrawling everything.
 
 ## Session identity
@@ -50,7 +51,7 @@ Unchanged documents are skipped. Only new or modified documents are committed.
 Deleted documents (no longer reachable) can optionally trigger a delete event
 on the committer.
 
-## Recrawl scheduling
+## Crawl run scheduling (external)
 
 A session runs once and exits. There is no built-in scheduler. Use an
 external scheduler — cron, a systemd timer, a Kubernetes CronJob, or any
@@ -64,6 +65,10 @@ On repeat crawl runs, the web crawler can skip documents that are not yet
 ready to be re-crawled. This is controlled by the `recrawlableResolver`
 setting. Documents the resolver marks as not ready are skipped entirely —
 no HTTP request is made and they are not committed.
+
+This is a **recrawl eligibility/timing policy**, not a job scheduler. It only
+decides whether a given document should be fetched again during a run that has
+already started.
 
 The default resolver, `GenericRecrawlableResolver`, supports two mechanisms:
 

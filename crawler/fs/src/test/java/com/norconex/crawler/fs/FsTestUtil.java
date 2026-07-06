@@ -38,6 +38,7 @@ import org.apache.commons.vfs2.FileSystemOptions;
 import org.apache.commons.vfs2.impl.StandardFileSystemManager;
 import org.jeasy.random.EasyRandom;
 import org.jeasy.random.EasyRandomParameters;
+import org.jeasy.random.FieldPredicates;
 import org.jeasy.random.api.Randomizer;
 import org.jeasy.random.randomizers.misc.BooleanRandomizer;
 import org.jeasy.random.randomizers.number.IntegerRandomizer;
@@ -162,9 +163,19 @@ public final class FsTestUtil {
 
                     .excludeType(StandardFileSystemManager.class::equals)
                     .excludeType(FileSystemOptions.class::equals)
+                    .excludeType(java.nio.file.FileSystem.class::equals)
                     .excludeType(ReferencesProvider.class::equals)
                     .excludeType(OnMatch.class::equals)
-                    .excludeType(ReferenceFilter.class::equals));
+                    .excludeType(ReferenceFilter.class::equals)
+                    // Runtime-only NIO.2 connection environments (built
+                    // from config at fetcherStartup, not themselves part
+                    // of the config): randomizing their generic
+                    // Map<String, Object> shape is slow/unstable and
+                    // irrelevant to the XML/JSON round-trip being tested.
+                    .excludeField(FieldPredicates.named("env")
+                            .and(FieldPredicates.ofType(java.util.Map.class)))
+                    .excludeField(FieldPredicates.named("ftpEnv"))
+                    .excludeField(FieldPredicates.named("ftpsEnv")));
 
     //MAYBE: maybe move some of the common test classes/methods to core
     // and make it a usable test artifact?

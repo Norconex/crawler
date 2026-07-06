@@ -45,7 +45,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   # All committer artifact names (nx-committer-{name}), excluding 'core' which is bundled.
   COMMITTERS: >-
-    amazoncloudsearch azurecognitivesearch apachekafka elasticsearch idol neo4j solr sql
+    amazoncloudsearch azurecognitivesearch apachekafka elasticsearch googlecloudsearch idol neo4j solr sql
 
 jobs:
   publish:
