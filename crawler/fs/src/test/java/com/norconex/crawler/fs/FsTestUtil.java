@@ -175,7 +175,8 @@ public final class FsTestUtil {
                     .excludeField(FieldPredicates.named("env")
                             .and(FieldPredicates.ofType(java.util.Map.class)))
                     .excludeField(FieldPredicates.named("ftpEnv"))
-                    .excludeField(FieldPredicates.named("ftpsEnv")));
+                    .excludeField(FieldPredicates.named("ftpsEnv"))
+                    .excludeField(FieldPredicates.named("sftpEnv")));
 
     //MAYBE: maybe move some of the common test classes/methods to core
     // and make it a usable test artifact?

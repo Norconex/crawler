@@ -108,6 +108,13 @@
       <artifactId>sftp-fs</artifactId>
       <version>${sftp-fs.version}</version>
     </dependency>
+
+    <!-- tar/gz/bz2 archive extraction (zip/jar use the JDK's built-in
+         zipfs provider directly, no dependency needed) -->
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-compress</artifactId>
+    </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>log4j-over-slf4j</artifactId>
@@ -199,15 +206,6 @@
       </exclusions>
     </dependency>
     
-    <!-- MIME support -->
-    <!-- sandbox migrated from javax.mail to jakarta.mail in 2.1 -->
-    <dependency>
-      <groupId>jakarta.mail</groupId>
-      <artifactId>jakarta.mail-api</artifactId>
-      <version>2.1.5</version>
-    </dependency>
-
-
     <!-- Test + provided dependencies: -->
 
     <dependency>

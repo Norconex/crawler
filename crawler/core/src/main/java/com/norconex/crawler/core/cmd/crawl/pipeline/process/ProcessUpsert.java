@@ -76,6 +76,21 @@ final class ProcessUpsert {
             return;
         }
 
+        // Finalize (i.e., write to the crawl ledger) on the success path
+        // too, not just on rejection. Without this, a successfully
+        // committed document is never marked processed in the ledger:
+        // for the top-level document this is harmless (CrawlerProcessStep
+        // finalizes it afterward regardless), but for a child/embedded
+        // document produced by the importer (e.g. a zip entry or email
+        // attachment) this method is the ONLY place it is ever touched,
+        // so skipping it means the child can never be detected as an
+        // orphan (and deleted from the target repository) on a later
+        // crawl once it disappears from its parent. ProcessFinalize is
+        // idempotent (guarded by ctx.finalized()), so finalizing here is
+        // safe even though the top-level context also gets finalized
+        // again afterward by its caller.
+        ProcessFinalize.execute(ctx);
+
         var children = ctx.importerResponse().getNestedResponses();
         for (ImporterResponse childResponse : children) {
 
@@ -93,6 +108,16 @@ final class ProcessUpsert {
                     .getCrawlEntryLedger()
                     .getBaselineEntry(childResponse.getReference())
                     .orElse(null);
+
+            // Children never go through a fetch/queue stage (there's no
+            // fetcher for an embedded doc), so nothing else ever sets an
+            // outcome on them. Without this, ProcessFinalize would treat
+            // a freshly-committed child as having an "unknown" outcome
+            // and mistakenly run it through bad-state/deletion handling.
+            childCurrentEntry.setProcessingOutcome(
+                    childPreviousEntry == null
+                            ? ProcessingOutcome.NEW
+                            : ProcessingOutcome.MODIFIED);
 
             // Here we create a CrawlDoc since the document from the response
             // is (or can be) just a Doc, which does not hold all required
