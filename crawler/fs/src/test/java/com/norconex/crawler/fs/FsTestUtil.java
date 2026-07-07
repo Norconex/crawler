@@ -176,7 +176,15 @@ public final class FsTestUtil {
                             .and(FieldPredicates.ofType(java.util.Map.class)))
                     .excludeField(FieldPredicates.named("ftpEnv"))
                     .excludeField(FieldPredicates.named("ftpsEnv"))
-                    .excludeField(FieldPredicates.named("sftpEnv")));
+                    .excludeField(FieldPredicates.named("sftpEnv"))
+                    // Runtime-only custom NIO.2 FileSystemProvider (CMIS,
+                    // WebDAV): its file-system cache eventually holds a
+                    // CloseableHttpClient (abstract; not instantiable by
+                    // EasyRandom), and whether that map ends up empty is a
+                    // matter of chance given the time-seeded random size
+                    // draw, making its exclusion here necessary rather
+                    // than incidental.
+                    .excludeField(FieldPredicates.named("provider")));
 
     //MAYBE: maybe move some of the common test classes/methods to core
     // and make it a usable test artifact?

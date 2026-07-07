@@ -39,7 +39,7 @@
     <ftp-fs.version>3.3</ftp-fs.version>
     <ftpserver.version>1.2.1</ftpserver.version>
     <hadoop.version>3.5.0</hadoop.version>
-    <jackrabbit.version>2.21.7</jackrabbit.version>
+    <httpclient.version>4.5.14</httpclient.version>
     <jcifs.version>1.3.17</jcifs.version>
     <log4j-over-slf4j.version>2.0.18</log4j-over-slf4j.version>
     <sftp-fs.version>3.3.2</sftp-fs.version>
@@ -125,34 +125,24 @@
       <artifactId>jcl-over-slf4j</artifactId>
     </dependency>
 
-    <!-- WebDav support -->
+    <!-- WebDav + CMIS support: WebDAV (PROPFIND/GET) and the CMIS Atom
+         binding are both implemented directly on Apache HttpClient (classic
+         4.x). Pinned explicitly (it was previously only pulled in
+         transitively via commons-vfs2-jackrabbit2) so it survives the
+         eventual removal of commons-vfs2 once the SMB/HDFS providers are
+         also migrated off it. -->
     <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-vfs2-jackrabbit2</artifactId>
-      <version>${commons-vfs.version}</version>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpclient</artifactId>
+      <version>${httpclient.version}</version>
       <exclusions>
-      	<exclusion>
-      		<groupId>commons-logging</groupId>
-      		<artifactId>commons-logging</artifactId>
-      	</exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>commons-httpclient</groupId>
-      <artifactId>commons-httpclient</artifactId>
-      <version>3.1</version>
-      <exclusions>
-        <exclusion>
-          <groupId>commons-codec</groupId>
-          <artifactId>commons-codec</artifactId>
-        </exclusion>
         <exclusion>
           <groupId>commons-logging</groupId>
           <artifactId>commons-logging</artifactId>
         </exclusion>
-      </exclusions>    
-    </dependency>    
-    
+      </exclusions>
+    </dependency>
+
     <!-- HDFS support -->
     <!-- commons-vfs2-hdfs was split out from commons-vfs2 in 2.10.0 (VFS-851) -->
     <dependency>

@@ -1,18 +1,9 @@
 <?xml version="1.0"?>
 <providers>
 
-  <provider class-name="org.apache.commons.vfs2.provider.webdav4s.Webdav4sFileProvider">
-    <scheme name="webdav"/>
-  </provider>
-
   <provider class-name="org.apache.commons.vfs2.provider.smb.SmbFileProvider">
     <scheme name="smb"/>
     <if-available class-name="jcifs.smb.SmbFile"/>
-  </provider>
-
-  <provider class-name="org.apache.commons.vfs2.provider.url.UrlFileProvider">
-    <scheme name="http"/>
-    <scheme name="https"/>
   </provider>
 
 </providers>
