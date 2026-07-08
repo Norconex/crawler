@@ -17,28 +17,26 @@ package com.norconex.crawler.fs.fetch.impl.smb;
 import static com.norconex.crawler.fs.fetch.impl.FileFetchUtil.referenceStartsWith;
 
 import java.io.IOException;
+import java.net.URI;
+import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Objects;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemException;
-import org.apache.commons.vfs2.FileSystemOptions;
-import org.apache.commons.vfs2.UserAuthenticationData;
-import org.apache.commons.vfs2.UserAuthenticationData.Type;
-import org.apache.commons.vfs2.provider.smb.SmbFileName;
-import org.apache.commons.vfs2.provider.smb.SmbFileObject;
-import org.apache.commons.vfs2.provider.smb.SmbFileProvider;
-import org.apache.commons.vfs2.util.UserAuthenticatorUtils;
 
+import com.norconex.commons.lang.encrypt.EncryptionUtil;
 import com.norconex.commons.lang.map.Properties;
+import com.norconex.crawler.core.fetch.FetchRequest;
+import com.norconex.crawler.core.session.CrawlerSession;
 import com.norconex.crawler.fs.doc.FsDocMetadata;
 import com.norconex.crawler.fs.fetch.FileFetchRequest;
-import com.norconex.crawler.fs.fetch.impl.AbstractAuthVfsFetcher;
+import com.norconex.crawler.fs.fetch.impl.AbstractNioFetcher;
 import com.norconex.importer.doc.Doc;
 
-import jcifs.smb.ACE;
-import jcifs.smb.NtlmPasswordAuthentication;
-import jcifs.smb.SmbFile;
+import jcifs.CIFSContext;
+import jcifs.context.SingletonContext;
+import jcifs.smb.NtlmPasswordAuthenticator;
+
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NonNull;
@@ -47,7 +45,10 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * <p>
- * CIFS fetcher (Samba, Windows share) (<code>hdfs://</code>).
+ * CIFS fetcher (Samba, Windows share) (<code>smb://</code>), backed by a
+ * custom, read-only NIO.2 {@link java.nio.file.spi.FileSystemProvider}
+ * ({@link SmbFileSystemProvider}) built directly on jcifs-ng's classic
+ * {@code SmbFile} API.
  * </p>
  *
  * <h2>Access Control List (ACL)</h2>
@@ -57,16 +58,12 @@ import lombok.extern.slf4j.Slf4j;
  * acquiring them with {@link SmbFetcherConfig#setAclDisabled(boolean)}.
  * </p>
  */
+@Slf4j
 @ToString
 @EqualsAndHashCode
-@Slf4j
-public class SmbFetcher extends AbstractAuthVfsFetcher<SmbFetcherConfig> {
+public class SmbFetcher extends AbstractNioFetcher<SmbFetcherConfig> {
 
-    @Getter
-    private final SmbFetcherConfig configuration = new SmbFetcherConfig();
-
-    private static final String ACL_PREFIX =
-            FsDocMetadata.ACL + ".smb";
+    private static final String ACL_PREFIX = FsDocMetadata.ACL + ".smb";
     private static final String ACE = ".ace";
     private static final String SID = ".sid";
     private static final String SID_TEXT = ".sidAsText";
@@ -76,36 +73,64 @@ public class SmbFetcher extends AbstractAuthVfsFetcher<SmbFetcherConfig> {
     private static final String DOMAIN_NAME = ".domainName";
     private static final String ACCOUNT_NAME = ".accountName";
 
-    @Override
-    protected void fetchMetadata(Doc doc, @NonNull FileObject fileObject)
-            throws FileSystemException {
-        super.fetchMetadata(doc, fileObject);
+    @Getter
+    private final SmbFetcherConfig configuration = new SmbFetcherConfig();
 
-        // Fetch ACL
-        if (!configuration.isAclDisabled()
-                && fileObject instanceof SmbFileObject smbFileObject) {
-            try {
-                var f = createSmbFile(smbFileObject);
-                var acl = f.getSecurity();
-                storeSID(acl, doc.getMetadata());
-            } catch (IOException e) {
-                LOG.error("Could not retreive SMB ACL data.", e);
-            }
-        }
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private final SmbFileSystemProvider provider = new SmbFileSystemProvider();
+
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private CIFSContext context;
+
+    @Override
+    protected void fetcherStartup(CrawlerSession crawler) {
+        super.fetcherStartup(crawler);
+        var base = SingletonContext.getInstance();
+        var creds = configuration.getCredentials();
+        context = creds.isSet()
+                ? base.withCredentials(new NtlmPasswordAuthenticator(
+                        configuration.getDomain(), creds.getUsername(),
+                        EncryptionUtil.decryptPassword(creds)))
+                : base;
     }
 
     @Override
-    protected boolean acceptFileRequest(
-            @NonNull FileFetchRequest fetchRequest) {
+    protected void fetcherShutdown(CrawlerSession crawler) {
+        provider.openFileSystems().forEach(SmbFileSystem::close);
+        super.fetcherShutdown(crawler);
+    }
+
+    @Override
+    protected boolean acceptRequest(@NonNull FetchRequest fetchRequest) {
         return referenceStartsWith(fetchRequest, "smb://");
     }
 
     @Override
-    protected void applyFileSystemOptions(FileSystemOptions opts) {
-        //NOOP
+    protected Path resolvePath(String reference) throws IOException {
+        var uri = URI.create(reference);
+        var fs = provider.getOrCreateFileSystem(uri, context);
+        return fs.getPath(StringUtils.defaultIfBlank(uri.getPath(), "/"));
     }
 
-    private void storeSID(ACE[] acls, Properties metadata) {
+    @Override
+    protected void fetchMetadata(
+            Doc doc, @NonNull Path path, @NonNull BasicFileAttributes attrs)
+            throws IOException {
+        super.fetchMetadata(doc, path, attrs);
+
+        if (!configuration.isAclDisabled()) {
+            try {
+                var acl = provider.getAcl((SmbPath) path);
+                storeSID(acl, doc.getMetadata());
+            } catch (IOException e) {
+                LOG.error("Could not retrieve SMB ACL data.", e);
+            }
+        }
+    }
+
+    private void storeSID(jcifs.ACE[] acls, Properties metadata) {
         for (var i = 0; i < acls.length; i++) {
             var acl = acls[i];
             var sid = acl.getSID();
@@ -130,57 +155,5 @@ public class SmbFetcher extends AbstractAuthVfsFetcher<SmbFetcherConfig> {
 
     private String key(int index, String suffix) {
         return ACL_PREFIX + "[" + index + "]" + suffix;
-    }
-
-    /*
-     * Adapted from SmbFileObject since there is otherwise no way to get
-     * the SmbFile from the Commons VFS sandbox SmbFile class and we need it
-     * for ACL extract.  Should delete if a better way is provider by VFS.
-     */
-    private SmbFile createSmbFile(FileObject fileObject)
-            throws IOException {
-
-        final var smbFileName = (SmbFileName) fileObject.getName();
-
-        final var path = smbFileName.getUriWithoutAuth();
-
-        UserAuthenticationData authData = null;
-        SmbFile file;
-        try {
-            authData = UserAuthenticatorUtils.authenticate(
-                    fileObject.getFileSystem().getFileSystemOptions(),
-                    SmbFileProvider.AUTHENTICATOR_TYPES);
-
-            NtlmPasswordAuthentication auth = null;
-            if (authData != null) {
-                auth = new NtlmPasswordAuthentication(
-                        authToString(
-                                authData, UserAuthenticationData.DOMAIN,
-                                smbFileName.getDomain()),
-                        authToString(
-                                authData, UserAuthenticationData.USERNAME,
-                                smbFileName.getUserName()),
-                        authToString(
-                                authData, UserAuthenticationData.PASSWORD,
-                                smbFileName.getPassword()));
-            }
-
-            // if auth == null SmbFile uses default credentials
-            file = new SmbFile(path, auth);
-
-            if (file.isDirectory() && !file.toString().endsWith("/")) {
-                file = new SmbFile(path + "/", auth);
-            }
-            return file;
-        } finally {
-            UserAuthenticatorUtils.cleanup(authData); // might be null
-        }
-    }
-
-    private String authToString(
-            UserAuthenticationData authData, Type type, String part) {
-        return UserAuthenticatorUtils.toString(
-                UserAuthenticatorUtils.getData(
-                        authData, type, UserAuthenticatorUtils.toChar(part)));
     }
 }

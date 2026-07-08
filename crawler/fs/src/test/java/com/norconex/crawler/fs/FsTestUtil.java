@@ -178,13 +178,18 @@ public final class FsTestUtil {
                     .excludeField(FieldPredicates.named("ftpsEnv"))
                     .excludeField(FieldPredicates.named("sftpEnv"))
                     // Runtime-only custom NIO.2 FileSystemProvider (CMIS,
-                    // WebDAV): its file-system cache eventually holds a
-                    // CloseableHttpClient (abstract; not instantiable by
+                    // WebDAV, SMB): its file-system cache eventually holds
+                    // a CloseableHttpClient (abstract; not instantiable by
                     // EasyRandom), and whether that map ends up empty is a
                     // matter of chance given the time-seeded random size
                     // draw, making its exclusion here necessary rather
                     // than incidental.
-                    .excludeField(FieldPredicates.named("provider")));
+                    .excludeField(FieldPredicates.named("provider"))
+                    // Runtime-only jcifs-ng CIFSContext (SMB), built from
+                    // config at fetcherStartup: it is an interface with no
+                    // concrete type EasyRandom can instantiate (classpath
+                    // scanning for concrete types is disabled above).
+                    .excludeField(FieldPredicates.named("context")));
 
     //MAYBE: maybe move some of the common test classes/methods to core
     // and make it a usable test artifact?

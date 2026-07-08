@@ -14,7 +14,7 @@
  */
 package com.norconex.crawler.fs.fetch.impl.smb;
 
-import com.norconex.crawler.fs.fetch.impl.BaseAuthVfsFetcherConfig;
+import com.norconex.crawler.fs.fetch.impl.BaseAuthNioFetcherConfig;
 
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -26,7 +26,7 @@ import lombok.experimental.Accessors;
  */
 @Data
 @Accessors(chain = true)
-public class SmbFetcherConfig extends BaseAuthVfsFetcherConfig {
+public class SmbFetcherConfig extends BaseAuthNioFetcherConfig {
 
     private boolean aclDisabled;
 }
