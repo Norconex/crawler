@@ -34,8 +34,6 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.NullInputStream;
-import org.apache.commons.vfs2.FileSystemOptions;
-import org.apache.commons.vfs2.impl.StandardFileSystemManager;
 import org.jeasy.random.EasyRandom;
 import org.jeasy.random.EasyRandomParameters;
 import org.jeasy.random.FieldPredicates;
@@ -161,8 +159,6 @@ public final class FsTestUtil {
                             DocumentChecksummer.class,
                             Md5DocumentChecksummer::new)
 
-                    .excludeType(StandardFileSystemManager.class::equals)
-                    .excludeType(FileSystemOptions.class::equals)
                     .excludeType(java.nio.file.FileSystem.class::equals)
                     .excludeType(ReferencesProvider.class::equals)
                     .excludeType(OnMatch.class::equals)

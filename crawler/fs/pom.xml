@@ -29,13 +29,9 @@
   <properties>
     <sonar.skip>false</sonar.skip>
     <sonar.projectKey>${project.groupId}:${project.artifactId}</sonar.projectKey>
-    <!-- Sonar expects this one to be relative to mono-repo root: -->
-    <sonar.exclusions>**/org/apache/commons/vfs2/**/*</sonar.exclusions>
-    <sonar.coverage.exclusions>**/org/apache/commons/vfs2/**/*</sonar.coverage.exclusions>
-    <shared-resources.include>scripts/**</shared-resources.include> 
-      
+    <shared-resources.include>scripts/**</shared-resources.include>
+
     <commons-net.version>3.13.0</commons-net.version>
-    <commons-vfs.version>2.10.0</commons-vfs.version>
     <ftp-fs.version>3.3</ftp-fs.version>
     <ftpserver.version>1.2.1</ftpserver.version>
     <jcifs-ng.version>2.1.10</jcifs-ng.version>
@@ -79,17 +75,6 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-vfs2</artifactId>
-      <version>${commons-vfs.version}</version>
-      <exclusions>
-      	<exclusion>
-      		<groupId>commons-logging</groupId>
-      		<artifactId>commons-logging</artifactId>
-      	</exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
       <groupId>commons-net</groupId>
       <artifactId>commons-net</artifactId>
       <version>${commons-net.version}</version>
@@ -117,7 +102,7 @@
       <groupId>org.slf4j</groupId>
       <artifactId>log4j-over-slf4j</artifactId>
     </dependency>
-    <!-- Bridge commons-logging API to SLF4J (used by copied sandbox sources) -->
+    <!-- Bridge commons-logging API to SLF4J -->
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>jcl-over-slf4j</artifactId>
@@ -213,35 +198,6 @@
   
   <build>
     <plugins>
-
-      <!--
-        Exclude Apache Commons VFS sandbox sources (copied as-is, not
-        maintained here) from code-coverage and editor-config checks.
-        Sonar exclusion is already declared via <sonar.exclusions> above.
-        The formatter-maven-plugin is unaffected because the parent config
-        already limits its scope to com/norconex/**/*.java.
-      -->
-      <plugin>
-        <groupId>org.jacoco</groupId>
-        <artifactId>jacoco-maven-plugin</artifactId>
-        <configuration>
-          <excludes>
-            <exclude>org/apache/commons/vfs2/**/*</exclude>
-          </excludes>
-        </configuration>        
-      </plugin>
-
-      <plugin>
-        <groupId>org.ec4j.maven</groupId>
-        <artifactId>editorconfig-maven-plugin</artifactId>
-        <configuration>
-          <excludes>
-            <exclude>
-              src/main/java/org/apache/commons/vfs2/**
-            </exclude>
-          </excludes>
-        </configuration>
-      </plugin>
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

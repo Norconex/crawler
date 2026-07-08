@@ -286,9 +286,6 @@
     <Logger name="org.apache" level="WARN" additivity="false">
       <AppenderRef ref="Console"/>
     </Logger>
-    <Logger name="org.apache.commons.vfs2" level="WARN" additivity="false">
-      <AppenderRef ref="Console"/>
-    </Logger>
     <Logger name="org.apache.mina" level="ERROR" additivity="false">
       <AppenderRef ref="Console"/>
     </Logger>
