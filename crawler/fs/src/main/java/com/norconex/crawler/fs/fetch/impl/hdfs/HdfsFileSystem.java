@@ -1,4 +1,4 @@
-/* Copyright 2019-2026 Norconex Inc.
+/* Copyright 2023-2026 Norconex Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,10 +12,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.norconex.crawler.fs.fetch.impl.webdav;
+package com.norconex.crawler.fs.fetch.impl.hdfs;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.FileStore;
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
@@ -28,50 +27,43 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
+import javax.security.auth.Subject;
+
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 
 /**
- * A read-only WebDAV (or plain HTTP) file system, representing one
- * authority (scheme + host + port).
+ * A read-only HDFS file system, reached over the WebHDFS REST API,
+ * representing one authority (host + port).
  */
-final class WebDavFileSystem extends FileSystem {
+final class HdfsFileSystem extends FileSystem {
 
-    private final WebDavFileSystemProvider provider;
+    private final HdfsFileSystemProvider provider;
     private final String key;
-    private final String declaredScheme;
-    private final String transportScheme;
     private final String host;
     private final int port;
+    private final String username;
+    private final Subject kerberosSubject;
     private final CloseableHttpClient httpClient;
     private final AtomicBoolean open = new AtomicBoolean(true);
 
-    // Directory listings (PROPFIND, Depth: 1) return attributes for every
-    // child in one request. Caching them here lets the subsequent
-    // per-child readAttributes() call (issued next by the crawler for each
-    // listed child) be served without a redundant PROPFIND, Depth: 0
-    // round-trip.
-    private final Map<String, WebDavFileAttributes> attrsCache =
+    // GETFILESTATUS/LISTSTATUS return attributes for every listed child in
+    // one round trip. Caching them here lets the subsequent per-child
+    // readAttributes() call (issued next by the crawler for each listed
+    // child) be served without a redundant round-trip.
+    private final Map<String, HdfsFileAttributes> attrsCache =
             new ConcurrentHashMap<>();
 
-    WebDavFileSystem(
-            WebDavFileSystemProvider provider, String key,
-            String declaredScheme, String transportScheme, String host,
-            int port, CloseableHttpClient httpClient) {
+    HdfsFileSystem(
+            HdfsFileSystemProvider provider, String key, String host,
+            int port, String username, Subject kerberosSubject,
+            CloseableHttpClient httpClient) {
         this.provider = provider;
         this.key = key;
-        this.declaredScheme = declaredScheme;
-        this.transportScheme = transportScheme;
         this.host = host;
         this.port = port;
+        this.username = username;
+        this.kerberosSubject = kerberosSubject;
         this.httpClient = httpClient;
-    }
-
-    String declaredScheme() {
-        return declaredScheme;
-    }
-
-    String transportScheme() {
-        return transportScheme;
     }
 
     String host() {
@@ -82,16 +74,24 @@ final class WebDavFileSystem extends FileSystem {
         return port;
     }
 
+    String username() {
+        return username;
+    }
+
+    Subject kerberosSubject() {
+        return kerberosSubject;
+    }
+
     CloseableHttpClient httpClient() {
         return httpClient;
     }
 
-    Map<String, WebDavFileAttributes> attrsCache() {
+    Map<String, HdfsFileAttributes> attrsCache() {
         return attrsCache;
     }
 
     @Override
-    public WebDavFileSystemProvider provider() {
+    public HdfsFileSystemProvider provider() {
         return provider;
     }
 
@@ -102,7 +102,7 @@ final class WebDavFileSystem extends FileSystem {
             try {
                 httpClient.close();
             } catch (IOException e) {
-                throw new UncheckedIOException(e);
+                throw new java.io.UncheckedIOException(e);
             }
         }
     }
@@ -138,12 +138,12 @@ final class WebDavFileSystem extends FileSystem {
     }
 
     @Override
-    public WebDavPath getPath(String first, String... more) {
+    public HdfsPath getPath(String first, String... more) {
         var path = first;
         for (var part : more) {
             path += "/" + part;
         }
-        return new WebDavPath(this, path);
+        return new HdfsPath(this, path);
     }
 
     @Override
@@ -170,12 +170,12 @@ final class WebDavFileSystem extends FileSystem {
     @Override
     public UserPrincipalLookupService getUserPrincipalLookupService() {
         throw new UnsupportedOperationException(
-                "WebDAV file systems do not support user principal lookup.");
+                "HDFS file systems do not support user principal lookup.");
     }
 
     @Override
     public WatchService newWatchService() {
         throw new UnsupportedOperationException(
-                "WebDAV file systems do not support watching.");
+                "HDFS file systems do not support watching.");
     }
 }

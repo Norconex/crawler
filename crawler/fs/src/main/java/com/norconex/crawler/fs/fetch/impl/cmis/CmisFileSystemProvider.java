@@ -48,11 +48,11 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.impl.client.BasicCredentialsProvider;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.message.BasicHeader;
+import org.apache.hc.client5.http.auth.AuthScope;
+import org.apache.hc.client5.http.auth.UsernamePasswordCredentials;
+import org.apache.hc.client5.http.impl.auth.BasicCredentialsProvider;
+import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
+import org.apache.hc.core5.http.message.BasicHeader;
 
 import com.norconex.commons.lang.xml.Xml;
 
@@ -132,10 +132,14 @@ final class CmisFileSystemProvider extends FileSystemProvider {
         var username = (String) env.get("username");
         if (StringUtils.isNotBlank(username)) {
             var credentials = new BasicCredentialsProvider();
+            var password = (String) env.get("password");
             credentials.setCredentials(
-                    AuthScope.ANY,
+                    new AuthScope(null, null, -1, null, null),
                     new UsernamePasswordCredentials(
-                            username, (String) env.get("password")));
+                            username,
+                            password == null
+                                    ? new char[0]
+                                    : password.toCharArray()));
             httpBuilder.setDefaultCredentialsProvider(credentials);
         }
 

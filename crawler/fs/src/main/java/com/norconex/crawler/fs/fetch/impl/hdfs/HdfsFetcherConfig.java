@@ -1,4 +1,4 @@
-/* Copyright 2023-2025 Norconex Inc.
+/* Copyright 2023-2026 Norconex Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +14,7 @@
  */
 package com.norconex.crawler.fs.fetch.impl.hdfs;
 
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-import org.apache.hadoop.fs.Path;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.norconex.commons.lang.collection.CollectionUtil;
-import com.norconex.crawler.fs.fetch.impl.BaseAuthVfsFetcherConfig;
+import com.norconex.crawler.fs.fetch.impl.BaseAuthNioFetcherConfig;
 
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -36,82 +26,21 @@ import lombok.experimental.Accessors;
  */
 @Data
 @Accessors(chain = true)
-public class HdfsFetcherConfig extends BaseAuthVfsFetcherConfig {
-
-    private final List<String> configNames = new ArrayList<>();
-    @JsonIgnore
-    private final List<Path> configPaths = new ArrayList<>();
-    private final List<URL> configUrls = new ArrayList<>();
+public class HdfsFetcherConfig extends BaseAuthNioFetcherConfig {
 
     /**
-     * Gets the names of configuration resources to be loaded after defaults.
-     * @return list of names
+     * Authentication method. Defaults to {@link HdfsAuthMethod#SIMPLE}
+     * (no real authentication, the configured username if any is sent as
+     * the {@code user.name} query parameter). Use
+     * {@link HdfsAuthMethod#KERBEROS} for clusters with
+     * {@code hadoop.security.authentication=kerberos}, and set
+     * {@link #setKerberosConfig(KerberosConfig)} accordingly.
      */
-    public List<String> getConfigNames() {
-        return Collections.unmodifiableList(configNames);
-    }
+    private HdfsAuthMethod authMethod = HdfsAuthMethod.SIMPLE;
 
     /**
-     * Sets the names of configuration resources to be loaded after defaults.
-     * @param configNames list of names
-     * @return this
+     * Kerberos/SPNEGO configuration. Required when {@link #getAuthMethod()}
+     * is {@link HdfsAuthMethod#KERBEROS}.
      */
-    public HdfsFetcherConfig setConfigNames(List<String> configNames) {
-        CollectionUtil.setAll(this.configNames, configNames);
-        return this;
-    }
-
-    /**
-     * Gets the full paths of configuration files to be loaded after defaults.
-     * @return list of paths
-     */
-    @JsonIgnore
-    public List<Path> getConfigPaths() {
-        return Collections.unmodifiableList(configPaths);
-    }
-
-    /**
-     * Sets the full paths of configuration files to be loaded after defaults.
-     * @param configPaths list of paths
-     * @return this
-     */
-    @JsonIgnore
-    public HdfsFetcherConfig setConfigPaths(List<Path> configPaths) {
-        CollectionUtil.setAll(this.configPaths, configPaths);
-        return this;
-    }
-
-    @JsonProperty("configPaths")
-    private HdfsFetcherConfig setStrConfigPaths(List<String> configPaths) {
-        setConfigPaths(
-                configPaths.stream()
-                        .map(Path::new)
-                        .toList());
-        return this;
-    }
-
-    @JsonProperty("configPaths")
-    private List<String> getStrConfigPaths() {
-        return getConfigPaths().stream()
-                .map(Path::toString)
-                .toList();
-    }
-
-    /**
-     * Gets the URLs of configuration files to be loaded after defaults.
-     * @return list of URLs
-     */
-    public List<URL> getConfigUrls() {
-        return Collections.unmodifiableList(configUrls);
-    }
-
-    /**
-     * Sets the URLs of configuration files to be loaded after defaults.
-     * @param configUrls list of URLs
-     * @return this
-     */
-    public HdfsFetcherConfig setConfigUrls(List<URL> configUrls) {
-        CollectionUtil.setAll(this.configUrls, configUrls);
-        return this;
-    }
+    private KerberosConfig kerberosConfig;
 }

@@ -27,16 +27,18 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.http.HttpHost;
-import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.client.config.RequestConfig;
-import org.apache.http.conn.ssl.NoopHostnameVerifier;
-import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
-import org.apache.http.impl.client.BasicCredentialsProvider;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.ssl.SSLContexts;
+import org.apache.hc.client5.http.auth.AuthScope;
+import org.apache.hc.client5.http.auth.UsernamePasswordCredentials;
+import org.apache.hc.client5.http.config.ConnectionConfig;
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.impl.auth.BasicCredentialsProvider;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.client5.http.ssl.DefaultClientTlsStrategy;
+import org.apache.hc.client5.http.ssl.NoopHostnameVerifier;
+import org.apache.hc.core5.http.HttpHost;
+import org.apache.hc.core5.ssl.SSLContexts;
 
 import com.norconex.crawler.core.fetch.FetchRequest;
 import com.norconex.crawler.core.session.CrawlerSession;
@@ -124,63 +126,71 @@ public class WebDavFetcher extends AbstractNioFetcher<WebDavFetcherConfig> {
         }
 
         // Authentication
+        var credsProvider = new BasicCredentialsProvider();
         var creds = cfg.getCredentials();
         if (creds.isSet()) {
-            var credsProvider = new BasicCredentialsProvider();
             credsProvider.setCredentials(
-                    AuthScope.ANY,
+                    new AuthScope(null, null, -1, null, null),
                     new UsernamePasswordCredentials(
-                            creds.getUsername(), decryptPassword(creds)));
-            builder.setDefaultCredentialsProvider(credsProvider);
+                            creds.getUsername(),
+                            toCharArray(decryptPassword(creds))));
         }
-
-        // Connection pool limits
-        builder.setMaxConnPerRoute(cfg.getMaxConnectionsPerHost());
-        builder.setMaxConnTotal(cfg.getMaxTotalConnections());
 
         // Timeouts + redirect handling
         var requestConfig = RequestConfig.custom();
-        if (cfg.getConnectionTimeout() != null) {
-            requestConfig.setConnectTimeout(
-                    (int) cfg.getConnectionTimeout().toMillis());
-        }
-        if (cfg.getSoTimeout() != null) {
-            requestConfig.setSocketTimeout(
-                    (int) cfg.getSoTimeout().toMillis());
-        }
         requestConfig.setRedirectsEnabled(cfg.isFollowRedirect());
         builder.setDefaultRequestConfig(requestConfig.build());
 
         if (!cfg.isKeepAlive()) {
-            builder.setConnectionReuseStrategy((response, ctx) -> false);
+            builder.setConnectionReuseStrategy(
+                    (request, response, ctx) -> false);
         }
+
+        // Connection pool + timeouts + TLS
+        var connConfig = ConnectionConfig.custom();
+        if (cfg.getConnectionTimeout() != null) {
+            connConfig.setConnectTimeout(
+                    cfg.getConnectionTimeout().toMillis(),
+                    java.util.concurrent.TimeUnit.MILLISECONDS);
+        }
+        if (cfg.getSoTimeout() != null) {
+            connConfig.setSocketTimeout(
+                    (int) cfg.getSoTimeout().toMillis(),
+                    java.util.concurrent.TimeUnit.MILLISECONDS);
+        }
+        var connMgr = PoolingHttpClientConnectionManagerBuilder.create()
+                .setMaxConnPerRoute(cfg.getMaxConnectionsPerHost())
+                .setMaxConnTotal(cfg.getMaxTotalConnections())
+                .setDefaultConnectionConfig(connConfig.build())
+                .setTlsSocketStrategy(buildTlsSocketStrategy())
+                .build();
+        builder.setConnectionManager(connMgr);
 
         // Proxy
         if (cfg.getProxySettings().isSet()) {
             var proxyHost = cfg.getProxySettings().getHost();
             builder.setProxy(new HttpHost(
-                    proxyHost.getName(), proxyHost.getPort(),
-                    cfg.getProxySettings().getScheme()));
+                    cfg.getProxySettings().getScheme(),
+                    proxyHost.getName(), proxyHost.getPort()));
             var proxyCreds = cfg.getProxySettings().getCredentials();
             if (proxyCreds.isSet()) {
-                var credsProvider = new BasicCredentialsProvider();
                 credsProvider.setCredentials(
-                        new AuthScope(
-                                proxyHost.getName(), proxyHost.getPort()),
+                        new AuthScope(proxyHost.getName(), proxyHost.getPort()),
                         new UsernamePasswordCredentials(
                                 proxyCreds.getUsername(),
-                                decryptPassword(proxyCreds)));
-                builder.setDefaultCredentialsProvider(credsProvider);
+                                toCharArray(decryptPassword(proxyCreds))));
             }
         }
-
-        // TLS
-        builder.setSSLSocketFactory(buildSslSocketFactory());
+        builder.setDefaultCredentialsProvider(credsProvider);
 
         return builder.build();
     }
 
-    private SSLConnectionSocketFactory buildSslSocketFactory() {
+    private static char[] toCharArray(String s) {
+        return s == null ? new char[0] : s.toCharArray();
+    }
+
+    private DefaultClientTlsStrategy buildTlsSocketStrategy() {
         var cfg = configuration;
         try {
             var sslBuilder = SSLContexts.custom();
@@ -191,9 +201,7 @@ public class WebDavFetcher extends AbstractNioFetcher<WebDavFetcherConfig> {
                                 KeyStore.getDefaultType()));
                 var pass = decrypt(
                         cfg.getKeyStorePass(), cfg.getKeyStorePassKey());
-                var passChars = pass == null
-                        ? new char[0]
-                        : pass.toCharArray();
+                var passChars = toCharArray(pass);
                 try (var in = java.nio.file.Files.newInputStream(
                         java.nio.file.Path.of(cfg.getKeyStoreFile()))) {
                     keyStore.load(in, passChars);
@@ -207,10 +215,10 @@ public class WebDavFetcher extends AbstractNioFetcher<WebDavFetcherConfig> {
                 protocols = StringUtils.split(cfg.getTlsVersions(), ", ");
             }
             var hostnameVerifier = cfg.isHostnameVerificationEnabled()
-                    ? SSLConnectionSocketFactory.getDefaultHostnameVerifier()
+                    ? null
                     : NoopHostnameVerifier.INSTANCE;
-            return new SSLConnectionSocketFactory(
-                    sslContext, protocols, null, hostnameVerifier);
+            return new DefaultClientTlsStrategy(
+                    sslContext, protocols, null, null, hostnameVerifier);
         } catch (Exception e) {
             throw new IllegalStateException(
                     "Could not configure WebDAV TLS settings.", e);

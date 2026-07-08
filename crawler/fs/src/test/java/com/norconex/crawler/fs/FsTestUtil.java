@@ -189,7 +189,11 @@ public final class FsTestUtil {
                     // config at fetcherStartup: it is an interface with no
                     // concrete type EasyRandom can instantiate (classpath
                     // scanning for concrete types is disabled above).
-                    .excludeField(FieldPredicates.named("context")));
+                    .excludeField(FieldPredicates.named("context"))
+                    // Runtime-only Kerberos Subject (HDFS), populated by a
+                    // JAAS login at fetcherStartup, not part of the config
+                    // being round-trip tested.
+                    .excludeField(FieldPredicates.named("kerberosSubject")));
 
     //MAYBE: maybe move some of the common test classes/methods to core
     // and make it a usable test artifact?

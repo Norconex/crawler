@@ -38,8 +38,6 @@
     <commons-vfs.version>2.10.0</commons-vfs.version>
     <ftp-fs.version>3.3</ftp-fs.version>
     <ftpserver.version>1.2.1</ftpserver.version>
-    <hadoop.version>3.5.0</hadoop.version>
-    <httpclient.version>4.5.14</httpclient.version>
     <jcifs-ng.version>2.1.10</jcifs-ng.version>
     <log4j-over-slf4j.version>2.0.18</log4j-over-slf4j.version>
     <sftp-fs.version>3.3.2</sftp-fs.version>
@@ -125,62 +123,13 @@
       <artifactId>jcl-over-slf4j</artifactId>
     </dependency>
 
-    <!-- WebDav + CMIS support: WebDAV (PROPFIND/GET) and the CMIS Atom
-         binding are both implemented directly on Apache HttpClient (classic
-         4.x). Pinned explicitly (it was previously only pulled in
-         transitively via commons-vfs2-jackrabbit2) so it survives the
-         eventual removal of commons-vfs2 once the SMB/HDFS providers are
-         also migrated off it. -->
+    <!-- WebDAV, CMIS Atom binding, and HDFS (via the WebHDFS REST API) are
+         all implemented directly on Apache HttpClient 5.x. This is the
+         version managed at the mono-repo root (and already used by the web
+         crawler) - not pinned here, just declared. -->
     <dependency>
-      <groupId>org.apache.httpcomponents</groupId>
-      <artifactId>httpclient</artifactId>
-      <version>${httpclient.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>commons-logging</groupId>
-          <artifactId>commons-logging</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-
-    <!-- HDFS support -->
-    <!-- commons-vfs2-hdfs was split out from commons-vfs2 in 2.10.0 (VFS-851) -->
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-vfs2-hdfs</artifactId>
-      <version>${commons-vfs.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-common</artifactId>
-      <version>${hadoop.version}</version>
-      <exclusions>
-      	<exclusion>
-      		<groupId>org.slf4j</groupId>
-      		<artifactId>slf4j-log4j12</artifactId>
-      	</exclusion>
-      	<exclusion>
-      		<groupId>org.slf4j</groupId>
-      		<artifactId>slf4j-reload4j</artifactId>
-      	</exclusion>
-      	<exclusion>
-      		<groupId>commons-logging</groupId>
-      		<artifactId>commons-logging</artifactId>
-      	</exclusion>
-      	<exclusion>
-      		<groupId>log4j</groupId>
-      		<artifactId>log4j</artifactId>
-      	</exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-hdfs-client</artifactId>
-      <version>${hadoop.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>jakarta.activation</groupId>
-      <artifactId>jakarta.activation-api</artifactId>
+      <groupId>org.apache.httpcomponents.client5</groupId>
+      <artifactId>httpclient5</artifactId>
     </dependency>
 
     <!-- CIFS (Samba) support. jcifs-ng is an actively-maintained fork of

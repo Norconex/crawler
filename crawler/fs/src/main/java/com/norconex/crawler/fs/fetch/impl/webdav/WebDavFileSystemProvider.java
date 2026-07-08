@@ -56,13 +56,16 @@ import java.util.function.Supplier;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
-import org.apache.http.HttpStatus;
-import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpHead;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpHead;
+import org.apache.hc.client5.http.classic.methods.HttpUriRequestBase;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.routing.RoutingSupport;
+import org.apache.hc.core5.http.ClassicHttpResponse;
+import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.HttpException;
+import org.apache.hc.core5.http.HttpStatus;
+import org.apache.hc.core5.http.io.entity.StringEntity;
 
 import com.norconex.commons.lang.xml.Xml;
 
@@ -196,8 +199,17 @@ final class WebDavFileSystemProvider extends FileSystemProvider {
         var wdPath = (WebDavPath) path;
         var fs = wdPath.getFileSystem();
         var get = new HttpGet(url(fs, wdPath.path()));
-        var resp = fs.httpClient().execute(get);
-        var status = resp.getStatusLine().getStatusCode();
+        ClassicHttpResponse resp;
+        try {
+            resp = fs.httpClient().execute(
+                    RoutingSupport.determineHost(get), get);
+        } catch (HttpException e) {
+            throw new IOException(
+                    "Could not determine target host for "
+                            + url(fs, wdPath.path()),
+                    e);
+        }
+        var status = resp.getCode();
         if (status == HttpStatus.SC_NOT_FOUND) {
             resp.close();
             throw new NoSuchFileException(wdPath.path());
@@ -413,13 +425,24 @@ final class WebDavFileSystemProvider extends FileSystemProvider {
 
     private Xml propfind(WebDavFileSystem fs, String path, int depth)
             throws IOException {
-        var req = new HttpPropfind(url(fs, path));
+        var req = new HttpUriRequestBase(
+                "PROPFIND", URI.create(url(fs, path)));
         req.setHeader("Depth", Integer.toString(depth));
         req.setEntity(new StringEntity(
                 PROPFIND_BODY, ContentType.create(
                         "application/xml", StandardCharsets.UTF_8)));
-        try (var resp = fs.httpClient().execute(req)) {
-            var status = resp.getStatusLine().getStatusCode();
+        ClassicHttpResponse resp;
+        try {
+            resp = fs.httpClient().execute(
+                    RoutingSupport.determineHost(req), req);
+        } catch (HttpException e) {
+            throw new IOException(
+                    "Could not determine target host for "
+                            + url(fs, path),
+                    e);
+        }
+        try (resp) {
+            var status = resp.getCode();
             if (status == HttpStatus.SC_NOT_FOUND) {
                 throw new NoSuchFileException(path);
             }
@@ -508,8 +531,18 @@ final class WebDavFileSystemProvider extends FileSystemProvider {
     private WebDavFileAttributes httpHeadAttributes(
             WebDavFileSystem fs, String path) throws IOException {
         var head = new HttpHead(url(fs, path));
-        try (var resp = fs.httpClient().execute(head)) {
-            var status = resp.getStatusLine().getStatusCode();
+        ClassicHttpResponse resp;
+        try {
+            resp = fs.httpClient().execute(
+                    RoutingSupport.determineHost(head), head);
+        } catch (HttpException e) {
+            throw new IOException(
+                    "Could not determine target host for "
+                            + url(fs, path),
+                    e);
+        }
+        try (resp) {
+            var status = resp.getCode();
             if (status == HttpStatus.SC_NOT_FOUND) {
                 throw new NoSuchFileException(path);
             }
@@ -548,19 +581,6 @@ final class WebDavFileSystemProvider extends FileSystemProvider {
             return path.substring(0, path.length() - 1);
         }
         return path;
-    }
-
-    /** The WebDAV {@code PROPFIND} method (a body-bearing HTTP request). */
-    private static final class HttpPropfind
-            extends HttpEntityEnclosingRequestBase {
-        HttpPropfind(String uri) {
-            setURI(URI.create(uri));
-        }
-
-        @Override
-        public String getMethod() {
-            return "PROPFIND";
-        }
     }
 
     /** A read-only {@link SeekableByteChannel} over an in-memory buffer. */
