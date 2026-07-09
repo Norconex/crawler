@@ -32,9 +32,11 @@
     <shared-resources.include>scripts/**</shared-resources.include>
 
     <awssdk.version>2.46.9</awssdk.version>
+    <azure-storage-blob.version>12.35.0</azure-storage-blob.version>
     <commons-net.version>3.13.0</commons-net.version>
     <ftp-fs.version>3.3</ftp-fs.version>
     <ftpserver.version>1.2.1</ftpserver.version>
+    <google-cloud-nio.version>0.133.0</google-cloud-nio.version>
     <jcifs-ng.version>2.1.10</jcifs-ng.version>
     <log4j-over-slf4j.version>2.0.18</log4j-over-slf4j.version>
     <sftp-fs.version>3.3.2</sftp-fs.version>
@@ -58,6 +60,11 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
+        <dependency>
+          <groupId>com.azure</groupId>
+          <artifactId>azure-storage-blob</artifactId>
+          <version>${azure-storage-blob.version}</version>
+        </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -98,6 +105,12 @@
       <groupId>com.github.robtimus</groupId>
       <artifactId>sftp-fs</artifactId>
       <version>${sftp-fs.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.google.cloud</groupId>
+      <artifactId>google-cloud-nio</artifactId>
+      <version>${google-cloud-nio.version}</version>
     </dependency>
 
     <!-- tar/gz/bz2 archive extraction (zip/jar use the JDK's built-in
@@ -161,6 +174,11 @@
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>url-connection-client</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.azure</groupId>
+      <artifactId>azure-storage-blob</artifactId>
     </dependency>
 
     <!-- Test + provided dependencies: -->
