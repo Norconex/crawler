@@ -31,6 +31,7 @@
     <sonar.projectKey>${project.groupId}:${project.artifactId}</sonar.projectKey>
     <shared-resources.include>scripts/**</shared-resources.include>
 
+    <awssdk.version>2.46.9</awssdk.version>
     <commons-net.version>3.13.0</commons-net.version>
     <ftp-fs.version>3.3</ftp-fs.version>
     <ftpserver.version>1.2.1</ftpserver.version>
@@ -49,6 +50,13 @@
         <groupId>org.slf4j</groupId>
         <artifactId>log4j-over-slf4j</artifactId>
         <version>${log4j-over-slf4j.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>software.amazon.awssdk</groupId>
+        <artifactId>bom</artifactId>
+        <version>${awssdk.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -125,6 +133,34 @@
       <groupId>eu.agno3.jcifs</groupId>
       <artifactId>jcifs-ng</artifactId>
       <version>${jcifs-ng.version}</version>
+    </dependency>
+
+    <!-- S3 support: a custom NIO.2 provider on the standard (non-CRT) AWS
+         SDK v2 S3 client. The official AWS Labs NIO.2 provider
+         (aws-java-nio-spi-for-s3) was evaluated but rejected: it
+         unconditionally requires the native AWS Common Runtime (CRT)
+         library (~19MB, no way to exclude it, verified empirically) even
+         when configured to use its "regular client" mode. Excluding the
+         CRT/Netty/Apache HTTP clients here keeps this to the plain,
+         synchronous url-connection-client - no native code, no extra HTTP
+         stack beyond the JDK's own HttpURLConnection. -->
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>s3</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>software.amazon.awssdk</groupId>
+          <artifactId>netty-nio-client</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>software.amazon.awssdk</groupId>
+          <artifactId>apache5-client</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>url-connection-client</artifactId>
     </dependency>
 
     <!-- Test + provided dependencies: -->
