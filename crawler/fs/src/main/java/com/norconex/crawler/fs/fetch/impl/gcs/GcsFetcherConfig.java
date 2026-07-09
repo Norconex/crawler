@@ -1,4 +1,4 @@
-/* Copyright 2023-2026 Norconex Inc.
+/* Copyright 2026 Norconex Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,9 +26,17 @@ import lombok.experimental.Accessors;
  * <p>
  * Authentication is delegated to the official Google Cloud NIO provider,
  * which uses the standard Google Application Default Credentials chain.
+ * When an endpoint is set, the fetcher assumes an emulator or local test
+ * server and connects without authentication.
  * </p>
  */
 @Data
 @Accessors(chain = true)
 public class GcsFetcherConfig extends BaseFetcherConfig {
+
+    /**
+     * Optional endpoint override, mainly intended for GCS-compatible test
+     * servers such as fake-gcs-server.
+     */
+    private String endpoint;
 }

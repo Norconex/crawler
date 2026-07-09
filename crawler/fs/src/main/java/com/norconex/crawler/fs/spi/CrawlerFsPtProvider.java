@@ -37,25 +37,25 @@ import com.norconex.crawler.fs.fetch.impl.webdav.WebDavFetcher;
  */
 public class CrawlerFsPtProvider extends BasePolymorphicTypeProvider {
 
-        protected static final String BASE_PKG = "com.norconex.crawler.fs.";
+    protected static final String BASE_PKG = "com.norconex.crawler.fs.";
 
-        @Override
-        protected void register(Registry registry) {
-                registry
-                                .addFromScan(
-                                                MetadataChecksummer.class,
-                                                BASE_PKG + "doc.operations")
-                                .add(Fetcher.class,
-                                                ArchiveFetcher.class,
-                                                AzureBlobFetcher.class,
-                                                CmisFetcher.class,
-                                                FtpFetcher.class,
-                                                GcsFetcher.class,
-                                                HdfsFetcher.class,
-                                                LocalFetcher.class,
-                                                S3Fetcher.class,
-                                                SftpFetcher.class,
-                                                SmbFetcher.class,
-                                                WebDavFetcher.class);
-        }
+    @Override
+    protected void register(Registry registry) {
+        registry
+                .addFromScan(
+                        MetadataChecksummer.class,
+                        BASE_PKG + "doc.operations")
+                .add(Fetcher.class,
+                        ArchiveFetcher.class,
+                        AzureBlobFetcher.class,
+                        CmisFetcher.class,
+                        FtpFetcher.class,
+                        GcsFetcher.class,
+                        HdfsFetcher.class,
+                        LocalFetcher.class,
+                        S3Fetcher.class,
+                        SftpFetcher.class,
+                        SmbFetcher.class,
+                        WebDavFetcher.class);
+    }
 }

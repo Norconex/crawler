@@ -1,4 +1,4 @@
-/* Copyright 2023-2026 Norconex Inc.
+/* Copyright 2026 Norconex Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,16 +20,24 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang3.StringUtils;
 
+import com.google.cloud.NoCredentials;
+import com.google.cloud.storage.HttpStorageOptions;
+import com.google.cloud.storage.StorageOptions;
+import com.google.cloud.storage.contrib.nio.CloudStorageConfiguration;
+import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem;
 import com.norconex.crawler.core.fetch.FetchRequest;
+import com.norconex.crawler.core.session.CrawlerSession;
 import com.norconex.crawler.fs.fetch.impl.AbstractNioFetcher;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * <p>
@@ -38,12 +46,31 @@ import lombok.ToString;
  * <code>google-cloud-nio</code> provider.
  * </p>
  */
+@Slf4j
 @ToString
 @EqualsAndHashCode
 public class GcsFetcher extends AbstractNioFetcher<GcsFetcherConfig> {
 
     @Getter
     private final GcsFetcherConfig configuration = new GcsFetcherConfig();
+
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private final Map<String, CloudStorageFileSystem> openFileSystems =
+            new ConcurrentHashMap<>();
+
+    @Override
+    protected void fetcherShutdown(CrawlerSession crawler) {
+        openFileSystems.values().forEach(fs -> {
+            try {
+                fs.close();
+            } catch (IOException e) {
+                LOG.warn("Could not close GCS file system: {}", fs, e);
+            }
+        });
+        openFileSystems.clear();
+        super.fetcherShutdown(crawler);
+    }
 
     @Override
     protected boolean acceptRequest(@NonNull FetchRequest fetchRequest) {
@@ -53,7 +80,32 @@ public class GcsFetcher extends AbstractNioFetcher<GcsFetcherConfig> {
     @Override
     protected Path resolvePath(String reference) throws IOException {
         var uri = URI.create(reference);
-        var fs = getOrOpenFileSystem(uri, Map.of());
-        return fs.getPath(StringUtils.defaultIfBlank(uri.getPath(), "/"));
+        var fs = openFileSystems.computeIfAbsent(
+                uri.getHost(), this::openFileSystem);
+        var path = uri.getPath();
+        if (StringUtils.isNotBlank(path) && !"/".equals(path)) {
+            path = StringUtils.removeStart(path, "/");
+        }
+        return fs.getPath(StringUtils.defaultIfBlank(path, "/"));
+    }
+
+    CloudStorageFileSystem openFileSystem(String bucket) {
+        return CloudStorageFileSystem.forBucket(
+                bucket,
+                CloudStorageConfiguration.builder()
+                        .usePseudoDirectories(true)
+                        .build(),
+                buildStorageOptions());
+    }
+
+    StorageOptions buildStorageOptions() {
+        var endpoint = configuration.getEndpoint();
+        if (StringUtils.isBlank(endpoint)) {
+            return StorageOptions.getDefaultInstance();
+        }
+        return HttpStorageOptions.newBuilder()
+                .setHost(endpoint)
+                .setCredentials(NoCredentials.getInstance())
+                .build();
     }
 }
