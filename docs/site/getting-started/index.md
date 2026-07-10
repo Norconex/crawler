@@ -33,7 +33,7 @@ distribution.
 
 ## Where to go next
 
-- **New to Norconex Crawler?** → [Installation](./installation.md) then [Docker](./docker.md), [Web Quick Start](./quick-start-web.md), or [File System Quick Start](./quick-start-fs.md)
+- **New to Norconex Crawler?** → [Installation](./installation.md) then [Docker](./docker.md), [Web Quick Start](./quick-start-web.md), [File System Quick Start](./quick-start-fs.md), and [FS Fetchers Quickstart](./fs-fetchers-quickstart.md)
 - **Embedding in Java?** → [Java Integration](./java-integration.md)
 - **Need config rules and defaults?** → [Configuration Semantics](../concepts/configuration-semantics.md)
 - **How does it all work?** → [Concepts](../concepts/index.md)

@@ -39,3 +39,12 @@ All configuration lives in a single file (XML, YAML, or JSON).
 
 - [Reference](/docs/reference/) — all built-in extension points with examples
 - The [Visual Configurator](https://crawlerconfig.norconex.com) provides a visual way to build and validate configs.
+
+## File System Fetcher Start References
+
+For filesystem crawling, the most common first issue is choosing the right
+start reference scheme for the fetcher you want to use.
+
+Use [FS Fetchers Quickstart](../getting-started/fs-fetchers-quickstart.md)
+for a compact table covering all supported filesystem fetchers, including
+start reference examples and the first configuration step for each.

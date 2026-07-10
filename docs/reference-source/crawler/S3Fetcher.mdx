@@ -19,6 +19,10 @@ Fetches documents from Amazon S3 using references such as
 Supports AWS default credentials, explicit access keys via `credentials`, and
 S3-compatible endpoints.
 
+The fetcher is designed to support common S3-compatible object stores (for
+example MinIO, Ceph RGW, and Cloudflare R2) by combining `endpoint`, `region`,
+and `forcePathStyle` as needed by the target platform.
+
 S3 has no real directories. Folder-like paths are derived from object key
 prefixes.
 
@@ -77,6 +81,35 @@ The following example targets a MinIO endpoint.
     "credentials": {
       "username": "minioadmin",
       "password": "minioadmin"
+    }
+  }}
+/>
+
+The following example targets a Ceph RGW endpoint.
+
+<ConfigBlock
+  json={{
+    "class": "S3Fetcher",
+    "endpoint": "https://ceph.example.com",
+    "region": "us-east-1",
+    "forcePathStyle": true,
+    "credentials": {
+      "username": "access-key",
+      "password": "secret-key"
+    }
+  }}
+/>
+
+The following example targets a Cloudflare R2 endpoint.
+
+<ConfigBlock
+  json={{
+    "class": "S3Fetcher",
+    "endpoint": "https://<account-id>.r2.cloudflarestorage.com",
+    "region": "auto",
+    "credentials": {
+      "username": "r2-access-key",
+      "password": "r2-secret-key"
     }
   }}
 />

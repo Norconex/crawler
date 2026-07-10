@@ -101,6 +101,9 @@ Alternatively, you can combine "clean" with the start command:
 The file system crawler supports remote protocols out of the box. A few
 examples:
 
+If you are unsure which scheme or start reference format to use for a given
+fetcher, see [FS Fetchers Quickstart](./fs-fetchers-quickstart.md).
+
 **SFTP:**
 
 ```yaml
@@ -128,7 +131,7 @@ credentials:
 ```yaml
 id: my-first-crawl
 startReferences:
-  - hdfs://namenode:9000/user/data/corpus
+  - webhdfs://namenode:9870/user/data/corpus
 ```
 
 ## Step 6 — Send to a real target
