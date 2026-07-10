@@ -242,6 +242,13 @@ public abstract class AbstractNioFetcher<C extends BaseFetcherConfig>
         if (uri.getUserInfo() == null) {
             return uri;
         }
+        if ("abfs".equalsIgnoreCase(uri.getScheme())
+                || "abfss".equalsIgnoreCase(uri.getScheme())) {
+            // ADLS Gen2 encodes the file system name in the user-info part
+            // of abfs[s]://filesystem@account.dfs.core.windows.net/path.
+            // Stripping it would corrupt the reference.
+            return uri;
+        }
         try {
             return new URI(
                     uri.getScheme(), null, uri.getHost(), uri.getPort(),

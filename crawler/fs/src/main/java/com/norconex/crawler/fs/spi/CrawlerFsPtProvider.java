@@ -18,6 +18,7 @@ import com.norconex.commons.lang.bean.BeanMapper;
 import com.norconex.commons.lang.bean.spi.BasePolymorphicTypeProvider;
 import com.norconex.crawler.core.doc.operations.checksum.MetadataChecksummer;
 import com.norconex.crawler.core.fetch.Fetcher;
+import com.norconex.crawler.fs.fetch.impl.adlsgen2.AdlsGen2Fetcher;
 import com.norconex.crawler.fs.fetch.impl.archive.ArchiveFetcher;
 import com.norconex.crawler.fs.fetch.impl.azureblob.AzureBlobFetcher;
 import com.norconex.crawler.fs.fetch.impl.cmis.CmisFetcher;
@@ -46,6 +47,7 @@ public class CrawlerFsPtProvider extends BasePolymorphicTypeProvider {
                         MetadataChecksummer.class,
                         BASE_PKG + "doc.operations")
                 .add(Fetcher.class,
+                        AdlsGen2Fetcher.class,
                         ArchiveFetcher.class,
                         AzureBlobFetcher.class,
                         CmisFetcher.class,

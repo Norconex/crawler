@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Timeout;
 
 import com.norconex.commons.lang.bean.BeanMapper;
 import com.norconex.crawler.fs.doc.operations.checksum.FsMetadataChecksummer;
+import com.norconex.crawler.fs.fetch.impl.adlsgen2.AdlsGen2Fetcher;
 import com.norconex.crawler.fs.fetch.impl.azureblob.AzureBlobFetcher;
 import com.norconex.crawler.fs.fetch.impl.cmis.CmisFetcher;
 import com.norconex.crawler.fs.fetch.impl.ftp.FtpFetcher;
@@ -40,6 +41,7 @@ class CrawlerFsPtProviderTest {
         assertThat(BeanMapper.DEFAULT.getPolymorphicTypes().values())
                 .contains(
                         FsMetadataChecksummer.class,
+                        AdlsGen2Fetcher.class,
                         AzureBlobFetcher.class,
                         CmisFetcher.class,
                         FtpFetcher.class,

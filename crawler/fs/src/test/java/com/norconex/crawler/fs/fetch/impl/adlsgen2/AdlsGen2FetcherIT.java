@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.norconex.crawler.fs.fetch.impl.gcs;
+package com.norconex.crawler.fs.fetch.impl.adlsgen2;
 
 import static com.norconex.crawler.core.fetch.FetchDirective.DOCUMENT;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,8 +37,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.MockedStatic;
 
-import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem;
-import com.google.cloud.storage.contrib.nio.CloudStoragePath;
 import com.norconex.crawler.fs.doc.FsDocMetadata;
 import com.norconex.crawler.fs.fetch.FileFetchRequest;
 import com.norconex.crawler.fs.fetch.FileFetchResponse;
@@ -47,24 +45,22 @@ import com.norconex.crawler.fs.fetch.FolderPathsFetchResponse;
 import com.norconex.importer.doc.Doc;
 
 @Timeout(30)
-class GcsFetcherIT {
+class AdlsGen2FetcherIT {
 
     @Test
     void testFetchFileObject() throws IOException {
-        var fetcher = spy(new GcsFetcher());
-        var fs = mock(CloudStorageFileSystem.class);
-        var path = mock(CloudStoragePath.class);
+        var fetcher = spy(new AdlsGen2Fetcher());
+        var path = mock(AdlsGen2Path.class);
         var attrs = mock(BasicFileAttributes.class);
 
-        doReturn(fs).when(fetcher).openFileSystem("bucket");
-        when(fs.getPath("bye.txt")).thenReturn(path);
+        doReturn(path).when(fetcher).resolvePath(
+                "abfss://filesystem@account.dfs.core.windows.net/bye.txt");
         when(path.getFileName()).thenReturn(null);
         when(attrs.isRegularFile()).thenReturn(true);
         when(attrs.isDirectory()).thenReturn(false);
         when(attrs.isSymbolicLink()).thenReturn(false);
         when(attrs.size()).thenReturn(10L);
-        when(attrs.lastModifiedTime())
-                .thenReturn(FileTime.fromMillis(1234));
+        when(attrs.lastModifiedTime()).thenReturn(FileTime.fromMillis(1234));
 
         try (MockedStatic<Files> files = mockStatic(Files.class)) {
             files.when(() -> Files.readAttributes(
@@ -76,46 +72,40 @@ class GcsFetcherIT {
             files.when(() -> Files.newInputStream(path))
                     .thenReturn(new ByteArrayInputStream(
                             "Bye World!".getBytes()));
-            files.when(() -> Files.isExecutable(path))
-                    .thenReturn(false);
-            files.when(() -> Files.isReadable(path))
-                    .thenReturn(true);
-            files.when(() -> Files.isWritable(path))
-                    .thenReturn(false);
-            files.when(() -> Files.isHidden(path))
-                    .thenReturn(false);
+            files.when(() -> Files.isExecutable(path)).thenReturn(false);
+            files.when(() -> Files.isReadable(path)).thenReturn(true);
+            files.when(() -> Files.isWritable(path)).thenReturn(false);
+            files.when(() -> Files.isHidden(path)).thenReturn(false);
 
-            var doc = new Doc("gs://bucket/bye.txt");
+            var doc = new Doc(
+                    "abfss://filesystem@account.dfs.core.windows.net/bye.txt");
             var response = (FileFetchResponse) fetcher.fetch(
                     new FileFetchRequest(doc, DOCUMENT));
 
-            assertThat(response.getProcessingOutcome()
-                    .isGoodState())
-                            .isTrue();
+            assertThat(response.getProcessingOutcome().isGoodState())
+                    .isTrue();
             assertThat(response.isFile()).isTrue();
             assertThat(response.isFolder()).isFalse();
-            assertThat(new String(
-                    doc.getInputStream().readAllBytes()))
-                            .contains("Bye World!");
-            assertThat(doc.getMetadata()
-                    .getString(FsDocMetadata.FILE_SIZE))
-                            .isEqualTo("10");
+            assertThat(new String(doc.getInputStream().readAllBytes()))
+                    .contains("Bye World!");
+            assertThat(doc.getMetadata().getString(FsDocMetadata.FILE_SIZE))
+                    .isEqualTo("10");
         }
     }
 
     @Test
     void testFetchChildPaths() throws IOException {
-        var fetcher = spy(new GcsFetcher());
-        var fs = mock(CloudStorageFileSystem.class);
-        var root = mock(CloudStoragePath.class);
-        var file = mock(CloudStoragePath.class);
-        var folder = mock(CloudStoragePath.class);
+        var fetcher = spy(new AdlsGen2Fetcher());
+        var dir = mock(AdlsGen2Path.class);
+        var file = mock(AdlsGen2Path.class);
+        var folder = mock(AdlsGen2Path.class);
 
-        doReturn(fs).when(fetcher).openFileSystem("bucket");
-        when(fs.getPath("/")).thenReturn(root);
-        when(file.toUri())
-                .thenReturn(URI.create("gs://bucket/bye.txt"));
-        when(folder.toUri()).thenReturn(URI.create("gs://bucket/imgs"));
+        doReturn(dir).when(fetcher).resolvePath(
+                "abfss://filesystem@account.dfs.core.windows.net/");
+        when(file.toUri()).thenReturn(URI.create(
+                "abfss://filesystem@account.dfs.core.windows.net/bye.txt"));
+        when(folder.toUri()).thenReturn(URI.create(
+                "abfss://filesystem@account.dfs.core.windows.net/imgs"));
 
         DirectoryStream<Path> stream = new DirectoryStream<>() {
             @Override
@@ -130,30 +120,23 @@ class GcsFetcherIT {
         };
 
         try (MockedStatic<Files> files = mockStatic(Files.class)) {
-            files.when(() -> Files.newDirectoryStream(root))
-                    .thenReturn(stream);
-            files.when(() -> Files.isRegularFile(file))
-                    .thenReturn(true);
-            files.when(() -> Files.isDirectory(file))
-                    .thenReturn(false);
-            files.when(() -> Files.isRegularFile(folder))
-                    .thenReturn(false);
-            files.when(() -> Files.isDirectory(folder))
-                    .thenReturn(true);
+            files.when(() -> Files.newDirectoryStream(dir)).thenReturn(stream);
+            files.when(() -> Files.isRegularFile(file)).thenReturn(true);
+            files.when(() -> Files.isDirectory(file)).thenReturn(false);
+            files.when(() -> Files.isRegularFile(folder)).thenReturn(false);
+            files.when(() -> Files.isDirectory(folder)).thenReturn(true);
 
             var response = (FolderPathsFetchResponse) fetcher.fetch(
                     new FolderPathsFetchRequest(new Doc(
-                            "gs://bucket")));
+                            "abfss://filesystem@account.dfs.core.windows.net/")));
 
-            assertThat(response.getProcessingOutcome()
-                    .isGoodState()).isTrue();
+            assertThat(response.getProcessingOutcome().isGoodState()).isTrue();
             assertThat(response.getChildPaths())
-                    .extracting(p -> p.getUri() + ":"
-                            + p.isFile() + ":"
+                    .extracting(p -> p.getUri() + ":" + p.isFile() + ":"
                             + p.isFolder())
                     .containsExactlyInAnyOrder(
-                            "gs://bucket/bye.txt:true:false",
-                            "gs://bucket/imgs:false:true");
+                            "abfss://filesystem@account.dfs.core.windows.net/bye.txt:true:false",
+                            "abfss://filesystem@account.dfs.core.windows.net/imgs:false:true");
         }
     }
 }
