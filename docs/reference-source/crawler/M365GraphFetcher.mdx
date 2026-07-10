@@ -1,0 +1,155 @@
+---
+component: M365GraphFetcher
+module: crawler/fs
+locale: en
+propertyCoverage: all
+---
+
+# M365GraphFetcher
+
+## Summary
+
+Microsoft 365 Graph fetcher for SharePoint Online and OneDrive for Business.
+
+## Notes
+
+Fetches documents from Microsoft Graph using stable item-ID-based references
+for SharePoint and OneDrive.
+
+Supported schemes:
+
+- `m365sp://{tenant}/sites/{siteId}`
+- `m365sp://{tenant}/siteurl?url={url-encoded-absolute-site-url}`
+- `m365sp://{tenant}/sites/{siteId}/drives/{driveId}/items/{itemId}`
+- `m365od://{tenant}/users/{userId}`
+- `m365od://{tenant}/users/{userId}/drives/{driveId}/items/{itemId}`
+
+V1 authentication is app-only (client credentials).
+
+Discovery entry references (`/sites/{siteId}`, `/siteurl?...`, and
+`/users/{userId}`) are supported and expand to drive roots before normal item
+traversal.
+
+Retry model:
+
+- Framework retry is controlled by crawler-level `fetchersMaxRetries` and
+  `fetchersRetryDelay`.
+- Optional M365-native retry can be enabled for throttling/transient Graph
+  statuses (for example `429`), including `Retry-After` support.
+- Keep native retry disabled to rely solely on framework retry for consistency.
+
+## Properties
+
+### authorityHost
+
+Authentication authority host. Defaults to
+`https://login.microsoftonline.com`.
+
+### clientId
+
+Azure AD application (client) ID.
+
+### clientSecret
+
+Azure AD client secret used for client-credentials token acquisition.
+
+### graphBaseUrl
+
+Microsoft Graph API root URL. Defaults to `https://graph.microsoft.com/v1.0`.
+
+### validStatusCodes
+
+HTTP status codes treated as successful Graph responses.
+Defaults to `200`, `201`, `202`, and `204`.
+
+### notFoundStatusCodes
+
+HTTP status codes treated as "not found" outcomes.
+Defaults to `404`.
+
+### nativeRetryEnabled
+
+When `true`, enables M365-native retry for throttling/transient statuses.
+Default is `false`.
+
+### nativeRetryMaxRetries
+
+Maximum native retries when `nativeRetryEnabled` is `true`.
+Default is `3`.
+
+### nativeRetryBaseDelay
+
+Base delay for native retries when `Retry-After` is absent.
+Default is `PT1S`.
+
+### nativeRetryStatusCodes
+
+Status codes eligible for native retry when enabled.
+Defaults to `429`, `503`, and `504`.
+
+### referenceFilters
+
+Filters applied to document references (URLs or file paths) to control which
+ones are fetched. Documents whose references do not pass the filters are
+skipped.
+
+### tenantId
+
+Tenant ID used for token acquisition and tenant boundary validation.
+
+## Examples
+
+The following example starts from a known SharePoint drive item.
+
+<ConfigBlock
+  json={{
+    "class": "M365GraphFetcher",
+    "tenantId": "contoso.onmicrosoft.com",
+    "clientId": "11111111-2222-3333-4444-555555555555",
+    "clientSecret": "<secret>",
+    "validStatusCodes": [200, 204],
+    "notFoundStatusCodes": [404, 410]
+  }}
+/>
+
+Use a start reference such as:
+
+`m365sp://contoso.onmicrosoft.com/sites/{siteId}/drives/{driveId}/items/{itemId}`
+
+For discovery bootstrap, start from a site or site URL instead:
+
+- `m365sp://contoso.onmicrosoft.com/sites/{siteId}`
+- `m365sp://contoso.onmicrosoft.com/siteurl?url=https%3A%2F%2Fcontoso.sharepoint.com%2Fsites%2Fengineering`
+
+The following example starts from a known OneDrive drive item.
+
+<ConfigBlock
+  json={{
+    "class": "M365GraphFetcher",
+    "tenantId": "contoso.onmicrosoft.com",
+    "clientId": "11111111-2222-3333-4444-555555555555",
+    "clientSecret": "<secret>",
+    "nativeRetryEnabled": true,
+    "nativeRetryMaxRetries": 4,
+    "nativeRetryStatusCodes": [429, 503, 504]
+  }}
+/>
+
+Use a start reference such as:
+
+`m365od://contoso.onmicrosoft.com/users/{userId}/drives/{driveId}/items/{itemId}`
+
+For discovery bootstrap from the user boundary, start with:
+
+- `m365od://contoso.onmicrosoft.com/users/{userId}`
+
+## Permissions
+
+For app-only crawling, grant and admin-consent the minimum Microsoft Graph
+application permissions required by your selected mode:
+
+- SharePoint mode: `Sites.Read.All` (or broader scope only if required)
+- OneDrive mode: `Files.Read.All` and `User.Read.All`
+
+If your tenant policies require tighter scoping, prefer site/user boundaries in
+`startReferences` and avoid broad tenant-level permissions.

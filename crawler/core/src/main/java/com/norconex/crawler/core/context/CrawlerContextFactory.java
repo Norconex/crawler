@@ -47,92 +47,94 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public final class CrawlerContextFactory {
 
-    @Data
-    @Accessors(fluent = true)
-    public static class Builder {
-        private CrawlerDriver driver;
-        private CrawlerConfig config;
+        @Data
+        @Accessors(fluent = true)
+        public static class Builder {
+                private CrawlerDriver driver;
+                private CrawlerConfig config;
 
-        public CrawlerContextFactory build() {
-            return new CrawlerContextFactory(driver, config);
+                public CrawlerContextFactory build() {
+                        return new CrawlerContextFactory(driver, config);
+                }
         }
-    }
 
-    public static Builder builder() {
-        return new Builder();
-    }
-
-    private final CrawlerDriver driver;
-    private final CrawlerConfig config;
-
-    public CrawlerContext create() {
-        var workDir = ConfigUtil.resolveWorkDir(config);
-        var eventManager = ofNullable(driver.eventManager())
-                .orElse(new EventManager());
-        var tempDir = ConfigUtil.resolveTempDir(config);
-        createDir(tempDir); // Will also create "workdir", temp's parent
-
-        return CrawlerContext.builder()
-                .beanMapper(driver.beanMapper())
-                .bootstrappers(driver.bootstrappers())
-                .callbacks(driver.callbacks())
-                .committerService(CommitterService
-                        .<Doc>builder()
-                        .committers(config
-                                .getCommitters())
-                        .eventManager(eventManager)
-                        .upsertRequestBuilder(
-                                doc -> new UpsertRequest(
-                                        doc.getReference(),
-                                        doc.getMetadata(),
-                                        // InputStream closed by caller
-                                        doc.getInputStream()))
-                        .deleteRequestBuilder(
-                                doc -> new DeleteRequest(
-                                        doc.getReference(),
-                                        doc.getMetadata()))
-                        .build())
-                .crawlConfig(config)
-                .dedupService(new DedupService())
-                .crawlEntryType(driver.crawlEntryType())
-                .cacheTypes(driver.cacheTypes())
-                .docPipelines(driver.docPipelines())
-                .crawlEntryLedger(new CrawlerEntryLedger())
-                .eventManager(eventManager)
-                .fetcher(MultiFetcher.builder()
-                        .fetchers(config.getFetchers())
-                        .maxRetries(config
-                                .getFetchersMaxRetries())
-                        .responseAggregator(
-                                driver.fetchDriver()
-                                        .responseAggregator())
-                        .unsuccessfulResponseFactory(
-                                driver.fetchDriver()
-                                        .unsuccesfulResponseFactory())
-                        .build())
-                .metrics(new CrawlerMetricsImpl())
-                .importer(new Importer(
-                        config.getImporterConfig(),
-                        eventManager))
-                .streamFactory(new CachedStreamFactory(
-                        (int) config.getMaxStreamCachePoolSize(),
-                        (int) config.getMaxStreamCacheSize(),
-                        tempDir))
-                .tempDir(tempDir)
-                .threadFactoryCreator(
-                        new ScopedThreadFactoryCreator(
-                                "crawl"))
-                .workDir(workDir)
-                .build();
-    }
-
-    private void createDir(Path dir) {
-        try {
-            Files.createDirectories(dir);
-        } catch (IOException e) {
-            throw new CrawlerException(
-                    "Could not create directory: " + dir,
-                    e);
+        public static Builder builder() {
+                return new Builder();
         }
-    }
+
+        private final CrawlerDriver driver;
+        private final CrawlerConfig config;
+
+        public CrawlerContext create() {
+                var workDir = ConfigUtil.resolveWorkDir(config);
+                var eventManager = ofNullable(driver.eventManager())
+                                .orElse(new EventManager());
+                var tempDir = ConfigUtil.resolveTempDir(config);
+                createDir(tempDir); // Will also create "workdir", temp's parent
+
+                return CrawlerContext.builder()
+                                .beanMapper(driver.beanMapper())
+                                .bootstrappers(driver.bootstrappers())
+                                .callbacks(driver.callbacks())
+                                .committerService(CommitterService
+                                                .<Doc>builder()
+                                                .committers(config
+                                                                .getCommitters())
+                                                .eventManager(eventManager)
+                                                .upsertRequestBuilder(
+                                                                doc -> new UpsertRequest(
+                                                                                doc.getReference(),
+                                                                                doc.getMetadata(),
+                                                                                // InputStream closed by caller
+                                                                                doc.getInputStream()))
+                                                .deleteRequestBuilder(
+                                                                doc -> new DeleteRequest(
+                                                                                doc.getReference(),
+                                                                                doc.getMetadata()))
+                                                .build())
+                                .crawlConfig(config)
+                                .dedupService(new DedupService())
+                                .crawlEntryType(driver.crawlEntryType())
+                                .cacheTypes(driver.cacheTypes())
+                                .docPipelines(driver.docPipelines())
+                                .crawlEntryLedger(new CrawlerEntryLedger())
+                                .eventManager(eventManager)
+                                .fetcher(MultiFetcher.builder()
+                                                .fetchers(config.getFetchers())
+                                                .maxRetries(config
+                                                                .getFetchersMaxRetries())
+                                                .retryDelay(config
+                                                                .getFetchersRetryDelay())
+                                                .responseAggregator(
+                                                                driver.fetchDriver()
+                                                                                .responseAggregator())
+                                                .unsuccessfulResponseFactory(
+                                                                driver.fetchDriver()
+                                                                                .unsuccesfulResponseFactory())
+                                                .build())
+                                .metrics(new CrawlerMetricsImpl())
+                                .importer(new Importer(
+                                                config.getImporterConfig(),
+                                                eventManager))
+                                .streamFactory(new CachedStreamFactory(
+                                                (int) config.getMaxStreamCachePoolSize(),
+                                                (int) config.getMaxStreamCacheSize(),
+                                                tempDir))
+                                .tempDir(tempDir)
+                                .threadFactoryCreator(
+                                                new ScopedThreadFactoryCreator(
+                                                                "crawl"))
+                                .workDir(workDir)
+                                .build();
+        }
+
+        private void createDir(Path dir) {
+                try {
+                        Files.createDirectories(dir);
+                } catch (IOException e) {
+                        throw new CrawlerException(
+                                        "Could not create directory: " + dir,
+                                        e);
+                }
+        }
 }
