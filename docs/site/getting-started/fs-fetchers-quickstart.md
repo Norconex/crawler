@@ -47,7 +47,7 @@ committers:
 2. Omitting trailing slash on folder-like start references when the server expects one.
 3. Forgetting provider-specific endpoint settings for S3-compatible stores.
 4. Mixing account names in URI and credentials for Azure fetchers.
-5. Starting M365 delta mode from a site or user discovery reference when you need stored delta cursors. Use a drive boundary such as `m365sp://tenant/sites/{siteId}/drives/{driveId}` or `m365od://tenant/users/{userId}/drives/{driveId}` together with crawler-level `changeDiscovery: SOURCE_DELTA` and incremental crawl mode.
+5. Starting M365 delta mode without matching the fetcher expansion policy to your start references. Use a drive boundary such as `m365sp://tenant/sites/{siteId}/drives/{driveId}` or `m365od://tenant/users/{userId}/drives/{driveId}` with `changeDiscovery: SOURCE_DELTA`, or keep site/user start references and set `sourceDeltaExpansion: INCLUDE_CHILD_DRIVES`.
 
 ## Next step
 

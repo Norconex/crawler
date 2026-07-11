@@ -41,6 +41,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.norconex.commons.lang.Sleeper;
 import com.norconex.commons.lang.file.ContentType;
 import com.norconex.crawler.core.CrawlerConfig.ChangeDiscovery;
+import com.norconex.crawler.core.CrawlerException;
 import com.norconex.crawler.core.fetch.AbstractFetcher;
 import com.norconex.crawler.core.fetch.FetchDirective;
 import com.norconex.crawler.core.fetch.FetchException;
@@ -121,6 +122,9 @@ public class M365GraphFetcher extends AbstractFetcher<M365GraphFetcherConfig> {
         sourceDeltaEnabled = crawler.isIncremental()
                 && crawler.getCrawlContext().getCrawlConfig()
                         .getChangeDiscovery() == ChangeDiscovery.SOURCE_DELTA;
+        if (sourceDeltaEnabled) {
+            validateConfiguredSourceDeltaRoots(crawler);
+        }
     }
 
     @Override
@@ -199,6 +203,7 @@ public class M365GraphFetcher extends AbstractFetcher<M365GraphFetcherConfig> {
             }
 
             if (ref.isDiscoveryEntry()) {
+                validateDiscoveryEntryDeltaExpansion(ref);
                 return fetchDiscoveryEntryChildPaths(ref);
             }
 
@@ -372,6 +377,52 @@ public class M365GraphFetcher extends AbstractFetcher<M365GraphFetcherConfig> {
                 .processingOutcome(ProcessingOutcome.NEW)
                 .childPaths(childPaths)
                 .build();
+    }
+
+    private void validateConfiguredSourceDeltaRoots(CrawlerSession crawler) {
+        for (String startRef : crawler.getCrawlContext().getCrawlConfig()
+                .getStartReferences()) {
+            if (StringUtils.isBlank(startRef)) {
+                continue;
+            }
+            if (!StringUtils.startsWithAny(startRef,
+                    "m365sp://", "m365od://")) {
+                continue;
+            }
+            validateConfiguredSourceDeltaRoot(
+                    M365GraphReference.parse(startRef));
+        }
+    }
+
+    private void validateConfiguredSourceDeltaRoot(M365GraphReference ref) {
+        if (ref.kind() == M365GraphReference.Kind.DRIVE) {
+            return;
+        }
+        if (ref.isDiscoveryEntry()
+                && configuration
+                        .getSourceDeltaExpansion() == M365GraphFetcherConfig.SourceDeltaExpansion.INCLUDE_CHILD_DRIVES) {
+            return;
+        }
+        throw new CrawlerException("Unsupported M365 SOURCE_DELTA start "
+                + "reference for current sourceDeltaExpansion: "
+                + ref.toReference()
+                + ". Use a drive start reference or set "
+                + "sourceDeltaExpansion=INCLUDE_CHILD_DRIVES for site/siteurl/"
+                + "user boundaries.");
+    }
+
+    private void validateDiscoveryEntryDeltaExpansion(M365GraphReference ref)
+            throws IOException {
+        if (!isSourceDeltaEnabled()) {
+            return;
+        }
+        if (configuration
+                .getSourceDeltaExpansion() == M365GraphFetcherConfig.SourceDeltaExpansion.INCLUDE_CHILD_DRIVES) {
+            return;
+        }
+        throw new IOException("M365 SOURCE_DELTA discovery entry requires "
+                + "sourceDeltaExpansion=INCLUDE_CHILD_DRIVES: "
+                + ref.toReference());
     }
 
     void fetchMetadata(Doc doc, JsonNode item) {

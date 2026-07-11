@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Timeout;
 
 import com.norconex.commons.lang.bean.BeanMapper;
 import com.norconex.crawler.core.CrawlerConfig;
+import com.norconex.crawler.core.CrawlerException;
 import com.norconex.crawler.core.context.CrawlerContext;
 import com.norconex.crawler.core.session.CrawlerAttributes;
 import com.norconex.crawler.core.session.CrawlerSession;
@@ -164,8 +165,11 @@ class M365GraphFetcherTest {
     @Test
     void testSourceDeltaEnabledOnIncrementalStartup() {
         var fetcher = new M365GraphFetcher();
+        fetcher.getConfiguration().setSourceDeltaExpansion(
+                M365GraphFetcherConfig.SourceDeltaExpansion.SELF_ONLY);
         fetcher.fetcherStartup(mockSession(true,
-                CrawlerConfig.ChangeDiscovery.SOURCE_DELTA));
+                CrawlerConfig.ChangeDiscovery.SOURCE_DELTA,
+                "m365od://tenant/users/user123/drives/drive123"));
 
         assertThat(fetcher.isSourceDeltaEnabled()).isTrue();
     }
@@ -174,12 +178,53 @@ class M365GraphFetcherTest {
     void testSourceDeltaDisabledWithoutIncrementalSourceDelta() {
         var fetcher = new M365GraphFetcher();
         fetcher.fetcherStartup(mockSession(true,
-                CrawlerConfig.ChangeDiscovery.CRAWLER_SCAN));
+                CrawlerConfig.ChangeDiscovery.CRAWLER_SCAN,
+                "m365od://tenant/users/user123/drives/drive123"));
         assertThat(fetcher.isSourceDeltaEnabled()).isFalse();
 
         fetcher.fetcherStartup(mockSession(false,
-                CrawlerConfig.ChangeDiscovery.SOURCE_DELTA));
+                CrawlerConfig.ChangeDiscovery.SOURCE_DELTA,
+                "m365od://tenant/users/user123/drives/drive123"));
         assertThat(fetcher.isSourceDeltaEnabled()).isFalse();
+    }
+
+    @Test
+    void testSourceDeltaRejectsSiteBoundaryWithSelfOnlyExpansion() {
+        var fetcher = new M365GraphFetcher();
+        fetcher.getConfiguration().setSourceDeltaExpansion(
+                M365GraphFetcherConfig.SourceDeltaExpansion.SELF_ONLY);
+
+        assertThatThrownBy(() -> fetcher.fetcherStartup(mockSession(true,
+                CrawlerConfig.ChangeDiscovery.SOURCE_DELTA,
+                "m365sp://tenant/sites/site123")))
+                        .isInstanceOf(CrawlerException.class)
+                        .hasMessageContaining("sourceDeltaExpansion")
+                        .hasMessageContaining("INCLUDE_CHILD_DRIVES");
+    }
+
+    @Test
+    void testSourceDeltaAllowsSiteBoundaryWithChildDriveExpansion() {
+        var fetcher = new M365GraphFetcher();
+        fetcher.getConfiguration().setSourceDeltaExpansion(
+                M365GraphFetcherConfig.SourceDeltaExpansion.INCLUDE_CHILD_DRIVES);
+
+        assertThatNoException().isThrownBy(() -> fetcher.fetcherStartup(
+                mockSession(true,
+                        CrawlerConfig.ChangeDiscovery.SOURCE_DELTA,
+                        "m365sp://tenant/sites/site123")));
+        assertThat(fetcher.isSourceDeltaEnabled()).isTrue();
+    }
+
+    @Test
+    void testSourceDeltaRejectsItemBoundary() {
+        var fetcher = new M365GraphFetcher();
+
+        assertThatThrownBy(() -> fetcher.fetcherStartup(mockSession(true,
+                CrawlerConfig.ChangeDiscovery.SOURCE_DELTA,
+                "m365od://tenant/users/user123/drives/drive123/items/item123")))
+                        .isInstanceOf(CrawlerException.class)
+                        .hasMessageContaining("Unsupported M365 SOURCE_DELTA")
+                        .hasMessageContaining("drive start reference");
     }
 
     @Test
@@ -192,8 +237,11 @@ class M365GraphFetcherTest {
 
     private static CrawlerSession mockSession(
             boolean incremental,
-            CrawlerConfig.ChangeDiscovery changeDiscovery) {
-        var config = new CrawlerConfig().setChangeDiscovery(changeDiscovery);
+            CrawlerConfig.ChangeDiscovery changeDiscovery,
+            String... startReferences) {
+        var config = new CrawlerConfig()
+                .setChangeDiscovery(changeDiscovery)
+                .setStartReferences(List.of(startReferences));
         var context = mock(CrawlerContext.class);
         when(context.getCrawlConfig()).thenReturn(config);
 

@@ -35,6 +35,19 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class M365GraphFetcherConfig extends BaseFetcherConfig {
 
+    public enum SourceDeltaExpansion {
+        /**
+         * Keep the start reference itself as the source-delta root.
+         * For M365 this is only valid on drive references.
+         */
+        SELF_ONLY,
+        /**
+         * Expand broader start references such as site, site URL, or user
+         * into child drives and maintain one delta cursor per drive.
+         */
+        INCLUDE_CHILD_DRIVES
+    }
+
     public static final List<Integer> DEFAULT_VALID_STATUS_CODES =
             CollectionUtil.unmodifiableList(
                     HttpStatus.SC_OK,
@@ -79,6 +92,12 @@ public class M365GraphFetcherConfig extends BaseFetcherConfig {
      * Microsoft Graph v1 endpoint root.
      */
     private String graphBaseUrl = "https://graph.microsoft.com/v1.0";
+
+    /**
+     * How SOURCE_DELTA start references are expanded into Graph delta roots.
+     */
+    private SourceDeltaExpansion sourceDeltaExpansion =
+            SourceDeltaExpansion.SELF_ONLY;
 
     /**
      * HTTP status codes considered successful for Graph API calls.

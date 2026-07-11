@@ -43,6 +43,11 @@ Incremental source-delta mode:
 - When crawler-level `changeDiscovery` is set to `SOURCE_DELTA` and the crawl
   runs in incremental mode, drive references use Microsoft Graph delta APIs
   instead of full child enumeration.
+- `sourceDeltaExpansion` controls how non-drive start references behave in
+  `SOURCE_DELTA` mode.
+  - `SELF_ONLY`: the start reference must already be a drive boundary.
+  - `INCLUDE_CHILD_DRIVES`: site, site URL, and user start references are
+    expanded to child drives, with one persisted delta cursor per drive.
 - Delta cursors are persisted per drive reference for the current crawler
   session and reused on the next incremental run.
 - If Microsoft Graph rejects a stored cursor (`400`, `404`, or `410`), the
@@ -79,6 +84,15 @@ Defaults to `200`, `201`, `202`, and `204`.
 
 HTTP status codes treated as "not found" outcomes.
 Defaults to `404`.
+
+### sourceDeltaExpansion
+
+How `SOURCE_DELTA` start references are expanded into Graph delta roots.
+Defaults to `SELF_ONLY`.
+
+- `SELF_ONLY`: only drive start references are valid delta roots.
+- `INCLUDE_CHILD_DRIVES`: site, site URL, and user references expand to child
+  drives and keep one cursor per drive.
 
 ### nativeRetryEnabled
 
@@ -178,6 +192,25 @@ Then configure the crawler itself with:
 
 - `crawlMode: INCREMENTAL`
 - `changeDiscovery: SOURCE_DELTA`
+
+If you want to keep site or user start references as the user-facing scope,
+enable child-drive expansion:
+
+<ConfigBlock
+  json={{
+    "class": "M365GraphFetcher",
+    "tenantId": "contoso.onmicrosoft.com",
+    "clientId": "11111111-2222-3333-4444-555555555555",
+    "clientSecret": "<secret>",
+    "sourceDeltaExpansion": "INCLUDE_CHILD_DRIVES"
+  }}
+/>
+
+Valid `SOURCE_DELTA` start references with that setting include:
+
+- `m365sp://contoso.onmicrosoft.com/sites/{siteId}`
+- `m365sp://contoso.onmicrosoft.com/siteurl?url=https%3A%2F%2Fcontoso.sharepoint.com%2Fsites%2Fengineering`
+- `m365od://contoso.onmicrosoft.com/users/{userId}`
 
 ## Permissions
 
