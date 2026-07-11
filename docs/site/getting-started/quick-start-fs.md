@@ -6,6 +6,13 @@ title: File System Crawler Quick Start
 
 This guide gets you from zero to a running file system crawl in under 5 minutes.
 
+:::tip[Built-in baseline, not a hard limit]
+The source protocols and examples in this guide represent built-in support in
+Norconex Crawler v4. They are practical defaults, not a fixed ceiling.
+Teams can extend crawler behavior with custom connectors, parser logic, and
+pipeline components for customer-specific requirements.
+:::
+
 :::note[Windows users]
 Replace `crawl-fs.sh` with `crawl-fs.bat` and `./` with `.\` in all commands below.
 :::

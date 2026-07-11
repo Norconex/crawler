@@ -6,6 +6,13 @@ title: Web Crawler Quick Start
 
 This guide gets you from zero to a running web crawl in under 5 minutes.
 
+:::tip[Built-in baseline, not a hard limit]
+The source scope and examples in this guide represent built-in support in
+Norconex Crawler v4. They are practical defaults, not a fixed ceiling.
+Teams can extend crawler behavior with custom connectors, parser logic, and
+pipeline components for customer-specific requirements.
+:::
+
 :::note[Windows users]
 Replace `crawl-web.sh` with `crawl-web.bat` and `./` with `.\` in all commands below.
 :::

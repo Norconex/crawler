@@ -21,6 +21,13 @@ pipelines — without vendor lock-in.
 Both crawlers share the same configuration model, pipeline, and committer system.
 Learn one, know both.
 
+:::tip[Built-in baseline, not a hard limit]
+The source types highlighted in this guide represent built-in support in
+Norconex Crawler v4. They are practical defaults, not a fixed ceiling.
+Teams can extend crawler behavior with custom connectors, parser logic, and
+pipeline components for customer-specific requirements.
+:::
+
 ## Core concepts at a glance
 
 - **Crawl session** — a named, resumable run with persistent state

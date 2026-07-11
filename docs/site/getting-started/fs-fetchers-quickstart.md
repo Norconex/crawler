@@ -12,6 +12,13 @@ which start reference format does this source require?
 For full configuration options, authentication details, and advanced examples,
 use each fetcher's reference page.
 
+:::tip[Built-in baseline, not a hard limit]
+The fetchers and source schemes listed here represent built-in support in
+Norconex Crawler v4. They are practical defaults, not a fixed ceiling.
+Teams can extend crawler behavior with custom connectors and pipeline
+components for customer-specific source requirements.
+:::
+
 ## Start references by fetcher
 
 | Fetcher          | Accepted start reference format                     | Minimal start reference example                                      | First thing to configure next                                |
