@@ -23,8 +23,6 @@ import java.util.Collections;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import tools.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
-import tools.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import com.norconex.committer.core.Committer;
 import com.norconex.commons.lang.bean.jackson.JsonXmlCollection;
 import com.norconex.commons.lang.collection.CollectionUtil;
@@ -51,6 +49,8 @@ import lombok.Data;
 import lombok.NonNull;
 import lombok.experimental.Accessors;
 import lombok.experimental.FieldNameConstants;
+import tools.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
+import tools.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
 /**
  * <p>
@@ -83,6 +83,24 @@ public class CrawlerConfig {
          * (not deleted, not processed).
          */
         IGNORE
+    }
+
+    /**
+     * Defines how changes are discovered during a crawl run.
+     */
+    public enum ChangeDiscovery {
+        /**
+         * The crawler discovers changes by scanning/walking source inventory.
+         * In incremental runs, reference absence can contribute to orphan
+         * handling according to configured orphan strategy.
+         */
+        CRAWLER_SCAN,
+        /**
+         * The source provides explicit change/delete signals (delta feed).
+         * In incremental runs, reference absence is not authoritative and must
+         * not be treated as orphan evidence by itself.
+         */
+        SOURCE_DELTA
     }
 
     public static final Duration DEFAULT_IDLE_TIMEOUT =
@@ -279,6 +297,11 @@ public class CrawlerConfig {
      * </p>
      */
     private OrphansStrategy orphansStrategy = OrphansStrategy.PROCESS;
+
+    /**
+     * Change discovery strategy. Defaults to crawler-driven inventory scan.
+     */
+    private ChangeDiscovery changeDiscovery = ChangeDiscovery.CRAWLER_SCAN;
 
     private final List<Class<? extends Exception>> stopOnExceptions =
             new ArrayList<>();
