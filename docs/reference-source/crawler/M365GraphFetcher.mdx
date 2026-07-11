@@ -38,6 +38,19 @@ Retry model:
   statuses (for example `429`), including `Retry-After` support.
 - Keep native retry disabled to rely solely on framework retry for consistency.
 
+Incremental source-delta mode:
+
+- When crawler-level `changeDiscovery` is set to `SOURCE_DELTA` and the crawl
+  runs in incremental mode, drive references use Microsoft Graph delta APIs
+  instead of full child enumeration.
+- Delta cursors are persisted per drive reference for the current crawler
+  session and reused on the next incremental run.
+- If Microsoft Graph rejects a stored cursor (`400`, `404`, or `410`), the
+  fetcher automatically clears it and restarts delta discovery from a fresh
+  drive delta request.
+- Deletions are handled from explicit Graph delta tombstones. Missing items are
+  not inferred from absence while `changeDiscovery=SOURCE_DELTA`.
+
 ## Properties
 
 ### authorityHost
@@ -142,6 +155,29 @@ Use a start reference such as:
 For discovery bootstrap from the user boundary, start with:
 
 - `m365od://contoso.onmicrosoft.com/users/{userId}`
+
+The following example is suited for incremental delta crawling from a drive
+boundary.
+
+<ConfigBlock
+  json={{
+    "class": "M365GraphFetcher",
+    "tenantId": "contoso.onmicrosoft.com",
+    "clientId": "11111111-2222-3333-4444-555555555555",
+    "clientSecret": "<secret>",
+    "nativeRetryEnabled": true,
+    "nativeRetryStatusCodes": [429, 503, 504]
+  }}
+/>
+
+Use a start reference such as:
+
+`m365od://contoso.onmicrosoft.com/users/{userId}/drives/{driveId}`
+
+Then configure the crawler itself with:
+
+- `crawlMode: INCREMENTAL`
+- `changeDiscovery: SOURCE_DELTA`
 
 ## Permissions
 

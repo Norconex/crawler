@@ -18,6 +18,8 @@ import static com.norconex.crawler.core.fetch.FetchDirective.DOCUMENT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.List;
 
@@ -25,6 +27,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import com.norconex.commons.lang.bean.BeanMapper;
+import com.norconex.crawler.core.CrawlerConfig;
+import com.norconex.crawler.core.context.CrawlerContext;
+import com.norconex.crawler.core.session.CrawlerAttributes;
+import com.norconex.crawler.core.session.CrawlerSession;
 import com.norconex.crawler.fs.FsTestUtil;
 import com.norconex.crawler.fs.fetch.FileFetchRequest;
 import com.norconex.importer.doc.Doc;
@@ -156,10 +162,46 @@ class M365GraphFetcherTest {
     }
 
     @Test
+    void testSourceDeltaEnabledOnIncrementalStartup() {
+        var fetcher = new M365GraphFetcher();
+        fetcher.fetcherStartup(mockSession(true,
+                CrawlerConfig.ChangeDiscovery.SOURCE_DELTA));
+
+        assertThat(fetcher.isSourceDeltaEnabled()).isTrue();
+    }
+
+    @Test
+    void testSourceDeltaDisabledWithoutIncrementalSourceDelta() {
+        var fetcher = new M365GraphFetcher();
+        fetcher.fetcherStartup(mockSession(true,
+                CrawlerConfig.ChangeDiscovery.CRAWLER_SCAN));
+        assertThat(fetcher.isSourceDeltaEnabled()).isFalse();
+
+        fetcher.fetcherStartup(mockSession(false,
+                CrawlerConfig.ChangeDiscovery.SOURCE_DELTA));
+        assertThat(fetcher.isSourceDeltaEnabled()).isFalse();
+    }
+
+    @Test
     void testRejectInvalidReference() {
         assertThatThrownBy(() -> M365GraphReference.parse(
                 "m365sp://tenant/invalid/path"))
                         .isInstanceOf(IllegalArgumentException.class)
                         .hasMessageContaining("Invalid SharePoint reference");
+    }
+
+    private static CrawlerSession mockSession(
+            boolean incremental,
+            CrawlerConfig.ChangeDiscovery changeDiscovery) {
+        var config = new CrawlerConfig().setChangeDiscovery(changeDiscovery);
+        var context = mock(CrawlerContext.class);
+        when(context.getCrawlConfig()).thenReturn(config);
+
+        var sessionAttributes = mock(CrawlerAttributes.class);
+        var session = mock(CrawlerSession.class);
+        when(session.getCrawlContext()).thenReturn(context);
+        when(session.getSessionAttributes()).thenReturn(sessionAttributes);
+        when(session.isIncremental()).thenReturn(incremental);
+        return session;
     }
 }
