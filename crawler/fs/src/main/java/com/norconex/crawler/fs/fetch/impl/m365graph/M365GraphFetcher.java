@@ -31,11 +31,13 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.norconex.commons.lang.Sleeper;
@@ -63,6 +65,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Microsoft 365 Graph fetcher for SharePoint Online and OneDrive.
@@ -77,11 +80,14 @@ import lombok.ToString;
  */
 @ToString
 @EqualsAndHashCode
+@Slf4j
 public class M365GraphFetcher extends AbstractFetcher<M365GraphFetcherConfig> {
 
     private static final String META_PREFIX = PREFIX + "m365.";
     private static final String DELTA_CURSOR_KEY_PREFIX =
             "m365graph.delta.cursor.";
+    private static final String DISCOVERED_CHILD_DRIVES_KEY_PREFIX =
+            "m365graph.delta.childDrives.";
     private static final int DELTA_MAX_PAGES = 1000;
     private static final Set<Integer> DELTA_CURSOR_RESET_STATUSES = Set.of(
             400,
@@ -270,13 +276,26 @@ public class M365GraphFetcher extends AbstractFetcher<M365GraphFetcherConfig> {
             return notFoundFolderPathsResponse();
         }
 
-        Set<FsPath> childPaths = new HashSet<>();
+        Set<String> currentDriveRefs = new LinkedHashSet<>();
         for (JsonNode drive : drives.path("value")) {
             var driveId = drive.path("id").asText(null);
             if (StringUtils.isBlank(driveId)) {
                 continue;
             }
-            var driveRef = ref.drive(driveId).toReference();
+            currentDriveRefs.add(ref.drive(driveId).toReference());
+        }
+
+        var effectiveDriveRefs = currentDriveRefs;
+        if (isSourceDeltaEnabled()
+                && configuration
+                        .getSourceDeltaExpansion() == M365GraphFetcherConfig.SourceDeltaExpansion.INCLUDE_CHILD_DRIVES) {
+            effectiveDriveRefs =
+                    mergeChildDriveScopeRefs(ref, currentDriveRefs);
+            setStoredChildDriveRefs(ref, effectiveDriveRefs);
+        }
+
+        Set<FsPath> childPaths = new HashSet<>();
+        for (String driveRef : effectiveDriveRefs) {
             var fsPath = new FsPath(driveRef);
             fsPath.setFile(false);
             fsPath.setFolder(true);
@@ -287,6 +306,27 @@ public class M365GraphFetcher extends AbstractFetcher<M365GraphFetcherConfig> {
                 .processingOutcome(ProcessingOutcome.NEW)
                 .childPaths(childPaths)
                 .build();
+    }
+
+    private Set<String> mergeChildDriveScopeRefs(
+            M365GraphReference parentRef,
+            Set<String> currentDriveRefs) {
+        var effectiveDriveRefs = new LinkedHashSet<>(currentDriveRefs);
+        for (String storedDriveRef : getStoredChildDriveRefs(parentRef)) {
+            if (effectiveDriveRefs.contains(storedDriveRef)) {
+                continue;
+            }
+            try {
+                var storedDrive = M365GraphReference.parse(storedDriveRef);
+                if (hasLiveDeltaCursor(storedDrive)) {
+                    effectiveDriveRefs.add(storedDriveRef);
+                }
+            } catch (RuntimeException e) {
+                LOG.warn("Ignoring invalid stored M365 child-drive ref: {}",
+                        storedDriveRef, e);
+            }
+        }
+        return effectiveDriveRefs;
     }
 
     private static FetchResponse notFoundFolderPathsResponse() {
@@ -712,7 +752,9 @@ public class M365GraphFetcher extends AbstractFetcher<M365GraphFetcherConfig> {
         if (sessionAttributes == null) {
             return Optional.empty();
         }
-        return sessionAttributes.getString(deltaCursorKey(ref));
+        return sessionAttributes.getString(deltaCursorKey(ref))
+                .flatMap(value -> Optional.ofNullable(
+                        StringUtils.trimToNull(value)));
     }
 
     void setDeltaCursor(M365GraphReference ref, String cursor) {
@@ -727,8 +769,50 @@ public class M365GraphFetcher extends AbstractFetcher<M365GraphFetcherConfig> {
         }
     }
 
+    Set<String> getStoredChildDriveRefs(M365GraphReference parentRef) {
+        if (sessionAttributes == null) {
+            return Set.of();
+        }
+        return sessionAttributes.getString(childDriveRefsKey(parentRef))
+                .map(this::parseStoredChildDriveRefs)
+                .orElseGet(Set::of);
+    }
+
+    void setStoredChildDriveRefs(M365GraphReference parentRef,
+            Set<String> driveRefs) {
+        if (sessionAttributes == null) {
+            return;
+        }
+        try {
+            sessionAttributes.setString(childDriveRefsKey(parentRef),
+                    objectMapper.writeValueAsString(driveRefs));
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                    "Could not persist M365 child-drive scope refs.", e);
+        }
+    }
+
+    boolean hasLiveDeltaCursor(M365GraphReference driveRef) {
+        return getDeltaCursor(driveRef).isPresent();
+    }
+
     private static String deltaCursorKey(M365GraphReference ref) {
         return DELTA_CURSOR_KEY_PREFIX + ref.toReference();
+    }
+
+    private static String childDriveRefsKey(M365GraphReference ref) {
+        return DISCOVERED_CHILD_DRIVES_KEY_PREFIX + ref.toReference();
+    }
+
+    private Set<String> parseStoredChildDriveRefs(String json) {
+        try {
+            return objectMapper.readValue(json,
+                    new TypeReference<LinkedHashSet<String>>() {});
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                    "Could not read persisted M365 child-drive scope refs.",
+                    e);
+        }
     }
 
     static final class GraphHttpStatusException extends IOException {

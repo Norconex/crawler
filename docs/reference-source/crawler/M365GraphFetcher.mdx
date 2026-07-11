@@ -55,6 +55,10 @@ Incremental source-delta mode:
   drive delta request.
 - Deletions are handled from explicit Graph delta tombstones. Missing items are
   not inferred from absence while `changeDiscovery=SOURCE_DELTA`.
+- If a configured or discovered drive boundary itself becomes `NOT_FOUND`, the
+  crawler re-queues known descendants from the previous baseline for deletion
+  processing, so committers receive deletion requests for previously indexed
+  items under that drive.
 
 ## Properties
 

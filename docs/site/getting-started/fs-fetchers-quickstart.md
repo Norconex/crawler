@@ -48,6 +48,7 @@ committers:
 3. Forgetting provider-specific endpoint settings for S3-compatible stores.
 4. Mixing account names in URI and credentials for Azure fetchers.
 5. Starting M365 delta mode without matching the fetcher expansion policy to your start references. Use a drive boundary such as `m365sp://tenant/sites/{siteId}/drives/{driveId}` or `m365od://tenant/users/{userId}/drives/{driveId}` with `changeDiscovery: SOURCE_DELTA`, or keep site/user start references and set `sourceDeltaExpansion: INCLUDE_CHILD_DRIVES`.
+6. Expecting an entire missing drive to require source-side per-item tombstones. In `SOURCE_DELTA` mode, if a drive boundary itself becomes `NOT_FOUND`, the crawler will re-queue previously known descendants from baseline so committers can receive delete requests for those known items.
 
 ## Next step
 
