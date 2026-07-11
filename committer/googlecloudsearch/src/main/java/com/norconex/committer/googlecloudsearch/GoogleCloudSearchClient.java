@@ -210,7 +210,7 @@ class GoogleCloudSearchClient {
         var item = new Item()
                 .setName(itemName)
                 .setItemType(CONTENT_ITEM_TYPE)
-                .setVersion(nextVersion())
+                .encodeVersion(nextVersion().getBytes(UTF_8))
                 .setMetadata(buildMetadata(request, contentType))
                 .setStructuredData(buildStructuredData(request.getMetadata()))
                 .setAcl(buildAcl(request.getMetadata()));
@@ -439,7 +439,11 @@ class GoogleCloudSearchClient {
                 new Media().setResourceName(uploadItemRef.getName()),
                 new ByteArrayContent(contentType, content));
         uploadRequest.getMediaHttpUploader().setDirectUploadEnabled(true);
-        uploadRequest.execute();
+        // The real Cloud Search media.upload endpoint returns an empty body
+        // on success (unlike the Media-typed response the client stub
+        // declares), so executeUnparsed() is used to avoid failing to parse
+        // an empty response as JSON. The Media result isn't needed here.
+        uploadRequest.executeUnparsed().disconnect();
 
         return new ItemContent()
                 .setContentFormat(contentFormat)
