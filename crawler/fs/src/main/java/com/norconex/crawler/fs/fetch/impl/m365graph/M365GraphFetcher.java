@@ -31,6 +31,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
@@ -40,11 +41,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.norconex.commons.lang.Sleeper;
 import com.norconex.commons.lang.file.ContentType;
 import com.norconex.crawler.core.fetch.AbstractFetcher;
+import com.norconex.crawler.core.CrawlerConfig.ChangeDiscovery;
 import com.norconex.crawler.core.fetch.FetchDirective;
 import com.norconex.crawler.core.fetch.FetchException;
 import com.norconex.crawler.core.fetch.FetchRequest;
 import com.norconex.crawler.core.fetch.FetchResponse;
 import com.norconex.crawler.core.ledger.ProcessingOutcome;
+import com.norconex.crawler.core.session.CrawlerAttributes;
+import com.norconex.crawler.core.session.CrawlerSession;
 import com.norconex.crawler.fs.doc.FsDocMetadata;
 import com.norconex.crawler.fs.fetch.FileFetchRequest;
 import com.norconex.crawler.fs.fetch.FolderPathsFetchRequest;
@@ -75,6 +79,13 @@ import lombok.ToString;
 public class M365GraphFetcher extends AbstractFetcher<M365GraphFetcherConfig> {
 
     private static final String META_PREFIX = PREFIX + "m365.";
+    private static final String DELTA_CURSOR_KEY_PREFIX =
+            "m365graph.delta.cursor.";
+    private static final int DELTA_MAX_PAGES = 1000;
+    private static final Set<Integer> DELTA_CURSOR_RESET_STATUSES = Set.of(
+            400,
+            404,
+            410);
 
     @Getter
     private final M365GraphFetcherConfig configuration =
@@ -95,6 +106,28 @@ public class M365GraphFetcher extends AbstractFetcher<M365GraphFetcherConfig> {
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     private Instant accessTokenExpiry = Instant.EPOCH;
+
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private transient CrawlerAttributes sessionAttributes;
+
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private transient boolean sourceDeltaEnabled;
+
+    @Override
+    protected void fetcherStartup(CrawlerSession crawler) {
+        sessionAttributes = crawler.getSessionAttributes();
+        sourceDeltaEnabled = crawler.isIncremental()
+                && crawler.getCrawlContext().getCrawlConfig()
+                        .getChangeDiscovery() == ChangeDiscovery.SOURCE_DELTA;
+    }
+
+    @Override
+    protected void fetcherShutdown(CrawlerSession crawler) {
+        sourceDeltaEnabled = false;
+        sessionAttributes = null;
+    }
 
     @Override
     protected boolean acceptRequest(@NonNull FetchRequest fetchRequest) {
@@ -167,6 +200,11 @@ public class M365GraphFetcher extends AbstractFetcher<M365GraphFetcherConfig> {
 
             if (ref.isDiscoveryEntry()) {
                 return fetchDiscoveryEntryChildPaths(ref);
+            }
+
+            if (isSourceDeltaEnabled()
+                    && ref.kind() == M365GraphReference.Kind.DRIVE) {
+                return fetchDriveDeltaChildPaths(ref);
             }
 
             var children = fetchChildrenNode(ref);
@@ -250,6 +288,89 @@ public class M365GraphFetcher extends AbstractFetcher<M365GraphFetcherConfig> {
         return GenericFolderPathsFetchResponse.builder()
                 .processingOutcome(ProcessingOutcome.NOT_FOUND)
                 .childPaths(Set.of())
+                .build();
+    }
+
+    private FetchResponse fetchDriveDeltaChildPaths(M365GraphReference ref)
+            throws IOException {
+        var usingStoredCursor = false;
+        var pagePathOrUrl =
+                getDeltaCursor(ref).orElseGet(() -> ref.driveDeltaApiPath());
+        if (!StringUtils.equals(pagePathOrUrl, ref.driveDeltaApiPath())) {
+            usingStoredCursor = true;
+        }
+
+        while (true) {
+            try {
+                return fetchDriveDeltaPages(ref, pagePathOrUrl);
+            } catch (GraphHttpStatusException e) {
+                if (usingStoredCursor
+                        && DELTA_CURSOR_RESET_STATUSES
+                                .contains(e.getStatusCode())) {
+                    clearDeltaCursor(ref);
+                    pagePathOrUrl = ref.driveDeltaApiPath();
+                    usingStoredCursor = false;
+                    continue;
+                }
+                throw e;
+            }
+        }
+    }
+
+    private FetchResponse fetchDriveDeltaPages(
+            M365GraphReference ref,
+            String firstPagePathOrUrl) throws IOException {
+        Set<FsPath> childPaths = new HashSet<>();
+        String pagePathOrUrl = firstPagePathOrUrl;
+        String deltaLink = null;
+        int pageCount = 0;
+
+        while (StringUtils.isNotBlank(pagePathOrUrl)) {
+            pageCount++;
+            if (pageCount > DELTA_MAX_PAGES) {
+                throw new IOException(
+                        "Exceeded maximum number of Microsoft Graph "
+                                + "delta pages (" + DELTA_MAX_PAGES + ").");
+            }
+
+            var page = fetchDeltaNode(pagePathOrUrl);
+            if (page == null) {
+                return notFoundFolderPathsResponse();
+            }
+            for (JsonNode item : page.path("value")) {
+                var childId = item.path("id").asText(null);
+                if (StringUtils.isBlank(childId) || item.has("root")) {
+                    continue;
+                }
+
+                var fsPath = new FsPath(ref.child(childId).toReference());
+                if (item.has("deleted")) {
+                    fsPath.setFile(true);
+                    fsPath.setFolder(false);
+                } else {
+                    fsPath.setFile(item.has("file"));
+                    fsPath.setFolder(item.has("folder"));
+                }
+                childPaths.add(fsPath);
+            }
+
+            var nextLink = StringUtils.trimToNull(
+                    page.path("@odata.nextLink").asText(null));
+            var currentDelta = StringUtils.trimToNull(
+                    page.path("@odata.deltaLink").asText(null));
+            if (StringUtils.isNotBlank(currentDelta)) {
+                deltaLink = currentDelta;
+            }
+            pagePathOrUrl = nextLink;
+        }
+
+        if (StringUtils.isNotBlank(deltaLink)) {
+            setDeltaCursor(ref, deltaLink);
+        }
+
+        return GenericFolderPathsFetchResponse.builder()
+                .processingOutcome(ProcessingOutcome.NEW)
+                .childPaths(childPaths)
                 .build();
     }
 
@@ -347,17 +468,30 @@ public class M365GraphFetcher extends AbstractFetcher<M365GraphFetcherConfig> {
         return objectMapper.readTree(response.body());
     }
 
+    JsonNode fetchDeltaNode(String pathOrUrl) throws IOException {
+        var response = executeGet(pathOrUrl);
+        if (isNotFoundStatus(response.statusCode())) {
+            return null;
+        }
+        ensureStatus(response, "read drive delta");
+        return objectMapper.readTree(response.body());
+    }
+
     byte[] fetchContentBytes(M365GraphReference ref) throws IOException {
         var response = executeGet(ref.itemApiPath() + "/content");
         ensureStatus(response, "download content");
         return response.body();
     }
 
-    private HttpResponse<byte[]> executeGet(String apiPath) throws IOException {
+    private HttpResponse<byte[]> executeGet(String pathOrUrl)
+            throws IOException {
+        var url = pathOrUrl;
+        if (!StringUtils.startsWithAny(StringUtils.defaultString(pathOrUrl),
+                "http://", "https://")) {
+            url = normalizeBaseUrl(configuration.getGraphBaseUrl()) + pathOrUrl;
+        }
         var request = HttpRequest.newBuilder()
-                .uri(URI.create(
-                        normalizeBaseUrl(configuration.getGraphBaseUrl())
-                                + apiPath))
+                .uri(URI.create(url))
                 .header("Authorization", "Bearer " + getAccessToken())
                 .header("Accept", "application/json")
                 .GET()
@@ -376,8 +510,7 @@ public class M365GraphFetcher extends AbstractFetcher<M365GraphFetcherConfig> {
             }
             return response;
         }
-        throw new IOException("Could not call Microsoft Graph API path: "
-                + apiPath);
+        throw new IOException("Could not call Microsoft Graph URL: " + url);
     }
 
     HttpResponse<byte[]> sendRequest(HttpRequest request) throws IOException {
@@ -520,11 +653,41 @@ public class M365GraphFetcher extends AbstractFetcher<M365GraphFetcherConfig> {
                 StandardCharsets.UTF_8);
     }
 
-    private static final class GraphHttpStatusException extends IOException {
-        private static final long serialVersionUID = 1L;
+    boolean isSourceDeltaEnabled() {
+        return sourceDeltaEnabled;
+    }
 
-        private GraphHttpStatusException(int statusCode, String message) {
+    Optional<String> getDeltaCursor(M365GraphReference ref) {
+        if (sessionAttributes == null) {
+            return Optional.empty();
+        }
+        return sessionAttributes.getString(deltaCursorKey(ref));
+    }
+
+    void setDeltaCursor(M365GraphReference ref, String cursor) {
+        if (sessionAttributes != null && StringUtils.isNotBlank(cursor)) {
+            sessionAttributes.setString(deltaCursorKey(ref), cursor);
+        }
+    }
+
+    void clearDeltaCursor(M365GraphReference ref) {
+        if (sessionAttributes != null) {
+            sessionAttributes.setString(deltaCursorKey(ref), "");
+        }
+    }
+
+    private static String deltaCursorKey(M365GraphReference ref) {
+        return DELTA_CURSOR_KEY_PREFIX + ref.toReference();
+    }
+
+    static final class GraphHttpStatusException extends IOException {
+        private static final long serialVersionUID = 1L;
+        @Getter
+        private final int statusCode;
+
+        GraphHttpStatusException(int statusCode, String message) {
             super(message + " (status=" + statusCode + ")");
+            this.statusCode = statusCode;
         }
     }
 }

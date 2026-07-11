@@ -17,15 +17,21 @@ package com.norconex.crawler.fs.fetch.impl.m365graph;
 import static com.norconex.crawler.core.fetch.FetchDirective.DOCUMENT;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.norconex.crawler.fs.doc.FsDocMetadata;
 import com.norconex.crawler.fs.fetch.FileFetchRequest;
 import com.norconex.crawler.fs.fetch.FileFetchResponse;
 import com.norconex.crawler.fs.fetch.FolderPathsFetchRequest;
 import com.norconex.crawler.fs.fetch.FolderPathsFetchResponse;
+import com.norconex.crawler.fs.fetch.FsPath;
 import com.norconex.importer.doc.Doc;
 
 @Timeout(30)
@@ -162,12 +168,95 @@ class M365GraphFetcherIT {
                         "m365sp://tenant/sites/siteResolved/drives/driveZ");
     }
 
+    @Test
+    void testDriveDeltaPaginationAndCursorPersistence() throws Exception {
+        var fetcher = new StubFetcher();
+        fetcher.setSourceDeltaEnabledForTest(true);
+        fetcher.setDeltaJson("/users/user123/drives/drive123/root/delta", """
+                {
+                  "value": [
+                    { "id": "fileA", "file": { "mimeType": "text/plain" } }
+                  ],
+                  "@odata.nextLink": "https://graph.microsoft.com/v1.0/page2"
+                }
+                """);
+        fetcher.setDeltaJson("https://graph.microsoft.com/v1.0/page2", """
+                {
+                  "value": [
+                    { "id": "folderA", "folder": { "childCount": 1 } },
+                    { "id": "deletedA", "deleted": { "state": "deleted" } }
+                  ],
+                  "@odata.deltaLink": "https://graph.microsoft.com/v1.0/deltaToken-1"
+                }
+                """);
+
+        var response = (FolderPathsFetchResponse) fetcher.fetch(
+                new FolderPathsFetchRequest(
+                        new Doc("m365od://tenant/users/user123/drives/drive123")));
+
+        assertThat(response.getProcessingOutcome().isGoodState()).isTrue();
+        assertThat(response.getChildPaths())
+                .extracting(
+                        p -> p.getUri() + ":" + p.isFile() + ":" + p.isFolder())
+                .containsExactlyInAnyOrder(
+                        "m365od://tenant/users/user123/drives/drive123/items/fileA:true:false",
+                        "m365od://tenant/users/user123/drives/drive123/items/folderA:false:true",
+                        "m365od://tenant/users/user123/drives/drive123/items/deletedA:true:false");
+        assertThat(fetcher.getStoredDeltaCursor(
+                M365GraphReference.parse(
+                        "m365od://tenant/users/user123/drives/drive123")))
+                                .isEqualTo(
+                                        "https://graph.microsoft.com/v1.0/deltaToken-1");
+    }
+
+    @Test
+    void testDriveDeltaInvalidStoredCursorFallsBackToFreshDelta()
+            throws Exception {
+        var fetcher = new StubFetcher();
+        fetcher.setSourceDeltaEnabledForTest(true);
+        var driveRef = M365GraphReference.parse(
+                "m365od://tenant/users/user123/drives/drive123");
+        fetcher.setStoredDeltaCursor(
+                driveRef,
+                "https://graph.microsoft.com/v1.0/stale-token");
+        fetcher.setDeltaException(
+                "https://graph.microsoft.com/v1.0/stale-token",
+                new M365GraphFetcher.GraphHttpStatusException(
+                        410,
+                        "stale delta token"));
+        fetcher.setDeltaJson("/users/user123/drives/drive123/root/delta", """
+                {
+                  "value": [
+                    { "id": "fileB", "file": { "mimeType": "text/plain" } }
+                  ],
+                  "@odata.deltaLink": "https://graph.microsoft.com/v1.0/deltaToken-2"
+                }
+                """);
+
+        var response = (FolderPathsFetchResponse) fetcher.fetch(
+                new FolderPathsFetchRequest(new Doc(driveRef.toReference())));
+
+        assertThat(response.getProcessingOutcome().isGoodState()).isTrue();
+        assertThat(response.getChildPaths())
+                .extracting(FsPath::getUri)
+                .containsExactlyInAnyOrder(
+                        "m365od://tenant/users/user123/drives/drive123/items/fileB");
+        assertThat(fetcher.getStoredDeltaCursor(driveRef))
+                .isEqualTo("https://graph.microsoft.com/v1.0/deltaToken-2");
+    }
+
     private static class StubFetcher extends M365GraphFetcher {
         private com.fasterxml.jackson.databind.JsonNode item;
         private com.fasterxml.jackson.databind.JsonNode children;
         private com.fasterxml.jackson.databind.JsonNode drives;
         private com.fasterxml.jackson.databind.JsonNode resolvedSite;
         private byte[] content = new byte[0];
+        private final Map<String,
+                com.fasterxml.jackson.databind.JsonNode> deltaPages =
+                        new HashMap<>();
+        private final Map<String, IOException> deltaErrors = new HashMap<>();
+        private final Map<String, String> deltaCursors = new HashMap<>();
+        private boolean sourceDeltaEnabledForTest;
 
         StubFetcher() {
             getConfiguration()
@@ -194,6 +283,26 @@ class M365GraphFetcherIT {
 
         void setContent(String body) {
             content = body.getBytes();
+        }
+
+        void setDeltaJson(String pathOrUrl, String json) throws Exception {
+            deltaPages.put(pathOrUrl, MAPPER.readTree(json));
+        }
+
+        void setDeltaException(String pathOrUrl, IOException e) {
+            deltaErrors.put(pathOrUrl, e);
+        }
+
+        void setSourceDeltaEnabledForTest(boolean enabled) {
+            sourceDeltaEnabledForTest = enabled;
+        }
+
+        void setStoredDeltaCursor(M365GraphReference ref, String cursor) {
+            deltaCursors.put(ref.toReference(), cursor);
+        }
+
+        String getStoredDeltaCursor(M365GraphReference ref) {
+            return deltaCursors.get(ref.toReference());
         }
 
         @Override
@@ -223,6 +332,35 @@ class M365GraphFetcherIT {
         @Override
         byte[] fetchContentBytes(M365GraphReference ref) {
             return content;
+        }
+
+        @Override
+        JsonNode fetchDeltaNode(String pathOrUrl) throws IOException {
+            if (deltaErrors.containsKey(pathOrUrl)) {
+                throw deltaErrors.get(pathOrUrl);
+            }
+            return deltaPages.get(pathOrUrl);
+        }
+
+        @Override
+        boolean isSourceDeltaEnabled() {
+            return sourceDeltaEnabledForTest;
+        }
+
+        @Override
+        java.util.Optional<String> getDeltaCursor(M365GraphReference ref) {
+            return java.util.Optional
+                    .ofNullable(deltaCursors.get(ref.toReference()));
+        }
+
+        @Override
+        void setDeltaCursor(M365GraphReference ref, String cursor) {
+            deltaCursors.put(ref.toReference(), cursor);
+        }
+
+        @Override
+        void clearDeltaCursor(M365GraphReference ref) {
+            deltaCursors.remove(ref.toReference());
         }
     }
 }

@@ -229,6 +229,10 @@ record M365GraphReference(
         return "/users/%s/drives/%s/root".formatted(userId, driveId);
     }
 
+    String driveDeltaApiPath() {
+        return driveRootApiPath() + "/delta";
+    }
+
     String drivesApiPath() {
         if (kind == Kind.SITE) {
             return "/sites/%s/drives".formatted(siteId);
