@@ -21,6 +21,7 @@ import com.norconex.crawler.core.fetch.Fetcher;
 import com.norconex.crawler.fs.fetch.impl.adlsgen2.AdlsGen2Fetcher;
 import com.norconex.crawler.fs.fetch.impl.archive.ArchiveFetcher;
 import com.norconex.crawler.fs.fetch.impl.azureblob.AzureBlobFetcher;
+import com.norconex.crawler.fs.fetch.impl.box.BoxFetcher;
 import com.norconex.crawler.fs.fetch.impl.cmis.CmisFetcher;
 import com.norconex.crawler.fs.fetch.impl.ftp.FtpFetcher;
 import com.norconex.crawler.fs.fetch.impl.gcs.GcsFetcher;
@@ -51,6 +52,7 @@ public class CrawlerFsPtProvider extends BasePolymorphicTypeProvider {
                         AdlsGen2Fetcher.class,
                         ArchiveFetcher.class,
                         AzureBlobFetcher.class,
+                        BoxFetcher.class,
                         CmisFetcher.class,
                         FtpFetcher.class,
                         GcsFetcher.class,

@@ -141,6 +141,12 @@ startReferences:
   - webhdfs://namenode:9870/user/data/corpus
 ```
 
+For Google Drive and M365-specific examples, use the dedicated fetcher
+reference pages so configuration examples stay canonical in one place:
+
+- [GoogleDriveFetcher](../reference-source/crawler/GoogleDriveFetcher)
+- [M365GraphFetcher](../reference-source/crawler/M365GraphFetcher)
+
 ## Step 6 — Send to a real target
 
 Replace the `LogCommitter` with your actual destination. See the

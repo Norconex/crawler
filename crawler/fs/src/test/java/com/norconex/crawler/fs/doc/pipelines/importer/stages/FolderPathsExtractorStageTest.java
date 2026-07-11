@@ -54,245 +54,245 @@ import com.norconex.importer.doc.Doc;
 @Timeout(30)
 class FolderPathsExtractorStageTest {
 
-        /**
-         * Builds an {@link ImporterPipelineContext} backed by mocks,
-         * wiring together CrawlerSession → CrawlerContext → CrawlerConfig/Fetcher/
-         * DocPipelines, and a CrawlerDocContext wrapping the given entry.
-         */
-        private ImporterPipelineContext buildCtx(
-                        FsCrawlerEntry entry,
-                        Fetcher fetcher,
-                        QueuePipeline queuePipeline) {
-                return buildCtx(entry, fetcher, queuePipeline,
-                                ChangeDiscovery.CRAWLER_SCAN, false, null);
+    /**
+     * Builds an {@link ImporterPipelineContext} backed by mocks,
+     * wiring together CrawlerSession → CrawlerContext → CrawlerConfig/Fetcher/
+     * DocPipelines, and a CrawlerDocContext wrapping the given entry.
+     */
+    private ImporterPipelineContext buildCtx(
+            FsCrawlerEntry entry,
+            Fetcher fetcher,
+            QueuePipeline queuePipeline) {
+        return buildCtx(entry, fetcher, queuePipeline,
+                ChangeDiscovery.CRAWLER_SCAN, false, null);
+    }
+
+    private ImporterPipelineContext buildCtx(
+            FsCrawlerEntry entry,
+            Fetcher fetcher,
+            QueuePipeline queuePipeline,
+            ChangeDiscovery changeDiscovery,
+            boolean incremental,
+            CrawlerEntryLedger ledger) {
+
+        var config = new CrawlerConfig()
+                .setDocumentFetchSupport(
+                        FetchDirectiveSupport.REQUIRED)
+                .setChangeDiscovery(changeDiscovery);
+
+        var docPipelines = CrawlerDocPipelines.builder()
+                .queuePipeline(queuePipeline)
+                .build();
+
+        var crawlContext = mock(CrawlerContext.class);
+        when(crawlContext.getCrawlConfig()).thenReturn(config);
+        when(crawlContext.getFetcher()).thenReturn(fetcher);
+        when(crawlContext.getDocPipelines()).thenReturn(docPipelines);
+        when(crawlContext.getCrawlEntryLedger()).thenReturn(ledger);
+        when(crawlContext.createCrawlEntry(any()))
+                .thenAnswer(inv -> new FsCrawlerEntry(
+                        inv.getArgument(0,
+                                String.class)));
+
+        var session = mock(CrawlerSession.class);
+        when(session.getCrawlContext()).thenReturn(crawlContext);
+        when(session.isIncremental()).thenReturn(incremental);
+
+        var docContext = CrawlerDocContext.builder()
+                .doc(new Doc(entry.getReference()))
+                .currentCrawlEntry(entry)
+                .build();
+
+        return new ImporterPipelineContext(session, docContext);
+    }
+
+    @Test
+    void testFetchExceptionWrapped() {
+        var entry = new FsCrawlerEntry("file:///some/folder");
+        entry.setFolder(true);
+
+        var fetcher = mock(Fetcher.class);
+        try {
+            when(fetcher.fetch(any()))
+                    .thenThrow(new FetchException("blah"));
+        } catch (FetchException e) {
+            throw new AssertionError(
+                    "Unexpected exception in mock setup",
+                    e);
         }
 
-        private ImporterPipelineContext buildCtx(
-                        FsCrawlerEntry entry,
-                        Fetcher fetcher,
-                        QueuePipeline queuePipeline,
-                        ChangeDiscovery changeDiscovery,
-                        boolean incremental,
-                        CrawlerEntryLedger ledger) {
+        var ctx = buildCtx(
+                entry,
+                fetcher,
+                mock(QueuePipeline.class));
 
-                var config = new CrawlerConfig()
-                                .setDocumentFetchSupport(
-                                                FetchDirectiveSupport.REQUIRED)
-                                .setChangeDiscovery(changeDiscovery);
+        assertThatExceptionOfType(CrawlerException.class)
+                .isThrownBy(() -> //NOSONAR
+                new FolderPathsExtractorStage(
+                        FetchDirective.DOCUMENT)
+                                .test(ctx))
+                .withMessageContaining(
+                        "Could not fetch child paths of:");
+    }
 
-                var docPipelines = CrawlerDocPipelines.builder()
-                                .queuePipeline(queuePipeline)
-                                .build();
+    @Test
+    void testFolderChildPathsQueued() {
+        var entry = new FsCrawlerEntry("file:///some/folder");
+        entry.setFolder(true);
 
-                var crawlContext = mock(CrawlerContext.class);
-                when(crawlContext.getCrawlConfig()).thenReturn(config);
-                when(crawlContext.getFetcher()).thenReturn(fetcher);
-                when(crawlContext.getDocPipelines()).thenReturn(docPipelines);
-                when(crawlContext.getCrawlEntryLedger()).thenReturn(ledger);
-                when(crawlContext.createCrawlEntry(any()))
-                                .thenAnswer(inv -> new FsCrawlerEntry(
-                                                inv.getArgument(0,
-                                                                String.class)));
+        var child1 = new FsPath("file:///some/folder/child1.txt");
+        child1.setFile(true);
+        var child2 = new FsPath("file:///some/folder/sub");
+        child2.setFolder(true);
 
-                var session = mock(CrawlerSession.class);
-                when(session.getCrawlContext()).thenReturn(crawlContext);
-                when(session.isIncremental()).thenReturn(incremental);
+        var mockResponse = mock(FolderPathsFetchResponse.class);
+        when(mockResponse.getProcessingOutcome())
+                .thenReturn(ProcessingOutcome.NEW);
+        when(mockResponse.getChildPaths())
+                .thenReturn(Set.of(child1, child2));
 
-                var docContext = CrawlerDocContext.builder()
-                                .doc(new Doc(entry.getReference()))
-                                .currentCrawlEntry(entry)
-                                .build();
-
-                return new ImporterPipelineContext(session, docContext);
+        var fetcher = mock(Fetcher.class);
+        try {
+            when(fetcher.fetch(any())).thenReturn(mockResponse);
+        } catch (FetchException e) {
+            throw new AssertionError(
+                    "Unexpected exception in mock setup",
+                    e);
         }
 
-        @Test
-        void testFetchExceptionWrapped() {
-                var entry = new FsCrawlerEntry("file:///some/folder");
-                entry.setFolder(true);
+        // A no-op queue pipeline — we only assert on the return value
+        var queuePipeline = mock(QueuePipeline.class);
 
-                var fetcher = mock(Fetcher.class);
-                try {
-                        when(fetcher.fetch(any()))
-                                        .thenThrow(new FetchException("blah"));
-                } catch (FetchException e) {
-                        throw new AssertionError(
-                                        "Unexpected exception in mock setup",
-                                        e);
-                }
+        var ctx = buildCtx(entry, fetcher, queuePipeline);
 
-                var ctx = buildCtx(
-                                entry,
-                                fetcher,
-                                mock(QueuePipeline.class));
+        // A folder-only entry returns false (no file content to process)
+        boolean result = new FolderPathsExtractorStage(
+                FetchDirective.DOCUMENT).test(ctx);
+        assertThat(result).isFalse();
+    }
 
-                assertThatExceptionOfType(CrawlerException.class)
-                                .isThrownBy(() -> //NOSONAR
-                                new FolderPathsExtractorStage(
-                                                FetchDirective.DOCUMENT)
-                                                                .test(ctx))
-                                .withMessageContaining(
-                                                "Could not fetch child paths of:");
+    @Test
+    void testFolderAndFileEntryReturnsContinue() {
+        // An entry that is both a folder and a file should return true
+        var entry = new FsCrawlerEntry("file:///some/folderfile");
+        entry.setFolder(true);
+        entry.setFile(true);
+
+        var mockResponse = mock(FolderPathsFetchResponse.class);
+        when(mockResponse.getProcessingOutcome())
+                .thenReturn(ProcessingOutcome.NEW);
+        when(mockResponse.getChildPaths()).thenReturn(Set.of());
+
+        var fetcher = mock(Fetcher.class);
+        try {
+            when(fetcher.fetch(any())).thenReturn(mockResponse);
+        } catch (FetchException e) {
+            throw new AssertionError(
+                    "Unexpected exception in mock setup",
+                    e);
         }
 
-        @Test
-        void testFolderChildPathsQueued() {
-                var entry = new FsCrawlerEntry("file:///some/folder");
-                entry.setFolder(true);
+        var ctx = buildCtx(entry, fetcher, mock(QueuePipeline.class));
 
-                var child1 = new FsPath("file:///some/folder/child1.txt");
-                child1.setFile(true);
-                var child2 = new FsPath("file:///some/folder/sub");
-                child2.setFolder(true);
+        boolean result = new FolderPathsExtractorStage(
+                FetchDirective.DOCUMENT).test(ctx);
+        assertThat(result).isTrue();
+    }
 
-                var mockResponse = mock(FolderPathsFetchResponse.class);
-                when(mockResponse.getProcessingOutcome())
-                                .thenReturn(ProcessingOutcome.NEW);
-                when(mockResponse.getChildPaths())
-                                .thenReturn(Set.of(child1, child2));
+    @Test
+    void testSourceDeltaMissingFolderQueuesKnownDescendants() {
+        var entry = new FsCrawlerEntry(
+                "m365od://tenant/users/user123/drives/drive123");
+        entry.setFolder(true);
 
-                var fetcher = mock(Fetcher.class);
-                try {
-                        when(fetcher.fetch(any())).thenReturn(mockResponse);
-                } catch (FetchException e) {
-                        throw new AssertionError(
-                                        "Unexpected exception in mock setup",
-                                        e);
-                }
+        var mockResponse = mock(FolderPathsFetchResponse.class);
+        when(mockResponse.getProcessingOutcome())
+                .thenReturn(ProcessingOutcome.NOT_FOUND);
+        when(mockResponse.getChildPaths()).thenReturn(Set.of());
 
-                // A no-op queue pipeline — we only assert on the return value
-                var queuePipeline = mock(QueuePipeline.class);
-
-                var ctx = buildCtx(entry, fetcher, queuePipeline);
-
-                // A folder-only entry returns false (no file content to process)
-                boolean result = new FolderPathsExtractorStage(
-                                FetchDirective.DOCUMENT).test(ctx);
-                assertThat(result).isFalse();
+        var fetcher = mock(Fetcher.class);
+        try {
+            when(fetcher.fetch(any())).thenReturn(mockResponse);
+        } catch (FetchException e) {
+            throw new AssertionError(
+                    "Unexpected exception in mock setup",
+                    e);
         }
 
-        @Test
-        void testFolderAndFileEntryReturnsContinue() {
-                // An entry that is both a folder and a file should return true
-                var entry = new FsCrawlerEntry("file:///some/folderfile");
-                entry.setFolder(true);
-                entry.setFile(true);
+        var ledger = mock(CrawlerEntryLedger.class);
+        doAnswer(inv -> {
+            @SuppressWarnings("unchecked")
+            Consumer<CrawlerEntry> consumer = inv.getArgument(0,
+                    Consumer.class);
 
-                var mockResponse = mock(FolderPathsFetchResponse.class);
-                when(mockResponse.getProcessingOutcome())
-                                .thenReturn(ProcessingOutcome.NEW);
-                when(mockResponse.getChildPaths()).thenReturn(Set.of());
+            consumer.accept(new FsCrawlerEntry(
+                    "m365od://tenant/users/user123/drives/drive123/items/fileA"));
+            consumer.accept(new FsCrawlerEntry(
+                    "m365od://tenant/users/user123/drives/drive123/items/folderB"));
+            consumer.accept(new FsCrawlerEntry(
+                    "m365od://tenant/users/user123/drives/otherDrive/items/skipMe"));
+            return null;
+        }).when(ledger).forEachBaseline(any());
 
-                var fetcher = mock(Fetcher.class);
-                try {
-                        when(fetcher.fetch(any())).thenReturn(mockResponse);
-                } catch (FetchException e) {
-                        throw new AssertionError(
-                                        "Unexpected exception in mock setup",
-                                        e);
-                }
+        var ctx = buildCtx(entry, fetcher, mock(QueuePipeline.class),
+                ChangeDiscovery.SOURCE_DELTA, true, ledger);
 
-                var ctx = buildCtx(entry, fetcher, mock(QueuePipeline.class));
+        boolean result = new FolderPathsExtractorStage(
+                FetchDirective.DOCUMENT).test(ctx);
 
-                boolean result = new FolderPathsExtractorStage(
-                                FetchDirective.DOCUMENT).test(ctx);
-                assertThat(result).isTrue();
+        assertThat(result).isFalse();
+        assertThat(entry.getProcessingOutcome())
+                .isEqualTo(ProcessingOutcome.NOT_FOUND);
+        verify(ledger, times(2)).queue(any(FsCrawlerEntry.class));
+    }
+
+    @Test
+    void testMissingFolderOutsideSourceDeltaDoesNotQueueDescendants() {
+        var entry = new FsCrawlerEntry(
+                "m365od://tenant/users/user123/drives/drive123");
+        entry.setFolder(true);
+
+        var mockResponse = mock(FolderPathsFetchResponse.class);
+        when(mockResponse.getProcessingOutcome())
+                .thenReturn(ProcessingOutcome.NOT_FOUND);
+        when(mockResponse.getChildPaths()).thenReturn(Set.of());
+
+        var fetcher = mock(Fetcher.class);
+        try {
+            when(fetcher.fetch(any())).thenReturn(mockResponse);
+        } catch (FetchException e) {
+            throw new AssertionError(
+                    "Unexpected exception in mock setup",
+                    e);
         }
 
-        @Test
-        void testSourceDeltaMissingFolderQueuesKnownDescendants() {
-                var entry = new FsCrawlerEntry(
-                                "m365od://tenant/users/user123/drives/drive123");
-                entry.setFolder(true);
+        var ledger = mock(CrawlerEntryLedger.class);
 
-                var mockResponse = mock(FolderPathsFetchResponse.class);
-                when(mockResponse.getProcessingOutcome())
-                                .thenReturn(ProcessingOutcome.NOT_FOUND);
-                when(mockResponse.getChildPaths()).thenReturn(Set.of());
+        var ctx = buildCtx(entry, fetcher, mock(QueuePipeline.class),
+                ChangeDiscovery.CRAWLER_SCAN, true, ledger);
 
-                var fetcher = mock(Fetcher.class);
-                try {
-                        when(fetcher.fetch(any())).thenReturn(mockResponse);
-                } catch (FetchException e) {
-                        throw new AssertionError(
-                                        "Unexpected exception in mock setup",
-                                        e);
-                }
+        boolean result = new FolderPathsExtractorStage(
+                FetchDirective.DOCUMENT).test(ctx);
 
-                var ledger = mock(CrawlerEntryLedger.class);
-                doAnswer(inv -> {
-                        @SuppressWarnings("unchecked")
-                        Consumer<CrawlerEntry> consumer = inv.getArgument(0,
-                                        Consumer.class);
+        assertThat(result).isFalse();
+        assertThat(entry.getProcessingOutcome())
+                .isEqualTo(ProcessingOutcome.NOT_FOUND);
+        verify(ledger, never()).forEachBaseline(any());
+        verify(ledger, never()).queue(any());
+    }
 
-                        consumer.accept(new FsCrawlerEntry(
-                                        "m365od://tenant/users/user123/drives/drive123/items/fileA"));
-                        consumer.accept(new FsCrawlerEntry(
-                                        "m365od://tenant/users/user123/drives/drive123/items/folderB"));
-                        consumer.accept(new FsCrawlerEntry(
-                                        "m365od://tenant/users/user123/drives/otherDrive/items/skipMe"));
-                        return null;
-                }).when(ledger).forEachBaseline(any());
+    @Test
+    void testNonFolderEntrySkipsAndReturnsFile() {
+        // A file-only entry must skip folder logic and return isFile()
+        var entry = new FsCrawlerEntry("file:///some/file.txt");
+        entry.setFile(true);
 
-                var ctx = buildCtx(entry, fetcher, mock(QueuePipeline.class),
-                                ChangeDiscovery.SOURCE_DELTA, true, ledger);
+        var fetcher = mock(Fetcher.class);
 
-                boolean result = new FolderPathsExtractorStage(
-                                FetchDirective.DOCUMENT).test(ctx);
+        var ctx = buildCtx(entry, fetcher, mock(QueuePipeline.class));
 
-                assertThat(result).isFalse();
-                assertThat(entry.getProcessingOutcome())
-                                .isEqualTo(ProcessingOutcome.NOT_FOUND);
-                verify(ledger, times(2)).queue(any(FsCrawlerEntry.class));
-        }
-
-        @Test
-        void testMissingFolderOutsideSourceDeltaDoesNotQueueDescendants() {
-                var entry = new FsCrawlerEntry(
-                                "m365od://tenant/users/user123/drives/drive123");
-                entry.setFolder(true);
-
-                var mockResponse = mock(FolderPathsFetchResponse.class);
-                when(mockResponse.getProcessingOutcome())
-                                .thenReturn(ProcessingOutcome.NOT_FOUND);
-                when(mockResponse.getChildPaths()).thenReturn(Set.of());
-
-                var fetcher = mock(Fetcher.class);
-                try {
-                        when(fetcher.fetch(any())).thenReturn(mockResponse);
-                } catch (FetchException e) {
-                        throw new AssertionError(
-                                        "Unexpected exception in mock setup",
-                                        e);
-                }
-
-                var ledger = mock(CrawlerEntryLedger.class);
-
-                var ctx = buildCtx(entry, fetcher, mock(QueuePipeline.class),
-                                ChangeDiscovery.CRAWLER_SCAN, true, ledger);
-
-                boolean result = new FolderPathsExtractorStage(
-                                FetchDirective.DOCUMENT).test(ctx);
-
-                assertThat(result).isFalse();
-                assertThat(entry.getProcessingOutcome())
-                                .isEqualTo(ProcessingOutcome.NOT_FOUND);
-                verify(ledger, never()).forEachBaseline(any());
-                verify(ledger, never()).queue(any());
-        }
-
-        @Test
-        void testNonFolderEntrySkipsAndReturnsFile() {
-                // A file-only entry must skip folder logic and return isFile()
-                var entry = new FsCrawlerEntry("file:///some/file.txt");
-                entry.setFile(true);
-
-                var fetcher = mock(Fetcher.class);
-
-                var ctx = buildCtx(entry, fetcher, mock(QueuePipeline.class));
-
-                boolean result = new FolderPathsExtractorStage(
-                                FetchDirective.DOCUMENT).test(ctx);
-                assertThat(result).isTrue();
-        }
+        boolean result = new FolderPathsExtractorStage(
+                FetchDirective.DOCUMENT).test(ctx);
+        assertThat(result).isTrue();
+    }
 }
