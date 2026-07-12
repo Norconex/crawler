@@ -30,7 +30,6 @@ import java.io.Reader;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashMap;
 import java.util.Iterator;
 
 import org.apache.commons.io.FileUtils;
@@ -309,9 +308,10 @@ public class ExternalTransformer
                     }
                 }
             }
-            // Set extracted metadata on actual metadata
-            // Create a copy to avoid ConcurrentModificationException
-            new HashMap<>(externalMeta).forEach(
+            // Set extracted metadata on actual metadata.
+            // Listener callbacks can still flush a last line right after
+            // command completion, so wait for a stable snapshot first.
+            stableMetaSnapshot(externalMeta).forEach(
                     (k, v) -> PropertySetter
                             .orAppend(configuration.getOnSet())
                             .apply(docCtx.metadata(), k, v));
@@ -319,6 +319,27 @@ public class ExternalTransformer
             files.deleteAll();
         }
         return true;
+    }
+
+    private static Properties stableMetaSnapshot(Properties metadata) {
+        var previous = new Properties();
+        for (var i = 0; i < 10; i++) {
+            var current = new Properties();
+            current.putAll(metadata);
+            if (current.equals(previous)) {
+                return current;
+            }
+            previous = current;
+            try {
+                Thread.sleep(20);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+        var fallback = new Properties();
+        fallback.putAll(metadata);
+        return fallback;
     }
 
     private int executeCommand(
