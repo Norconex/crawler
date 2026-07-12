@@ -15,6 +15,16 @@ Commit documents to Apache Kafka.
 
 Commits crawled documents to an Apache Kafka topic. Supports optional topic creation, field mappings to Kafka fields, and configurable partition and replication settings.
 
+Interoperability note:
+
+- ApacheKafkaCommitter provides Kafka-based interoperability out of the box by
+  publishing crawl output to an open event bus.
+- This allows downstream integration with a wide range of systems through
+  Kafka-native consumers and connector ecosystems.
+- Downstream behavior (for example schema mapping, delete semantics,
+  idempotency, and ACL handling) depends on the target consumer/connector
+  configuration and capabilities.
+
 ## Properties
 
 ### bootstrapServers
