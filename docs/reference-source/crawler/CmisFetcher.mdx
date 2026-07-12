@@ -24,6 +24,46 @@ Current limitations:
 - `SOURCE_DELTA` source-native change feed behavior is not implemented for CMIS in this v1 hardening slice.
 - Incremental behavior for CMIS currently relies on crawler scan semantics.
 
+## Troubleshooting
+
+### 401 or 403 at startup
+
+- Confirm `credentials` are valid for the CMIS endpoint you are using.
+- If behind SSO or a reverse proxy, verify the CMIS Atom endpoint is reachable
+	from the crawler runtime host, not only from a browser session.
+- If your server requires domain-qualified auth, set `domain`.
+
+### 404 for object path or folder traversal
+
+- Validate the start reference endpoint and path boundary.
+- Try first with a root-level boundary and then narrow to a subpath.
+- Set `repositoryId` explicitly when multiple repositories exist.
+
+### Metadata looks incomplete or inconsistent
+
+- Keep in mind CMIS servers can emit product-specific property naming and
+	optional fields.
+- Compare behavior against the compatibility notes and mark product status in
+	the matrix as you validate.
+- If needed for diagnostics, set `xmlTargetField` to persist raw Atom/XML for
+	inspection.
+
+### ACL values look duplicated or partially missing
+
+- Some CMIS servers emit duplicate grants or shift principal naming locations.
+- Validate with a small repository slice first and confirm expected principal
+	mapping in your target system.
+- Temporarily set `aclDisabled: true` to isolate content crawl behavior from
+	ACL-specific issues.
+
+### Recommended triage sequence
+
+1. Validate endpoint and authentication with a minimal root start reference.
+2. Confirm repository selection using explicit `repositoryId` when applicable.
+3. Run a narrow crawl boundary and inspect metadata and ACL outcomes.
+4. Enable `xmlTargetField` if payload-level diagnostics are required.
+5. Update the compatibility matrix with product/version/auth observations.
+
 ## Properties
 
 ### aclDisabled

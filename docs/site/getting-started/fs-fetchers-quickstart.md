@@ -63,8 +63,12 @@ committers:
 8. Starting Google Drive delta mode from an item reference. In `SOURCE_DELTA` mode, use a user boundary such as `gdrive://workspace/users/alex@example.com` or a Shared Drive boundary such as `gdrive://workspace/drives/{driveId}`.
 9. Starting Egnyte delta mode from a non-root folder boundary. In `SOURCE_DELTA` mode for Egnyte v1, use the root boundary `egnyte://{domain}/folders/root`.
 10. Expecting Box source-side delta crawling in v1. Box currently runs with crawler-scan semantics; use `changeDiscovery: CRAWLER_SCAN` for predictable incremental behavior.
+11. Mixing CMIS endpoint styles or path boundaries during first setup. Start with a known-good root boundary (`cmis:http://host:port/cmis/atom`) and only then narrow to subpaths.
 
 ## Next step
 
 After your first successful crawl with `LogCommitter`, switch to your target
 committer and tune fetcher-specific options in the reference docs.
+
+For CMIS-specific product caveats and validation status, see
+[CMIS Compatibility Matrix](../concepts/cmis-compatibility-matrix.md).
