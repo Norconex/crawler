@@ -23,6 +23,7 @@ import com.norconex.crawler.fs.fetch.impl.archive.ArchiveFetcher;
 import com.norconex.crawler.fs.fetch.impl.azureblob.AzureBlobFetcher;
 import com.norconex.crawler.fs.fetch.impl.box.BoxFetcher;
 import com.norconex.crawler.fs.fetch.impl.cmis.CmisFetcher;
+import com.norconex.crawler.fs.fetch.impl.egnyte.EgnyteFetcher;
 import com.norconex.crawler.fs.fetch.impl.ftp.FtpFetcher;
 import com.norconex.crawler.fs.fetch.impl.gcs.GcsFetcher;
 import com.norconex.crawler.fs.fetch.impl.hdfs.HdfsFetcher;
@@ -40,28 +41,29 @@ import com.norconex.crawler.fs.fetch.impl.webdav.WebDavFetcher;
  */
 public class CrawlerFsPtProvider extends BasePolymorphicTypeProvider {
 
-        protected static final String BASE_PKG = "com.norconex.crawler.fs.";
+    protected static final String BASE_PKG = "com.norconex.crawler.fs.";
 
-        @Override
-        protected void register(Registry registry) {
-                registry
-                                .addFromScan(
-                                                MetadataChecksummer.class,
-                                                BASE_PKG + "doc.operations")
-                                .add(Fetcher.class,
-                                                AdlsGen2Fetcher.class,
-                                                ArchiveFetcher.class,
-                                                AzureBlobFetcher.class,
-                                                BoxFetcher.class,
-                                                CmisFetcher.class,
-                                                FtpFetcher.class,
-                                                GcsFetcher.class,
-                                                HdfsFetcher.class,
-                                                LocalFetcher.class,
-                                                M365GraphFetcher.class,
-                                                S3Fetcher.class,
-                                                SftpFetcher.class,
-                                                SmbFetcher.class,
-                                                WebDavFetcher.class);
-        }
+    @Override
+    protected void register(Registry registry) {
+        registry
+                .addFromScan(
+                        MetadataChecksummer.class,
+                        BASE_PKG + "doc.operations")
+                .add(Fetcher.class,
+                        AdlsGen2Fetcher.class,
+                        ArchiveFetcher.class,
+                        AzureBlobFetcher.class,
+                        BoxFetcher.class,
+                        CmisFetcher.class,
+                        EgnyteFetcher.class,
+                        FtpFetcher.class,
+                        GcsFetcher.class,
+                        HdfsFetcher.class,
+                        LocalFetcher.class,
+                        M365GraphFetcher.class,
+                        S3Fetcher.class,
+                        SftpFetcher.class,
+                        SmbFetcher.class,
+                        WebDavFetcher.class);
+    }
 }

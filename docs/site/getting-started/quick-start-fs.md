@@ -141,10 +141,12 @@ startReferences:
   - webhdfs://namenode:9870/user/data/corpus
 ```
 
-For Google Drive and M365-specific examples, use the dedicated fetcher
+For Box, Google Drive, Egnyte, and M365-specific examples, use the dedicated fetcher
 reference pages so configuration examples stay canonical in one place:
 
+- [BoxFetcher](../reference-source/crawler/BoxFetcher)
 - [GoogleDriveFetcher](../reference-source/crawler/GoogleDriveFetcher)
+- [EgnyteFetcher](../reference-source/crawler/EgnyteFetcher)
 - [M365GraphFetcher](../reference-source/crawler/M365GraphFetcher)
 
 ## Step 6 — Send to a real target
