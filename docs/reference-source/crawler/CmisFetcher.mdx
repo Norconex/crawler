@@ -15,6 +15,15 @@ CMIS-enabled Content Management Systems (CMS) fetcher (Atom).
 
 Fetches documents from CMIS-enabled Content Management Systems (CMS) using the CMIS Atom binding protocol. Supports credentials, optional repository selection, and storing the raw XML response in a document field.
 
+Compatibility tracking:
+
+- [CMIS Compatibility Matrix](../../site/concepts/cmis-compatibility-matrix.md)
+
+Current limitations:
+
+- `SOURCE_DELTA` source-native change feed behavior is not implemented for CMIS in this v1 hardening slice.
+- Incremental behavior for CMIS currently relies on crawler scan semantics.
+
 ## Properties
 
 ### aclDisabled
@@ -40,3 +49,35 @@ The CMIS repository ID. Defaults to first one found.
 ### xmlTargetField
 
 The name of the field where the raw XML obtained from the CMIS REST API will be stored. Default: does not store the raw XML in a field.
+
+## Examples
+
+Basic CMIS Atom endpoint:
+
+<ConfigBlock
+	json={{
+		"class": "CmisFetcher",
+		"credentials": {
+			"username": "cmis-user",
+			"password": "<password>"
+		}
+	}}
+/>
+
+Use a start reference such as:
+
+`cmis:http://your-host:8080/cmis/atom`
+
+CMIS Atom endpoint with non-root start path:
+
+<ConfigBlock
+	json={{
+		"class": "CmisFetcher",
+		"repositoryId": "my-repo",
+		"aclDisabled": false
+	}}
+/>
+
+Use a start reference such as:
+
+`cmis:http://your-host:8080/cmis/atom!/Sites/Finance`
