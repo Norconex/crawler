@@ -27,6 +27,8 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -126,6 +128,9 @@ public class ArchiveFetcher extends AbstractNioFetcher<ArchiveFetcherConfig> {
             new ConcurrentHashMap<>();
 
     @EqualsAndHashCode.Exclude
+    private Path secureTempRootDir;
+
+    @EqualsAndHashCode.Exclude
     private Map<String, Object> ftpEnv;
     @EqualsAndHashCode.Exclude
     private Map<String, Object> sftpEnv;
@@ -134,6 +139,13 @@ public class ArchiveFetcher extends AbstractNioFetcher<ArchiveFetcherConfig> {
     protected void fetcherStartup(CrawlerSession crawler) {
         super.fetcherStartup(crawler);
         var cfg = configuration;
+
+        try {
+            secureTempRootDir = createSecureTempRootDir();
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                    "Could not initialize archive temp directory.", e);
+        }
 
         var ftp = new FTPEnvironment();
         var sftp = new SFTPEnvironment()
@@ -164,6 +176,10 @@ public class ArchiveFetcher extends AbstractNioFetcher<ArchiveFetcherConfig> {
         spooledTempFiles.clear();
         extractedArchiveDirs.values().forEach(this::deleteRecursivelyQuietly);
         extractedArchiveDirs.clear();
+        if (secureTempRootDir != null) {
+            deleteRecursivelyQuietly(secureTempRootDir);
+            secureTempRootDir = null;
+        }
         super.fetcherShutdown(crawler);
     }
 
@@ -273,7 +289,7 @@ public class ArchiveFetcher extends AbstractNioFetcher<ArchiveFetcherConfig> {
             // channels do not support (confirmed: sftp-fs's
             // SeekableByteChannel does not implement position()), so the
             // whole archive is spooled to a local temp file first.
-            var tempFile = Files.createTempFile("nx-archive-", ".zip");
+            var tempFile = createSecureTempFile("nx-archive-", ".zip");
             spooledTempFiles.add(tempFile);
             try (var in = openInnerStream(innerRef)) {
                 Files.copy(in, tempFile,
@@ -315,7 +331,7 @@ public class ArchiveFetcher extends AbstractNioFetcher<ArchiveFetcherConfig> {
 
     private Path extractToTempDir(String outerScheme, String innerRef)
             throws IOException {
-        var dir = Files.createTempDirectory("nx-archive-");
+        var dir = createSecureTempDirectory("nx-archive-");
         try (var rawIn = new BufferedInputStream(openInnerStream(innerRef));
                 var in = wrapCompressorStream(outerScheme, rawIn)) {
             if (TAR_SCHEMES.contains(outerScheme)) {
@@ -422,6 +438,43 @@ public class ArchiveFetcher extends AbstractNioFetcher<ArchiveFetcherConfig> {
         var uri = URI.create(innerRef);
         var fs = getOrOpenFileSystem(uri, env);
         return fs.getPath(uri.getPath());
+    }
+
+    private Path createSecureTempRootDir() throws IOException {
+        var parent = Path.of(System.getProperty("user.home"));
+        var root = Files.createTempDirectory(parent, ".nx-archive-");
+        trySetOwnerOnlyPermissions(root, true);
+        return root;
+    }
+
+    private Path createSecureTempFile(String prefix, String suffix)
+            throws IOException {
+        var file = Files.createTempFile(secureTempRootDir, prefix, suffix);
+        trySetOwnerOnlyPermissions(file, false);
+        return file;
+    }
+
+    private Path createSecureTempDirectory(String prefix) throws IOException {
+        var dir = Files.createTempDirectory(secureTempRootDir, prefix);
+        trySetOwnerOnlyPermissions(dir, true);
+        return dir;
+    }
+
+    private void trySetOwnerOnlyPermissions(Path path, boolean directory) {
+        try {
+            if (!Files.getFileStore(path).supportsFileAttributeView("posix")) {
+                return;
+            }
+            Set<PosixFilePermission> perms;
+            if (directory) {
+                perms = PosixFilePermissions.fromString("rwx------");
+            } else {
+                perms = PosixFilePermissions.fromString("rw-------");
+            }
+            Files.setPosixFilePermissions(path, perms);
+        } catch (IOException | UnsupportedOperationException e) {
+            LOG.debug("Could not set POSIX permissions on {}", path, e);
+        }
     }
 
     // --- Cleanup helpers --------------------------------------------------
