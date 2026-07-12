@@ -30,6 +30,7 @@ import java.io.Reader;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.Iterator;
 
 import org.apache.commons.io.FileUtils;
@@ -37,8 +38,6 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
 
-import com.norconex.commons.lang.config.Configurable;
-import com.norconex.importer.handler.ConfigurableDocHandler;
 import com.norconex.commons.lang.exec.SystemCommand;
 import com.norconex.commons.lang.exec.SystemCommandException;
 import com.norconex.commons.lang.io.CachedStream;
@@ -47,7 +46,7 @@ import com.norconex.commons.lang.map.Properties;
 import com.norconex.commons.lang.map.PropertySetter;
 import com.norconex.commons.lang.text.RegexFieldValueExtractor;
 import com.norconex.importer.ImporterRuntimeException;
-import com.norconex.importer.handler.DocHandler;
+import com.norconex.importer.handler.ConfigurableDocHandler;
 import com.norconex.importer.handler.DocHandlerContext;
 
 import lombok.Data;
@@ -311,7 +310,8 @@ public class ExternalTransformer
                 }
             }
             // Set extracted metadata on actual metadata
-            externalMeta.forEach(
+            // Create a copy to avoid ConcurrentModificationException
+            new HashMap<>(externalMeta).forEach(
                     (k, v) -> PropertySetter
                             .orAppend(configuration.getOnSet())
                             .apply(docCtx.metadata(), k, v));
