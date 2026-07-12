@@ -1,4 +1,4 @@
-/* Copyright 2023-2024 Norconex Inc.
+/* Copyright 2023-2026 Norconex Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ package com.norconex.crawler.fs.fetch.impl.sftp;
 import java.io.File;
 import java.time.Duration;
 
-import com.norconex.crawler.fs.fetch.impl.BaseAuthVfsFetcherConfig;
+import com.norconex.crawler.fs.fetch.impl.BaseAuthNioFetcherConfig;
 
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -30,7 +30,7 @@ import lombok.experimental.Accessors;
  */
 @Data
 @Accessors(chain = true)
-public class SftpFetcherConfig extends BaseAuthVfsFetcherConfig {
+public class SftpFetcherConfig extends BaseAuthNioFetcherConfig {
 
     private String compression;
     private String fileNameEncoding;

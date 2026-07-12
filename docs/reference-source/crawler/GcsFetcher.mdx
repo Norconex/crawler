@@ -1,0 +1,55 @@
+---
+component: GcsFetcher
+module: crawler/fs
+locale: en
+propertyCoverage: all
+---
+
+# GcsFetcher
+
+## Summary
+
+Google Cloud Storage fetcher (`gs://`).
+
+## Notes
+
+Fetches documents from Google Cloud Storage using references such as
+`gs://my-bucket/path/to/object.txt`.
+
+This fetcher relies on the official `google-cloud-nio` provider.
+
+Authentication is delegated to Google Application Default Credentials (ADC).
+When `endpoint` is set, the fetcher assumes a local/emulated GCS-compatible
+service and connects without authentication.
+
+## Properties
+
+### endpoint
+
+Optional endpoint override, mainly intended for local GCS-compatible test
+servers.
+
+### referenceFilters
+
+Filters applied to document references (URLs or file paths) to control which
+ones are fetched. Documents whose references do not pass the filters are
+skipped.
+
+## Examples
+
+The following example uses default Google Application Default Credentials.
+
+<ConfigBlock
+  json={{
+    "class": "GcsFetcher"
+  }}
+/>
+
+The following example targets a local GCS-compatible endpoint.
+
+<ConfigBlock
+  json={{
+    "class": "GcsFetcher",
+    "endpoint": "http://localhost:4443"
+  }}
+/>

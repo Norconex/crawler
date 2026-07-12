@@ -413,6 +413,15 @@ jobs:
             -B \
             package
 
+          # Committer zips for GitHub Releases assets.
+          mvn -pl committer/core,committer/amazoncloudsearch,committer/apachekafka,committer/azurecognitivesearch,committer/elasticsearch,committer/googlecloudsearch,committer/idol,committer/neo4j,committer/solr,committer/sql \
+            -Dmaven.compiler.skip=true \
+            -Dmaven.test.skip=true \
+            -Dmaven.javadoc.skip=true \
+            -Dgpg.skip=true \
+            -B \
+            package
+
       #--- Step ------------------------------------------------------------------
 
       - name: Publish snapshot zips to GitHub Releases
@@ -429,7 +438,8 @@ jobs:
             crawler/web/target/nx-crawler-web-*-full.zip \
             crawler/web/target/nx-crawler-web-*-standard.zip \
             crawler/fs/target/nx-crawler-fs-*-full.zip \
-            crawler/fs/target/nx-crawler-fs-*-standard.zip
+            crawler/fs/target/nx-crawler-fs-*-standard.zip \
+            committer/*/target/nx-committer-*.zip
           # Delete snapshot releases beyond the 3 most recent
           gh release list --limit 100 \
             --json tagName,createdAt \
@@ -454,12 +464,14 @@ jobs:
             crawler/web/target/nx-crawler-web-*-full.zip \
             crawler/web/target/nx-crawler-web-*-standard.zip \
             crawler/fs/target/nx-crawler-fs-*-full.zip \
-            crawler/fs/target/nx-crawler-fs-*-standard.zip 2>/dev/null || \
+            crawler/fs/target/nx-crawler-fs-*-standard.zip \
+            committer/*/target/nx-committer-*.zip 2>/dev/null || \
           gh release upload "v${{ steps.get_version.outputs.version }}" \
             crawler/web/target/nx-crawler-web-*-full.zip \
             crawler/web/target/nx-crawler-web-*-standard.zip \
             crawler/fs/target/nx-crawler-fs-*-full.zip \
             crawler/fs/target/nx-crawler-fs-*-standard.zip \
+            committer/*/target/nx-committer-*.zip \
             --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -492,4 +504,3 @@ jobs:
         env:
           # PAT required so this commit triggers CI for the new SNAPSHOT version.
           GITHUB_TOKEN: ${{ secrets.RELEASE_PAT }}
-

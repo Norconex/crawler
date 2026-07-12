@@ -1,6 +1,6 @@
 ---
 component: KerberosConfig
-module: crawler/web
+module: crawler/fs
 locale: en
 propertyCoverage: all
 ---
@@ -9,65 +9,108 @@ propertyCoverage: all
 
 ## Summary
 
-Configuration schema for Kerberos Config.
+Kerberos/SPNEGO authentication settings for HDFS WebHDFS access.
 
 ## Notes
 
-:::warning[Missing Documentation]
-Notes are missing. Add implementation details, caveats, and examples.
-:::
+Used by `HdfsFetcher` when `authMethod` is set to `KERBEROS`.
+
+At a minimum, provide a valid Kerberos configuration (`krb5.conf`) and one
+of the following authentication mechanisms:
+
+- keytab-based login (`keytabPath` + `principal`)
+- ticket-cache login (`useTicketCache`)
+- username/password JAAS login through HDFS fetcher credentials
+
+When `loginModuleName` is not set, the crawler creates a built-in JAAS
+configuration from the provided properties.
 
 ## Properties
 
-### `keytabPath`
+### keytabPath
 
-:::warning[Missing Documentation]
-Property `keytabPath` is missing documentation. Please update this section.
-:::
+Path to the keytab file containing the principal key. When set,
+authentication uses this keytab instead of requiring a password or
+ticket cache.
 
-### `krb5ConfigPath`
+### krb5ConfigPath
 
-:::warning[Missing Documentation]
-Property `krb5ConfigPath` is missing documentation. Please update this section.
-:::
+Path to the Kerberos configuration file (`krb5.conf`). When omitted,
+the JVM default Kerberos configuration is used.
 
-### `loginModuleName`
+### loginModuleName
 
-:::warning[Missing Documentation]
-Property `loginModuleName` is missing documentation. Please update this section.
-:::
+Optional JAAS login module entry name. When omitted, an internal JAAS
+configuration is generated automatically.
 
-### `principal`
+### principal
 
-:::warning[Missing Documentation]
-Property `principal` is missing documentation. Please update this section.
-:::
+Kerberos principal name (for example, `user@REALM`). Required for
+keytab-based authentication.
 
-### `servicePrincipalName`
+### useTicketCache
 
-:::warning[Missing Documentation]
-Property `servicePrincipalName` is missing documentation. Please update this section.
-:::
-
-### `useTicketCache`
-
-:::warning[Missing Documentation]
-Property `useTicketCache` is missing documentation. Please update this section.
-:::
+Whether the system ticket cache should be used. When enabled, an existing
+ticket (for example from `kinit`) is used and no keytab or password is
+required.
 
 ## Examples
 
 <ReferenceExamples
   examples={[
     {
-      title: "Minimal Example",
-      description: "Configures Kerberos/SPNEGO authentication using a keytab file for headless authentication.",
+      title: "Kerberos with Keytab",
+      description: "Uses a keytab and principal for non-interactive authentication.",
       codeByLanguage: {
-        yaml: `# TODO: Add YAML example`,
+        yaml: `class: HdfsFetcher
+authMethod: KERBEROS
+kerberosConfig:
+  krb5ConfigPath: /etc/krb5.conf
+  keytabPath: /etc/security/keytabs/hdfs-user.keytab
+  principal: hdfs-user@EXAMPLE.COM`,
         json: `{
-  "TODO": "Add JSON example"
+  "class": "HdfsFetcher",
+  "authMethod": "KERBEROS",
+  "kerberosConfig": {
+    "krb5ConfigPath": "/etc/krb5.conf",
+    "keytabPath": "/etc/security/keytabs/hdfs-user.keytab",
+    "principal": "hdfs-user@EXAMPLE.COM"
+  }
 }`,
-        xml: `<TODO>Add XML example</TODO>`,
+        xml: `<fetcher class="HdfsFetcher">
+  <authMethod>KERBEROS</authMethod>
+  <kerberosConfig>
+    <krb5ConfigPath>/etc/krb5.conf</krb5ConfigPath>
+    <keytabPath>/etc/security/keytabs/hdfs-user.keytab</keytabPath>
+    <principal>hdfs-user@EXAMPLE.COM</principal>
+  </kerberosConfig>
+</fetcher>`,
+      },
+    },
+    {
+      title: "Kerberos with Ticket Cache",
+      description: "Uses existing Kerberos tickets from the system cache.",
+      codeByLanguage: {
+        yaml: `class: HdfsFetcher
+authMethod: KERBEROS
+kerberosConfig:
+  krb5ConfigPath: /etc/krb5.conf
+  useTicketCache: true`,
+        json: `{
+  "class": "HdfsFetcher",
+  "authMethod": "KERBEROS",
+  "kerberosConfig": {
+    "krb5ConfigPath": "/etc/krb5.conf",
+    "useTicketCache": true
+  }
+}`,
+        xml: `<fetcher class="HdfsFetcher">
+  <authMethod>KERBEROS</authMethod>
+  <kerberosConfig>
+    <krb5ConfigPath>/etc/krb5.conf</krb5ConfigPath>
+    <useTicketCache>true</useTicketCache>
+  </kerberosConfig>
+</fetcher>`,
       },
     },
   ]}

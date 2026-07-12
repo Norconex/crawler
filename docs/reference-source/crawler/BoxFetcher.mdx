@@ -1,0 +1,94 @@
+---
+component: BoxFetcher
+module: crawler/fs
+locale: en
+propertyCoverage: all
+---
+
+# BoxFetcher
+
+## Summary
+
+Box fetcher (`box://`) for filesystem-like traversal and content download
+through Box APIs.
+
+## Notes
+
+Fetches documents from Box using stable ID-based references.
+
+Supported scheme:
+
+- `box://{enterpriseId}/folders/{folderId}`
+- `box://{enterpriseId}/folders/{folderId}/items/{itemId}`
+
+V1 authentication is bearer-token based.
+
+Incremental source-delta mode:
+
+- Box `SOURCE_DELTA` support is not implemented in v1.
+- In incremental crawls, Box currently relies on standard crawler-side scan
+  semantics (`changeDiscovery: CRAWLER_SCAN`).
+
+## Properties
+
+### accessToken
+
+OAuth access token used for Box API requests.
+
+### apiBaseUrl
+
+Box API base URL.
+
+Default: `https://api.box.com/2.0`
+
+### validStatusCodes
+
+HTTP status codes treated as successful API responses.
+Defaults to `200`, `201`, `202`, and `204`.
+
+### notFoundStatusCodes
+
+HTTP status codes treated as "not found" outcomes.
+Defaults to `404`.
+
+### referenceFilters
+
+Filters applied to document references (URLs or file paths) to control which
+ones are fetched. Documents whose references do not pass the filters are
+skipped.
+
+## Examples
+
+The following example starts from the Box root folder boundary.
+
+<ConfigBlock
+  json={{
+    "class": "BoxFetcher",
+    "accessToken": "<token>",
+    "apiBaseUrl": "https://api.box.com/2.0"
+  }}
+/>
+
+Use a start reference such as:
+
+`box://my-enterprise/folders/0`
+
+## Example Crawl
+
+```yaml
+id: box-root-crawl
+startReferences:
+  - box://my-enterprise/folders/0
+fetchers:
+  - class: BoxFetcher
+    accessToken: <token>
+committers:
+  - class: LogCommitter
+    ignoreContent: true
+```
+
+## Permissions
+
+Grant the minimum Box read permissions required by your selected boundary.
+
+Prefer least-privilege API tokens when possible.

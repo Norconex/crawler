@@ -1,4 +1,4 @@
-/* Copyright 2023-2024 Norconex Inc.
+/* Copyright 2023-2026 Norconex Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ import java.time.Duration;
 
 import com.norconex.commons.lang.encrypt.EncryptionKey;
 import com.norconex.commons.lang.net.ProxySettings;
-import com.norconex.crawler.fs.fetch.impl.BaseAuthVfsFetcherConfig;
+import com.norconex.crawler.fs.fetch.impl.BaseAuthNioFetcherConfig;
 
 import jakarta.xml.bind.annotation.XmlTransient;
 import lombok.Data;
@@ -32,7 +32,7 @@ import lombok.experimental.Accessors;
  */
 @Data
 @Accessors(chain = true)
-public class WebDavFetcherConfig extends BaseAuthVfsFetcherConfig {
+public class WebDavFetcherConfig extends BaseAuthNioFetcherConfig {
 
     //MAYBE ACL?
 

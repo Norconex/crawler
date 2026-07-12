@@ -29,18 +29,18 @@
   <properties>
     <sonar.skip>false</sonar.skip>
     <sonar.projectKey>${project.groupId}:${project.artifactId}</sonar.projectKey>
-    <!-- Sonar expects this one to be relative to mono-repo root: -->
-    <sonar.exclusions>**/org/apache/commons/vfs2/**/*</sonar.exclusions>
-    <sonar.coverage.exclusions>**/org/apache/commons/vfs2/**/*</sonar.coverage.exclusions>
-    <shared-resources.include>scripts/**</shared-resources.include> 
-      
+    <shared-resources.include>scripts/**</shared-resources.include>
+
+    <awssdk.version>2.46.9</awssdk.version>
+    <azure-storage-blob.version>12.35.0</azure-storage-blob.version>
+    <azure-storage-file-datalake.version>12.28.0</azure-storage-file-datalake.version>
     <commons-net.version>3.13.0</commons-net.version>
-    <commons-vfs.version>2.10.0</commons-vfs.version>
+    <ftp-fs.version>3.3</ftp-fs.version>
     <ftpserver.version>1.2.1</ftpserver.version>
-    <hadoop.version>3.5.0</hadoop.version>
-    <jackrabbit.version>2.21.7</jackrabbit.version>
-    <jcifs.version>1.3.17</jcifs.version>
+    <google-cloud-nio.version>0.133.0</google-cloud-nio.version>
+    <jcifs-ng.version>2.1.10</jcifs-ng.version>
     <log4j-over-slf4j.version>2.0.18</log4j-over-slf4j.version>
+    <sftp-fs.version>3.3.2</sftp-fs.version>
 
     <!-- Distribution zip name; standard profile overrides to -standard. -->
     <dist.zip.name>${project.artifactId}-${project.version}-full</dist.zip.name>
@@ -54,6 +54,23 @@
         <artifactId>log4j-over-slf4j</artifactId>
         <version>${log4j-over-slf4j.version}</version>
       </dependency>
+      <dependency>
+        <groupId>software.amazon.awssdk</groupId>
+        <artifactId>bom</artifactId>
+        <version>${awssdk.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+        <dependency>
+          <groupId>com.azure</groupId>
+          <artifactId>azure-storage-blob</artifactId>
+          <version>${azure-storage-blob.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>com.azure</groupId>
+          <artifactId>azure-storage-file-datalake</artifactId>
+          <version>${azure-storage-file-datalake.version}</version>
+        </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -72,21 +89,6 @@
           <groupId>commons-logging</groupId>
           <artifactId>commons-logging</artifactId>
         </exclusion>
-        <exclusion>
-          <groupId>org.apache.logging.log4j</groupId>
-          <artifactId>log4j-core</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-vfs2</artifactId>
-      <version>${commons-vfs.version}</version>
-      <exclusions>
-      	<exclusion>
-      		<groupId>commons-logging</groupId>
-      		<artifactId>commons-logging</artifactId>
-      	</exclusion>
       </exclusions>
     </dependency>
     <dependency>
@@ -94,105 +96,96 @@
       <artifactId>commons-net</artifactId>
       <version>${commons-net.version}</version>
     </dependency>
+
+    <!-- NIO.2 file system providers for FTP/FTPS and SFTP -->
+    <dependency>
+      <groupId>com.github.robtimus</groupId>
+      <artifactId>ftp-fs</artifactId>
+      <version>${ftp-fs.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.github.robtimus</groupId>
+      <artifactId>sftp-fs</artifactId>
+      <version>${sftp-fs.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.google.cloud</groupId>
+      <artifactId>google-cloud-nio</artifactId>
+      <version>${google-cloud-nio.version}</version>
+    </dependency>
+
+    <!-- tar/gz/bz2 archive extraction (zip/jar use the JDK's built-in
+         zipfs provider directly, no dependency needed) -->
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-compress</artifactId>
+    </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>log4j-over-slf4j</artifactId>
     </dependency>
-    <!-- Bridge commons-logging API to SLF4J (used by copied sandbox sources) -->
+    <!-- Bridge commons-logging API to SLF4J -->
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>jcl-over-slf4j</artifactId>
     </dependency>
 
-    <!-- WebDav support -->
+    <!-- WebDAV, CMIS Atom binding, and HDFS (via the WebHDFS REST API) are
+         all implemented directly on Apache HttpClient 5.x. This is the
+         version managed at the mono-repo root (and already used by the web
+         crawler) - not pinned here, just declared. -->
     <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-vfs2-jackrabbit2</artifactId>
-      <version>${commons-vfs.version}</version>
-      <exclusions>
-      	<exclusion>
-      		<groupId>commons-logging</groupId>
-      		<artifactId>commons-logging</artifactId>
-      	</exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>commons-httpclient</groupId>
-      <artifactId>commons-httpclient</artifactId>
-      <version>3.1</version>
-      <exclusions>
-        <exclusion>
-          <groupId>commons-codec</groupId>
-          <artifactId>commons-codec</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>commons-logging</groupId>
-          <artifactId>commons-logging</artifactId>
-        </exclusion>
-      </exclusions>    
-    </dependency>    
-    
-    <!-- HDFS support -->
-    <!-- commons-vfs2-hdfs was split out from commons-vfs2 in 2.10.0 (VFS-851) -->
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-vfs2-hdfs</artifactId>
-      <version>${commons-vfs.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-common</artifactId>
-      <version>${hadoop.version}</version>
-      <exclusions>
-      	<exclusion>
-      		<groupId>org.slf4j</groupId>
-      		<artifactId>slf4j-log4j12</artifactId>
-      	</exclusion>
-      	<exclusion>
-      		<groupId>org.slf4j</groupId>
-      		<artifactId>slf4j-reload4j</artifactId>
-      	</exclusion>
-      	<exclusion>
-      		<groupId>commons-logging</groupId>
-      		<artifactId>commons-logging</artifactId>
-      	</exclusion>
-      	<exclusion>
-      		<groupId>log4j</groupId>
-      		<artifactId>log4j</artifactId>
-      	</exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-hdfs-client</artifactId>
-      <version>${hadoop.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>jakarta.activation</groupId>
-      <artifactId>jakarta.activation-api</artifactId>
+      <groupId>org.apache.httpcomponents.client5</groupId>
+      <artifactId>httpclient5</artifactId>
     </dependency>
 
-    <!-- CIFS (Samba) support -->
+    <!-- CIFS (Samba) support. jcifs-ng is an actively-maintained fork of
+         the old jcifs 1.x line, which supports SMB1 only. SMB1 is disabled
+         by default on modern Windows/Samba servers, so jcifs-ng is a
+         functional fix, not just a modernization. -->
     <dependency>
-      <groupId>jcifs</groupId>
-      <artifactId>jcifs</artifactId>
-      <version>${jcifs.version}</version>
+      <groupId>eu.agno3.jcifs</groupId>
+      <artifactId>jcifs-ng</artifactId>
+      <version>${jcifs-ng.version}</version>
+    </dependency>
+
+    <!-- S3 support: a custom NIO.2 provider on the standard (non-CRT) AWS
+         SDK v2 S3 client. The official AWS Labs NIO.2 provider
+         (aws-java-nio-spi-for-s3) was evaluated but rejected: it
+         unconditionally requires the native AWS Common Runtime (CRT)
+         library (~19MB, no way to exclude it, verified empirically) even
+         when configured to use its "regular client" mode. Excluding the
+         CRT/Netty/Apache HTTP clients here keeps this to the plain,
+         synchronous url-connection-client - no native code, no extra HTTP
+         stack beyond the JDK's own HttpURLConnection. -->
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>s3</artifactId>
       <exclusions>
         <exclusion>
-          <groupId>javax.servlet</groupId>
-          <artifactId>servlet-api</artifactId>
+          <groupId>software.amazon.awssdk</groupId>
+          <artifactId>netty-nio-client</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>software.amazon.awssdk</groupId>
+          <artifactId>apache5-client</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
-    
-    <!-- MIME support -->
-    <!-- sandbox migrated from javax.mail to jakarta.mail in 2.1 -->
     <dependency>
-      <groupId>jakarta.mail</groupId>
-      <artifactId>jakarta.mail-api</artifactId>
-      <version>2.1.5</version>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>url-connection-client</artifactId>
     </dependency>
 
+    <dependency>
+      <groupId>com.azure</groupId>
+      <artifactId>azure-storage-blob</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.azure</groupId>
+      <artifactId>azure-storage-file-datalake</artifactId>
+    </dependency>
 
     <!-- Test + provided dependencies: -->
 
@@ -243,9 +236,9 @@
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-slf4j2-impl</artifactId>
-      <scope>test</scope>
+      <scope>compile</scope>
     </dependency>
-    
+
     <dependency>
       <groupId>org.apache.ftpserver</groupId>
       <artifactId>ftpserver-core</artifactId>
@@ -265,35 +258,6 @@
   
   <build>
     <plugins>
-
-      <!--
-        Exclude Apache Commons VFS sandbox sources (copied as-is, not
-        maintained here) from code-coverage and editor-config checks.
-        Sonar exclusion is already declared via <sonar.exclusions> above.
-        The formatter-maven-plugin is unaffected because the parent config
-        already limits its scope to com/norconex/**/*.java.
-      -->
-      <plugin>
-        <groupId>org.jacoco</groupId>
-        <artifactId>jacoco-maven-plugin</artifactId>
-        <configuration>
-          <excludes>
-            <exclude>org/apache/commons/vfs2/**/*</exclude>
-          </excludes>
-        </configuration>        
-      </plugin>
-
-      <plugin>
-        <groupId>org.ec4j.maven</groupId>
-        <artifactId>editorconfig-maven-plugin</artifactId>
-        <configuration>
-          <excludes>
-            <exclude>
-              src/main/java/org/apache/commons/vfs2/**
-            </exclude>
-          </excludes>
-        </configuration>
-      </plugin>
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

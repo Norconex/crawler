@@ -121,7 +121,6 @@ public class MockFtpServer {
     public static FtpFetcher fetcherClient() {
         var fetcher = new FtpFetcher();
         fetcher.getConfiguration()
-                .setMdtmLastModifiedTime(true)
                 .setUserDirIsRoot(false)
                 .getCredentials()
                 .setUsername("testuser")

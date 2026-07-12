@@ -21,6 +21,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.attribute.AclEntry;
 import java.nio.file.attribute.AclEntryFlag;
 import java.nio.file.attribute.AclEntryPermission;
@@ -29,8 +30,6 @@ import java.nio.file.attribute.AclFileAttributeView;
 import java.nio.file.attribute.UserPrincipal;
 import java.util.List;
 
-import org.apache.commons.vfs2.provider.local.LocalFile;
-import org.apache.commons.vfs2.provider.local.LocalFileName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.Mock;
@@ -46,9 +45,7 @@ import com.norconex.crawler.fs.doc.FsDocMetadata;
 class LocalFetcherAclTest {
 
     @Mock
-    private LocalFile localFile;
-    @Mock
-    private LocalFileName localFileName;
+    private Path path;
     @Mock
     private AclFileAttributeView aclView;
 
@@ -58,10 +55,6 @@ class LocalFetcherAclTest {
 
     @Test
     void testAcl() throws IOException {
-        when(localFileName.getRootFile()).thenReturn("root-file");
-        when(localFileName.getPathDecoded()).thenReturn("path-decoded");
-        when(localFile.getName()).thenReturn(localFileName);
-
         var fetcher = new LocalFetcher();
         var meta = new Properties();
 
@@ -70,7 +63,7 @@ class LocalFetcherAclTest {
             // no ACL
             mocked.when(Files.getFileAttributeView(
                     Mockito.any(), Mockito.any())).thenReturn(null);
-            fetcher.fetchAcl(localFile, meta);
+            fetcher.fetchAcl(path, meta);
             assertThat(meta).isEmpty();
 
             // With ACL
@@ -88,7 +81,7 @@ class LocalFetcherAclTest {
                     .build()));
             mocked.when(Files.getFileAttributeView(
                     Mockito.any(), Mockito.any())).thenReturn(aclView);
-            fetcher.fetchAcl(localFile, meta);
+            fetcher.fetchAcl(path, meta);
 
             assertThat(meta.getString(FsDocMetadata.ACL + ".owner"))
                     .isEqualTo("Joe");
@@ -108,7 +101,7 @@ class LocalFetcherAclTest {
             // Test IOException is swallowed
             when(aclView.getOwner()).thenThrow(IOException.class);
             assertThatNoException().isThrownBy(
-                    () -> fetcher.fetchAcl(localFile, meta));
+                    () -> fetcher.fetchAcl(path, meta));
         }
     }
 }

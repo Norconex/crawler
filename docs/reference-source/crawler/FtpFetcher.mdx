@@ -13,7 +13,7 @@ File Transfer Protocol (FTP and FTPS) fetcher.
 
 ## Notes
 
-Fetches documents from FTP and FTPS servers. Supports passive mode, explicit and implicit FTPS connection modes, data channel protection, keep-alive settings, custom date formats, server encoding, and credential configuration.
+Fetches documents from FTP and FTPS servers. Supports passive mode, explicit and implicit FTPS security modes, data channel protection, keep-alive settings, custom date formats, server encoding, and authentication configuration.
 
 ## Properties
 
@@ -21,9 +21,9 @@ Fetches documents from FTP and FTPS servers. Supports passive mode, explicit and
 
 Autodetect if the server is using UTF-8.
 
-### connectionMode
+### securityMode
 
-FTPS connection mode.
+FTPS security mode.
 
 ### connectTimeout
 
@@ -43,7 +43,7 @@ The control keep alive timeout for the FTP client.
 
 ### credentials
 
-Username and password to a protected FTP site.
+Username and password used to authenticate with the FTP or FTPS server.
 
 ### dataChannelProtectionLevel
 
@@ -60,14 +60,6 @@ The default date format used by the server.
 ### domain
 
 The domain name for authentication when accessing the remote resource.
-
-### fileType
-
-The file type parameter.
-
-### mdtmLastModifiedTime
-
-Use FTP `MDTM`` to return the last-modified time of a specified file.
 
 ### passiveMode
 
@@ -87,27 +79,19 @@ Filters applied to document references (URLs or file paths) to control which one
 
 ### remoteVerificationDisabled
 
-Disable verification that the remote host making a connection to the  FTP client is the intended one (based on host and port).
+Disable verification that the remote host making a connection to the FTP client is the intended one (based on host and port).
 
 ### serverLanguageCode
 
 The server language code, if different than English (`en`).
 
-### serverTimeZoneId
-
-Time zone of the remote server, if different than the local time zone.
-
 ### shortMonthNames
 
-A set of month names used by the server if different than  those expected by the client (considering the server language code).
+A set of month names used by the server if different than those expected by the client (considering the server language code).
 
 ### socketTimeout
 
 The maximum time in milliseconds to wait for data on an established connection before giving up.
-
-### transferAbortedOkReplyCodes
-
-List of reply codes (apart from 200) considered as OK when prematurely closing a stream.
 
 ### userDirIsRoot
 
@@ -115,7 +99,7 @@ When enabled, the user's home directory on the remote server is treated as the r
 
 ## Examples
 
-The following example sets the FTP settings required by some hosts  to get file listings on server directories.
+The following example sets FTP options that some hosts require to list files in server directories.
 
 <ConfigBlock
   json={{

@@ -16,20 +16,27 @@ package com.norconex.crawler.fs.fetch.impl.cmis;
 
 import static com.norconex.crawler.fs.fetch.impl.FileFetchUtil.referenceStartsWith;
 
+import java.io.IOException;
+import java.net.URI;
+import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map.Entry;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemException;
-import org.apache.commons.vfs2.FileSystemOptions;
 
+import com.norconex.commons.lang.encrypt.EncryptionUtil;
 import com.norconex.commons.lang.map.Properties;
 import com.norconex.commons.lang.xml.Xml;
 import com.norconex.crawler.core.doc.CrawlerDocMetaConstants;
-import com.norconex.crawler.fs.fetch.FileFetchRequest;
-import com.norconex.crawler.fs.fetch.impl.AbstractAuthVfsFetcher;
+import com.norconex.crawler.core.fetch.FetchRequest;
+import com.norconex.crawler.core.session.CrawlerSession;
+import com.norconex.crawler.fs.fetch.impl.AbstractNioFetcher;
 import com.norconex.importer.doc.Doc;
 
 import lombok.EqualsAndHashCode;
@@ -40,7 +47,8 @@ import lombok.ToString;
 /**
  * <p>
  * CMIS-enabled Content Management Systems (CMS) fetcher
- * (Atom end-point).
+ * (Atom end-point), backed by a custom, read-only NIO.2
+ * {@link java.nio.file.spi.FileSystemProvider} ({@link CmisFileSystemProvider}).
  * The start path can be specified as:
  * <code>cmis:http://yourhost:port/path/to/atom</code>.
  * Optionally you can have a non-root starting path by adding the path
@@ -51,7 +59,7 @@ import lombok.ToString;
  */
 @ToString
 @EqualsAndHashCode
-public class CmisFetcher extends AbstractAuthVfsFetcher<CmisFetcherConfig> {
+public class CmisFetcher extends AbstractNioFetcher<CmisFetcherConfig> {
 
     private static final String CMIS_PREFIX =
             CrawlerDocMetaConstants.PREFIX + "cmis.";
@@ -59,35 +67,61 @@ public class CmisFetcher extends AbstractAuthVfsFetcher<CmisFetcherConfig> {
     @Getter
     private final CmisFetcherConfig configuration = new CmisFetcherConfig();
 
+    @EqualsAndHashCode.Exclude
+    private final CmisFileSystemProvider provider =
+            new CmisFileSystemProvider();
+
     @Override
-    protected void fetchMetadata(Doc doc, @NonNull FileObject fileObject)
-            throws FileSystemException {
-        super.fetchMetadata(doc, fileObject);
-
-        if (fileObject instanceof CmisAtomFileObject cmisObject) {
-            var ctx = new Context(cmisObject, doc.getMetadata());
-
-            if (ctx.document != null) {
-                fetchCoreMeta(ctx);
-                fetchProperties(ctx);
-                if (!configuration.isAclDisabled()) {
-                    fetchAcl(ctx);
-                }
-            }
-        }
+    protected void fetcherShutdown(CrawlerSession crawler) {
+        provider.openFileSystems().forEach(CmisFileSystem::close);
+        super.fetcherShutdown(crawler);
     }
 
     @Override
-    protected boolean acceptFileRequest(
-            @NonNull FileFetchRequest fetchRequest) {
+    protected boolean acceptRequest(@NonNull FetchRequest fetchRequest) {
         return referenceStartsWith(fetchRequest, "cmis:");
     }
 
     @Override
-    protected void applyFileSystemOptions(FileSystemOptions opts) {
-        var cfg = CmisAtomFileSystemConfigBuilder.getInstance();
-        cfg.setRepositoryId(opts, configuration.getRepositoryId());
-        cfg.setXmlTargetField(opts, configuration.getXmlTargetField());
+    protected Path resolvePath(String reference) throws IOException {
+        var withoutScheme = reference.replaceFirst("^cmis(?:-atom)?:", "");
+        var endpointUrl = StringUtils.substringBefore(withoutScheme, "!");
+        var innerPath = StringUtils.defaultIfBlank(
+                StringUtils.substringAfter(withoutScheme, "!"), "/");
+
+        var endpointUri = URI.create("cmis:" + endpointUrl);
+        var fs = provider.getOrCreateFileSystem(endpointUri, buildEnv());
+        return fs.getPath(innerPath);
+    }
+
+    private Map<String, Object> buildEnv() {
+        Map<String, Object> env = new HashMap<>();
+        var cfg = configuration;
+        if (cfg.getCredentials().isSet()) {
+            env.put("username", cfg.getCredentials().getUsername());
+            env.put(
+                    "password",
+                    EncryptionUtil.decryptPassword(cfg.getCredentials()));
+        }
+        env.put("repositoryId", cfg.getRepositoryId());
+        return env;
+    }
+
+    @Override
+    protected void fetchMetadata(
+            Doc doc, @NonNull Path path,
+            @NonNull BasicFileAttributes attrs)
+            throws IOException {
+        super.fetchMetadata(doc, path, attrs);
+
+        if (attrs instanceof CmisFileAttributes cmisAttrs) {
+            var ctx = new Context(cmisAttrs.getDocument(), doc.getMetadata());
+            fetchCoreMeta(ctx);
+            fetchProperties(ctx);
+            if (!configuration.isAclDisabled()) {
+                fetchAcl(ctx);
+            }
+        }
     }
 
     private void fetchCoreMeta(Context ctx) {
@@ -99,64 +133,106 @@ public class CmisFetcher extends AbstractAuthVfsFetcher<CmisFetcherConfig> {
         ctx.addMetaXpath("updated", "/entry/updated/text()");
         ctx.addMetaXpath("content", "/entry/content/@src");
 
-        ctx.addMeta("repository.id", ctx.session.getRepoId());
-        ctx.addMeta("repository.name", ctx.session.getRepoName());
-
-        var xTargetField = ctx.cfg.getXmlTargetField(ctx.vfsOptions);
+        var xTargetField = configuration.getXmlTargetField();
         if (StringUtils.isNotBlank(xTargetField)) {
-            ctx.metadata.add(xTargetField, ctx.fileObject.toXmlString());
+            ctx.metadata.add(xTargetField, ctx.document.toString());
         }
     }
 
     private void fetchProperties(Context ctx) {
-        var propXmlList = ctx.document.getXMLList(
-                "/entry/object/properties//"
-                        + "*[starts-with(local-name(), 'property')]");
-        for (Xml propXml : propXmlList) {
-            var propId = propXml.getString("@propertyDefinitionId");
-            if (StringUtils.isBlank(propId)) {
-                propId = "undefined_property";
+        extractPropertyValues(ctx.document).forEach((propId, values) -> {
+            for (String value : values) {
+                ctx.addMeta("property." + propId, value);
             }
-            ctx.addMeta(
-                    "property." + propId,
-                    propXml.getString("value/text()"));
-        }
+        });
     }
 
     private void fetchAcl(Context ctx) {
-        var permissions = new Properties();
-        var permXmlList = ctx.document.getXMLList(
-                "/entry/object/acl/permission");
-        for (Xml permXml : permXmlList) {
-            var principalId = permXml.getString("principal/principalId");
-            permXml.getStringList("permission").forEach(p -> {
-                if (StringUtils.isNotBlank(p)) {
-                    permissions.add("acl." + p, principalId);
-                }
-            });
-        }
+        extractAclEntries(ctx.document).forEach((permission, principals) -> {
+            for (String principal : principals) {
+                ctx.addMeta(permission, principal);
+            }
+        });
+    }
 
-        for (Entry<String, List<String>> en : permissions.entrySet()) {
-            for (String val : en.getValue()) {
-                ctx.addMeta(en.getKey(), val);
+    static Map<String, List<String>> extractPropertyValues(Xml document) {
+        var valuesByProperty = new LinkedHashMap<String, List<String>>();
+        var propXmlList = document.getXMLList(
+                "/entry/object/properties//"
+                        + "*[starts-with(local-name(), 'property')]");
+        for (Xml propXml : propXmlList) {
+            var propId = StringUtils.trimToNull(
+                    propXml.getString("@propertyDefinitionId"));
+            if (propId == null) {
+                propId = "undefined_property";
+            }
+
+            var propValues = propXml.getStringList("value/text()");
+            if (propValues.isEmpty()) {
+                propValues = propXml.getStringList(
+                        "*[local-name()='value']/text()");
+            }
+
+            for (String propValue : propValues) {
+                var value = StringUtils.trimToNull(propValue);
+                if (value == null) {
+                    continue;
+                }
+                valuesByProperty
+                        .computeIfAbsent(propId,
+                                k -> new java.util.ArrayList<>())
+                        .add(value);
             }
         }
+        return valuesByProperty;
+    }
+
+    static Map<String, Set<String>> extractAclEntries(Xml document) {
+        var aclByPermission = new LinkedHashMap<String, Set<String>>();
+        var permXmlList = document.getXMLList("/entry/object/acl/permission");
+        for (Xml permXml : permXmlList) {
+            var principalId = firstNonBlank(
+                    permXml.getString("principal/principalId"),
+                    permXml.getString("principal/id"),
+                    permXml.getString("principal/text()"));
+            if (principalId == null) {
+                continue;
+            }
+
+            var permissionValues = permXml.getStringList("permission/text()");
+            if (permissionValues.isEmpty()) {
+                permissionValues = permXml.getStringList("permission");
+            }
+            for (String permissionValue : permissionValues) {
+                var permission = StringUtils.trimToNull(permissionValue);
+                if (permission == null) {
+                    continue;
+                }
+                aclByPermission
+                        .computeIfAbsent("acl." + permission,
+                                k -> new LinkedHashSet<>())
+                        .add(principalId);
+            }
+        }
+        return aclByPermission;
+    }
+
+    private static String firstNonBlank(String... values) {
+        for (String value : values) {
+            var trimmed = StringUtils.trimToNull(value);
+            if (trimmed != null) {
+                return trimmed;
+            }
+        }
+        return null;
     }
 
     private static class Context {
-        private final FileSystemOptions vfsOptions;
         private final Xml document;
         private final Properties metadata;
-        private final CmisAtomSession session;
-        private final CmisAtomFileSystemConfigBuilder cfg =
-                CmisAtomFileSystemConfigBuilder.getInstance();
-        private final CmisAtomFileObject fileObject;
 
-        public Context(CmisAtomFileObject vfsFile, Properties metadata) {
-            fileObject = vfsFile;
-            session = vfsFile.getSession();
-            document = vfsFile.getDocument();
-            vfsOptions = vfsFile.getFileSystem().getFileSystemOptions();
+        Context(Xml document, Properties metadata) {
+            this.document = document;
             this.metadata = metadata;
         }
 

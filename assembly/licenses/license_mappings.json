@@ -114,11 +114,17 @@
       "patterns": ["^icu license$"]
     },
     {
+      "spdx_id": "ISC",
+      "full_name": "ISC License",
+      "patterns": ["^isc$", "^isc license$"]
+    },
+    {
       "spdx_id": "LGPL-2.1-or-later",
       "full_name": "GNU Lesser General Public License v2.1 or later",
       "patterns": [
         "^(gnu )?lesser general public license( version)? 2 1( or later)?$",
-        "^lgpl( version)? 2 1( or later)?$"
+        "^lgpl( version)? 2 1( or later)?$",
+        "^lgpl$"
       ]
     },
     {
@@ -137,9 +143,7 @@
     {
       "spdx_id": "LGPL-3.0-only",
       "full_name": "GNU Lesser General Public License v3.0 only",
-      "patterns": [
-        "^gnu lesser general public license( version)? 3 lgpl( 3)?$"
-      ]
+      "patterns": ["^gnu lesser general public license( version)? 3 lgpl( 3)?$"]
     },
     {
       "spdx_id": "LicenseRef-CUP-Parser-Generator",
@@ -151,7 +155,7 @@
     {
       "spdx_id": "LicenseRef-GO",
       "full_name": "The Go license",
-      "patterns": ["^the go license$"]
+      "patterns": ["^the go license$", "^go license$"]
     },
     {
       "spdx_id": "LicenseRef-JDOM",
