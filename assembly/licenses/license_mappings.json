@@ -123,7 +123,8 @@
       "full_name": "GNU Lesser General Public License v2.1 or later",
       "patterns": [
         "^(gnu )?lesser general public license( version)? 2 1( or later)?$",
-        "^lgpl( version)? 2 1( or later)?$"
+        "^lgpl( version)? 2 1( or later)?$",
+        "^lgpl$"
       ]
     },
     {
