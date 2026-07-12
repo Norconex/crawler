@@ -154,7 +154,7 @@
     {
       "spdx_id": "LicenseRef-GO",
       "full_name": "The Go license",
-      "patterns": ["^the go license$"]
+      "patterns": ["^the go license$", "^go license$"]
     },
     {
       "spdx_id": "LicenseRef-JDOM",
