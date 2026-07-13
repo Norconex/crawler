@@ -56,6 +56,9 @@ class WebDavFetcherTest {
 
         assertThatNoException().isThrownBy(
                 () -> fetcher.applyFileSystemOptions(new FileSystemOptions()));
+    }
+
+    @Test
     void testAcceptRequest() {
         var fetcher = new WebDavFetcher();
         assertThat(fetcher.acceptRequest(new FileFetchRequest(
