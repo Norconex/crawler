@@ -22,8 +22,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.net.URI;
+import java.nio.file.AccessMode;
 import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.FileTime;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -171,5 +173,47 @@ class AdlsGen2ModelTest {
         assertThat(provider.readAttributes(children.getFirst(),
                 java.nio.file.attribute.BasicFileAttributes.class).size())
                         .isEqualTo(7L);
+    }
+
+    @Test
+    void testProviderRootAttributesAndUnsupportedOperations() throws Exception {
+        var provider = new AdlsGen2FileSystemProvider();
+        var location = AdlsGen2Location.from(URI.create(
+                "abfss://myfs@acct.dfs.core.windows.net/root"));
+        var client = mock(DataLakeFileSystemClient.class);
+        var fs = provider.getOrCreateFileSystem(location, loc -> client);
+        var root = fs.getPath("/");
+
+        var basicView = provider.getFileAttributeView(root,
+                BasicFileAttributeView.class);
+        assertThat(basicView).isNotNull();
+        assertThat(basicView.name()).isEqualTo("basic");
+        assertThat(basicView.readAttributes().isDirectory()).isTrue();
+        assertThat(provider.getFileAttributeView(root,
+                java.nio.file.attribute.FileAttributeView.class)).isNull();
+
+        assertThat(provider.readAttributes(root,
+                java.nio.file.attribute.BasicFileAttributes.class)
+                .isDirectory()).isTrue();
+        assertThatThrownBy(() -> provider.readAttributes(root,
+                java.nio.file.attribute.PosixFileAttributes.class))
+                        .isInstanceOf(UnsupportedOperationException.class);
+
+        assertThatThrownBy(() -> provider.checkAccess(root, AccessMode.WRITE))
+                .isInstanceOf(java.nio.file.AccessDeniedException.class);
+        assertThat(provider.isSameFile(root, fs.getPath("/"))).isTrue();
+        assertThat(provider.isHidden(root)).isFalse();
+        assertThatThrownBy(() -> provider.getFileStore(root))
+                .isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(() -> provider.createDirectory(root))
+                .isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(() -> provider.delete(root))
+                .isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(() -> provider.copy(root, root))
+                .isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(() -> provider.move(root, root))
+                .isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(() -> provider.setAttribute(root, "x", "y"))
+                .isInstanceOf(UnsupportedOperationException.class);
     }
 }
