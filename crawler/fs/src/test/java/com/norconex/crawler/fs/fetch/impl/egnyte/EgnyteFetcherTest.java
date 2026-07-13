@@ -442,6 +442,115 @@ class EgnyteFetcherTest {
         assertThat(result).isEqualTo("start-123");
     }
 
+    @Test
+    void testFetchEgnyteItemNodeFallsBackToFolderEndpoint()
+            throws Exception {
+        var f = new EgnyteFetcher() {
+            int callCount;
+
+            @Override
+            JsonNode fetchJson(EgnyteReference ref, String path)
+                    throws IOException {
+                callCount++;
+                if (callCount == 1) {
+                    return null;
+                }
+                return objectMapper.readTree("""
+                        {
+                          "id":"folder-123",
+                          "type":"folder"
+                        }
+                        """);
+            }
+        };
+
+        var item = f.fetchEgnyteItemNode(
+                EgnyteReference.parse(
+                        "egnyte://acme/folders/root/items/123"));
+
+        assertThat(item).isNotNull();
+        assertThat(item.file()).isFalse();
+        assertThat(item.folder()).isTrue();
+        assertThat(item.node().path("id").asText(null))
+                .isEqualTo("folder-123");
+    }
+
+    @Test
+    void testFetchStartCursorReturnsNullWhenCursorEndpointMissing()
+            throws Exception {
+        var f = new EgnyteFetcher() {
+            @Override
+            JsonNode fetchJson(EgnyteReference ref, String path)
+                    throws IOException {
+                return null;
+            }
+        };
+
+        var cursor = f.fetchStartCursor(
+                EgnyteReference.parse(
+                        "egnyte://acme/folders/root"));
+
+        assertThat(cursor).isNull();
+    }
+
+    @Test
+    void testSourceDeltaUsesFallbackEventIdsAndRemovalSignals()
+            throws Exception {
+        var f = new DeltaEgnyteFetcher();
+        f.startCursor = "start-cursor";
+        f.changePages.add(objectMapper.readTree("""
+                {
+                  "events":[
+                    {"object_id":"obj-folder","is_folder":true},
+                    {"id":"obj-type-folder","type":"folder"},
+                    {"entry":{"id":"obj-event-deleted"},"event_type":"deleted"},
+                    {"entry":{"id":"obj-action-removed"},"action":"removed"}
+                  ],
+                  "new_cursor":"next-cursor"
+                }
+                """));
+        var attrs = newCrawlerAttributes();
+        f.fetcherStartup(mockSession(true,
+                CrawlerConfig.ChangeDiscovery.SOURCE_DELTA,
+                attrs,
+                "egnyte://acme/folders/root"));
+
+        var response = (FolderPathsFetchResponse) f.fetch(
+                new FolderPathsFetchRequest(
+                        new Doc("egnyte://acme/folders/root")));
+
+        assertThat(response.getProcessingOutcome())
+                .isEqualTo(ProcessingOutcome.NEW);
+        assertThat(response.getChildPaths())
+                .extracting(path -> path.getUri())
+                .containsExactlyInAnyOrder(
+                        "egnyte://acme/folders/root/items/obj-folder",
+                        "egnyte://acme/folders/root/items/obj-type-folder",
+                        "egnyte://acme/folders/root/items/obj-event-deleted",
+                        "egnyte://acme/folders/root/items/obj-action-removed");
+
+        var byUri = response.getChildPaths().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        com.norconex.crawler.fs.fetch.FsPath::getUri,
+                        p -> p));
+        assertThat(byUri.get(
+                "egnyte://acme/folders/root/items/obj-folder")
+                .isFolder())
+                        .isTrue();
+        assertThat(byUri.get(
+                "egnyte://acme/folders/root/items/obj-type-folder")
+                .isFolder())
+                        .isTrue();
+        assertThat(byUri.get(
+                "egnyte://acme/folders/root/items/obj-event-deleted")
+                .isFile())
+                        .isTrue();
+        assertThat(byUri.get(
+                "egnyte://acme/folders/root/items/obj-action-removed")
+                .isFile())
+                        .isTrue();
+    }
+
     private static class StubEgnyteFetcher extends EgnyteFetcher {
         private final Deque<JsonNode> folderPages = new ArrayDeque<>();
         private EgnyteFetcher.EgnyteItem item;

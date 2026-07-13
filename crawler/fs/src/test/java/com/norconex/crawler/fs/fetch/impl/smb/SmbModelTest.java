@@ -19,8 +19,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
 import java.net.URI;
+import java.nio.file.AccessMode;
 import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributeView;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.attribute.FileTime;
 import java.util.Map;
 
@@ -151,6 +155,63 @@ class SmbModelTest {
                 .isEqualTo(fs.getPath("/share/a/b.txt"));
 
         assertThatThrownBy(() -> provider.newFileSystem(uri, Map.of()))
+                .isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    @Test
+    void testProviderReadAttributesAndReadOnlyOps() throws Exception {
+        var provider = new SmbFileSystemProvider();
+        var ctx = mock(CIFSContext.class);
+        var uri = URI.create("smb://fileserver.example.com/share/root");
+        var fs = provider.getOrCreateFileSystem(uri, ctx);
+        var path = fs.getPath("/share/a/file.txt");
+
+        fs.attrsCache().put(path.toString(),
+                new SmbFileAttributes(false, 12L, 123L));
+
+        assertThat(provider.readAttributes(path, BasicFileAttributes.class)
+                .size()).isEqualTo(12L);
+        assertThat(provider.readAttributes(path, SmbFileAttributes.class)
+                .isRegularFile()).isTrue();
+        assertThatThrownBy(() -> provider.readAttributes(path,
+                java.nio.file.attribute.PosixFileAttributes.class))
+                        .isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(() -> provider.readAttributes(path, "basic:*"))
+                .isInstanceOf(UnsupportedOperationException.class);
+
+        var view = provider.getFileAttributeView(path,
+                BasicFileAttributeView.class);
+        assertThat(view).isNotNull();
+        assertThat(view.name()).isEqualTo("basic");
+        assertThat(view.readAttributes().size()).isEqualTo(12L);
+        assertThatThrownBy(() -> view.setTimes(null, null, null))
+                .isInstanceOf(UnsupportedOperationException.class);
+        assertThat(provider.getFileAttributeView(path,
+                FileAttributeView.class)).isNull();
+
+        provider.checkAccess(path);
+        assertThatThrownBy(() -> provider.checkAccess(path,
+                AccessMode.WRITE))
+                        .isInstanceOf(
+                                java.nio.file.AccessDeniedException.class);
+        assertThatThrownBy(() -> provider.checkAccess(path,
+                AccessMode.EXECUTE))
+                        .isInstanceOf(
+                                java.nio.file.AccessDeniedException.class);
+        assertThat(provider.isSameFile(path, fs.getPath("/share/a/file.txt")))
+                .isTrue();
+        assertThat(provider.isHidden(path)).isFalse();
+        assertThatThrownBy(() -> provider.getFileStore(path))
+                .isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(() -> provider.createDirectory(path))
+                .isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(() -> provider.delete(path))
+                .isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(() -> provider.copy(path, path))
+                .isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(() -> provider.move(path, path))
+                .isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(() -> provider.setAttribute(path, "x", "y"))
                 .isInstanceOf(UnsupportedOperationException.class);
     }
 }

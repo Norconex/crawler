@@ -14,29 +14,45 @@
  */
 package com.norconex.crawler.fs.fetch.impl.adlsgen2;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.ByteArrayInputStream;
 import java.net.URI;
+import java.nio.ByteBuffer;
+import java.nio.channels.NonWritableChannelException;
 import java.nio.file.AccessMode;
 import java.nio.file.FileSystemNotFoundException;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributeView;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
 import com.azure.core.http.rest.PagedIterable;
+import com.azure.storage.file.datalake.DataLakeDirectoryClient;
+import com.azure.storage.file.datalake.DataLakeFileClient;
 import com.azure.storage.file.datalake.DataLakeFileSystemClient;
+import com.azure.storage.file.datalake.models.DataLakeFileOpenInputStreamResult;
+import com.azure.storage.file.datalake.models.DataLakeStorageException;
 import com.azure.storage.file.datalake.models.ListPathsOptions;
+import com.azure.storage.file.datalake.models.PathAccessControlEntry;
 import com.azure.storage.file.datalake.models.PathItem;
+import com.azure.storage.file.datalake.models.PathProperties;
+import com.norconex.crawler.fs.doc.FsDocMetadata;
 
 class AdlsGen2ModelTest {
 
@@ -142,6 +158,35 @@ class AdlsGen2ModelTest {
     }
 
     @Test
+    void testProviderLifecycleAndLookup() {
+        var provider = new AdlsGen2FileSystemProvider();
+        var location = AdlsGen2Location.from(URI.create(
+                "abfss://myfs@acct.dfs.core.windows.net/root"));
+        var client = mock(DataLakeFileSystemClient.class);
+        var fs = provider.getOrCreateFileSystem(location, loc -> client);
+
+        assertThat(provider.openFileSystems()).hasSize(1);
+        assertThat(provider.getFileSystem(
+                URI.create("abfss://myfs@acct.dfs.core.windows.net/a/b")))
+                        .isSameAs(fs);
+        assertThat(provider.getPath(
+                URI.create("abfss://myfs@acct.dfs.core.windows.net/a/b")))
+                        .hasToString("/a/b");
+
+        assertThatThrownBy(() -> provider.newFileSystem(
+                URI.create("abfss://myfs@acct.dfs.core.windows.net/root"),
+                Map.of()))
+                        .isInstanceOf(UnsupportedOperationException.class)
+                        .hasMessageContaining("getOrCreateFileSystem");
+
+        var missing = URI.create("abfss://missing@acct.dfs.core.windows.net/x");
+        assertThatThrownBy(() -> provider.getFileSystem(missing))
+                .isInstanceOf(FileSystemNotFoundException.class);
+        assertThatThrownBy(() -> provider.getPath(missing))
+                .isInstanceOf(FileSystemNotFoundException.class);
+    }
+
+    @Test
     void testDirectoryListingCachesChildAttributes() throws Exception {
         var provider = new AdlsGen2FileSystemProvider();
         provider.setAclDisabled(true);
@@ -176,6 +221,105 @@ class AdlsGen2ModelTest {
     }
 
     @Test
+    void testInputStreamByteChannelAndAclCaching() throws Exception {
+        var provider = new AdlsGen2FileSystemProvider();
+        var location = AdlsGen2Location.from(URI.create(
+                "abfss://myfs@acct.dfs.core.windows.net/root"));
+        var client = mock(DataLakeFileSystemClient.class);
+        var fileClient = mock(DataLakeFileClient.class);
+        var streamResult = mock(DataLakeFileOpenInputStreamResult.class);
+        var props = mock(PathProperties.class);
+        var ace = mock(PathAccessControlEntry.class);
+        var fs = provider.getOrCreateFileSystem(location, loc -> client);
+        var path = fs.getPath("/folder/file.txt");
+        var now = OffsetDateTime.now();
+
+        when(client.getFileClient("folder/file.txt")).thenReturn(fileClient);
+        when(fileClient.openInputStream()).thenReturn(streamResult);
+        when(streamResult.getInputStream())
+                .thenAnswer(invocation -> new ByteArrayInputStream(
+                        "abc".getBytes(UTF_8)));
+        when(fileClient.exists()).thenReturn(true);
+        when(fileClient.getProperties()).thenReturn(props);
+        when(props.getFileSize()).thenReturn(3L);
+        when(props.getLastModified()).thenReturn(now);
+        when(props.getOwner()).thenReturn("owner");
+        when(props.getGroup()).thenReturn("group");
+        when(props.getPermissions()).thenReturn("rwx------");
+        when(props.getAccessControlList()).thenReturn(
+                java.util.Arrays.asList(null, ace));
+        when(ace.isInDefaultScope()).thenReturn(true);
+        when(ace.getAccessControlType()).thenReturn(null);
+        when(ace.getEntityId()).thenReturn("user1");
+        when(ace.getPermissions()).thenReturn(null);
+
+        try (var is = provider.newInputStream(path)) {
+            assertThat(is.readAllBytes())
+                    .containsExactly("abc".getBytes(UTF_8));
+        }
+
+        try (var channel = provider.newByteChannel(path, Set.of())) {
+            var dst = ByteBuffer.allocate(8);
+            assertThat(channel.read(dst)).isEqualTo(3);
+            assertThat(channel.position()).isEqualTo(3L);
+            assertThat(channel.size()).isEqualTo(3L);
+            assertThat(channel.position(1).position()).isEqualTo(1L);
+            assertThat(channel.read(ByteBuffer.allocate(8))).isEqualTo(2);
+            assertThatThrownBy(() -> channel.write(ByteBuffer.wrap(
+                    "x".getBytes(UTF_8))))
+                            .isInstanceOf(
+                                    NonWritableChannelException.class);
+            assertThatThrownBy(() -> channel.truncate(1))
+                    .isInstanceOf(NonWritableChannelException.class);
+        }
+
+        var attrs = provider.readAttributes(path, BasicFileAttributes.class);
+        assertThat(attrs.isRegularFile()).isTrue();
+        assertThat(attrs.size()).isEqualTo(3L);
+
+        var aclProps = provider.consumeAcl(((AdlsGen2Path) path).path());
+        assertThat(aclProps).isNotNull();
+        assertThat(aclProps.getString(FsDocMetadata.ACL + ".owner"))
+                .isEqualTo("owner");
+        assertThat(aclProps.getString(FsDocMetadata.ACL + ".group"))
+                .isEqualTo("group");
+        assertThat(aclProps.getString(FsDocMetadata.ACL + ".permissions"))
+                .isEqualTo("rwx------");
+        assertThat(provider.consumeAcl(((AdlsGen2Path) path).path())).isNull();
+    }
+
+    @Test
+    void testProviderErrorBranches() throws Exception {
+        var provider = new AdlsGen2FileSystemProvider();
+        var location = AdlsGen2Location.from(URI.create(
+                "abfss://myfs@acct.dfs.core.windows.net/root"));
+        var client = mock(DataLakeFileSystemClient.class);
+        var fileClient = mock(DataLakeFileClient.class);
+        var dirClient = mock(DataLakeDirectoryClient.class);
+        var missing = mock(DataLakeStorageException.class);
+        var fs = provider.getOrCreateFileSystem(location, loc -> client);
+        var missingPath = fs.getPath("/missing.txt");
+
+        when(missing.getStatusCode()).thenReturn(404);
+        when(client.getFileClient("missing.txt")).thenReturn(fileClient);
+        when(fileClient.openInputStream()).thenThrow(missing);
+        when(client.listPaths(any(ListPathsOptions.class), isNull()))
+                .thenThrow(missing);
+        when(client.getDirectoryClient("missing.txt")).thenReturn(dirClient);
+        when(fileClient.exists()).thenReturn(false);
+        when(dirClient.exists()).thenReturn(false);
+
+        assertThatThrownBy(() -> provider.newInputStream(missingPath))
+                .isInstanceOf(NoSuchFileException.class);
+        assertThatThrownBy(() -> provider.newDirectoryStream(
+                fs.getPath("/missing"), p -> true))
+                        .isInstanceOf(NoSuchFileException.class);
+        assertThatThrownBy(() -> provider.readAttributes(missingPath,
+                BasicFileAttributes.class))
+                        .isInstanceOf(NoSuchFileException.class);
+    }
+
+    @Test
     void testProviderRootAttributesAndUnsupportedOperations() throws Exception {
         var provider = new AdlsGen2FileSystemProvider();
         var location = AdlsGen2Location.from(URI.create(
@@ -195,8 +339,15 @@ class AdlsGen2ModelTest {
         assertThat(provider.readAttributes(root,
                 java.nio.file.attribute.BasicFileAttributes.class)
                 .isDirectory()).isTrue();
+        assertThatCode(() -> provider.checkAccess(root))
+                .doesNotThrowAnyException();
         assertThatThrownBy(() -> provider.readAttributes(root,
                 java.nio.file.attribute.PosixFileAttributes.class))
+                        .isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(() -> provider.readAttributes(root, "basic:*"))
+                .isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(() -> basicView.setTimes(FileTime.fromMillis(0),
+                FileTime.fromMillis(0), FileTime.fromMillis(0)))
                         .isInstanceOf(UnsupportedOperationException.class);
 
         assertThatThrownBy(() -> provider.checkAccess(root, AccessMode.WRITE))

@@ -172,13 +172,16 @@ final class AdlsGen2FileSystemProvider extends FileSystemProvider {
             PagedIterable<PathItem> iterable = fs.client().listPaths(options,
                     null);
             for (PathItem item : iterable) {
+                if (item == null || StringUtils.isBlank(item.getName())) {
+                    continue;
+                }
+                var isDirectory = Boolean.TRUE.equals(item.isDirectory());
                 var childPath = fs.getPath("/" + item.getName());
                 fs.attrsCache().put(
                         childPath.path(),
                         new AdlsGen2FileAttributes(
-                                item.isDirectory(),
-                                item.isDirectory() ? 0
-                                        : item.getContentLength(),
+                                isDirectory,
+                                isDirectory ? 0 : item.getContentLength(),
                                 toFileTime(item.getLastModified())));
                 if (filter == null || filter.accept(childPath)) {
                     children.add(childPath);
@@ -296,6 +299,9 @@ final class AdlsGen2FileSystemProvider extends FileSystemProvider {
                 }
                 props = dirClient.getProperties();
             }
+            if (props == null) {
+                return;
+            }
             if (StringUtils.isNotBlank(props.getOwner())) {
                 aclProps.set(FsDocMetadata.ACL + ".owner", props.getOwner());
             }
@@ -309,8 +315,13 @@ final class AdlsGen2FileSystemProvider extends FileSystemProvider {
             if (props.getAccessControlList() != null) {
                 for (PathAccessControlEntry ace : props
                         .getAccessControlList()) {
+                    if (ace == null) {
+                        continue;
+                    }
                     var scope = StringUtils.defaultIfBlank(
-                            ace.isInDefaultScope() ? "DEFAULT" : null,
+                            Boolean.TRUE.equals(ace.isInDefaultScope())
+                                    ? "DEFAULT"
+                                    : null,
                             "ACCESS");
                     var type = StringUtils.defaultIfBlank(
                             ace.getAccessControlType() == null

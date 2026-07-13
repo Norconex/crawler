@@ -61,6 +61,21 @@ public class GoogleCloudSearchCommitterConfig
         TEXT
     }
 
+    /** Priority/consistency mode used for indexing and delete requests. */
+    public enum RequestMode {
+        /**
+         * Higher-priority, latency-sensitive mode, rate-limited more
+         * strictly by Google Cloud Search. Intended for interactive,
+         * user-facing requests.
+         */
+        SYNCHRONOUS,
+        /**
+         * Default mode for content connectors performing full or
+         * incremental crawls, offering higher throughput.
+         */
+        ASYNCHRONOUS
+    }
+
     /** Target of an ACL mapping. */
     public enum AclTarget {
         READERS, DENIED_READERS, OWNERS
@@ -92,6 +107,13 @@ public class GoogleCloudSearchCommitterConfig
      * {@link UploadFormat#RAW}.
      */
     private UploadFormat uploadFormat = UploadFormat.RAW;
+
+    /**
+     * The priority/consistency mode sent with indexing and delete requests.
+     * Default is {@link RequestMode#ASYNCHRONOUS}, suited to content
+     * connectors performing full or incremental crawls.
+     */
+    private RequestMode requestMode = RequestMode.ASYNCHRONOUS;
 
     /**
      * Overrides the Google Cloud Search API root URL. Mainly useful for
