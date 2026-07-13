@@ -15,6 +15,7 @@
 package com.norconex.importer.handler.condition.impl;
 
 import com.norconex.commons.lang.text.TextMatcher;
+import com.norconex.importer.handler.condition.BaseConditionConfig;
 
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -67,7 +68,7 @@ import lombok.experimental.Accessors;
 @SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
-public class BlankConditionConfig {
+public class BlankConditionConfig extends BaseConditionConfig {
 
     private final TextMatcher fieldMatcher = new TextMatcher();
 

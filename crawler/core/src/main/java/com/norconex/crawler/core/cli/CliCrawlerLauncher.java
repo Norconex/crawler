@@ -14,6 +14,8 @@
  */
 package com.norconex.crawler.core.cli;
 
+import java.io.PrintWriter;
+
 import com.norconex.crawler.core.CrawlerDriver;
 
 import lombok.NonNull;
@@ -35,6 +37,12 @@ public final class CliCrawlerLauncher {
             @NonNull CrawlerDriver crawlDriver, String... args) {
         System.setProperty("org.jboss.logging.provider", "slf4j");
         var cmdLine = new CommandLine(new CliRunner(crawlDriver));
+
+        // Eagerly bind picocli I/O streams to the current System.out/System.err
+        // so that output is captured correctly in parallel test environments
+        // where System.out/System.err may be replaced concurrently.
+        cmdLine.setOut(new PrintWriter(System.out, true));
+        cmdLine.setErr(new PrintWriter(System.err, true));
 
         cmdLine.setExecutionExceptionHandler(
                 (var ex, var cli, var parseResult) -> {

@@ -14,6 +14,8 @@
  */
 package com.norconex.importer.handler.transformer.impl;
 
+import com.norconex.importer.handler.BaseDocHandlerConfig;
+
 import java.util.regex.Pattern;
 
 import com.norconex.commons.lang.text.TextMatcher;
@@ -61,7 +63,7 @@ import lombok.experimental.Accessors;
 @SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
-public class KeepOnlyTransformerConfig {
+public class KeepOnlyTransformerConfig extends BaseDocHandlerConfig {
 
     private final TextMatcher fieldMatcher = new TextMatcher();
 

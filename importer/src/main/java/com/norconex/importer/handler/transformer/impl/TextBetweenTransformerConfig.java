@@ -14,6 +14,8 @@
  */
 package com.norconex.importer.handler.transformer.impl;
 
+import com.norconex.importer.handler.BaseDocHandlerConfig;
+
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -92,7 +94,7 @@ import lombok.experimental.Accessors;
 @SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
-public class TextBetweenTransformerConfig {
+public class TextBetweenTransformerConfig extends BaseDocHandlerConfig {
 
     private int maxReadSize = TextReader.DEFAULT_MAX_READ_SIZE;
     private Charset sourceCharset;

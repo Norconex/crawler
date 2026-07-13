@@ -22,6 +22,7 @@ import java.util.Map.Entry;
 import org.apache.commons.lang3.StringUtils;
 
 import com.norconex.commons.lang.config.Configurable;
+import com.norconex.importer.handler.ConfigurableDocHandler;
 import com.norconex.importer.handler.DocHandler;
 import com.norconex.importer.handler.DocHandlerContext;
 
@@ -101,7 +102,7 @@ import lombok.Data;
 @SuppressWarnings("javadoc")
 @Data
 public class MergeTransformer
-        implements DocHandler, Configurable<MergeTransformerConfig> {
+        implements ConfigurableDocHandler<MergeTransformerConfig> {
 
     private final MergeTransformerConfig configuration =
             new MergeTransformerConfig();

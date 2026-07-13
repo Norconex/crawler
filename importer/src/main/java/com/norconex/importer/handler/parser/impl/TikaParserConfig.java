@@ -14,12 +14,14 @@
  */
 package com.norconex.importer.handler.parser.impl;
 
+import com.norconex.importer.handler.BaseDocHandlerConfig;
+
 import lombok.Data;
 import lombok.experimental.Accessors;
 
 @Data
 @Accessors(chain = true)
-public class TikaParserConfig {
+public class TikaParserConfig extends BaseDocHandlerConfig {
 
     /**
      * The path to a Tika configuration file.

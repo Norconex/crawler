@@ -6,6 +6,10 @@ title: v3 to v4 Detailed Guide
 
 ## Configuration structure
 
+Before diving into field-level changes, review
+[Configuration Semantics](../concepts/configuration-semantics.md#v3-xml-to-v4-format-mapping)
+for cross-format behavior mapping from V3 XML to V4 XML/YAML/JSON.
+
 ### One file, one crawler
 
 The most significant structural change in v4 is that **each configuration

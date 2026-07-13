@@ -37,12 +37,11 @@ import org.apache.tika.parser.ParserDecorator;
 import org.apache.tika.parser.pdf.PDFParserConfig;
 import org.apache.tika.sax.BodyContentHandler;
 
-import com.norconex.commons.lang.config.Configurable;
 import com.norconex.commons.lang.io.CachedInputStream;
 import com.norconex.commons.lang.text.TextMatcher;
 import com.norconex.importer.doc.ContentTypeDetector;
 import com.norconex.importer.doc.Doc;
-import com.norconex.importer.handler.DocHandler;
+import com.norconex.importer.handler.ConfigurableDocHandler;
 import com.norconex.importer.handler.DocHandlerContext;
 import com.norconex.importer.handler.parser.ParseState;
 
@@ -62,7 +61,7 @@ import lombok.extern.slf4j.Slf4j;
 @EqualsAndHashCode
 @ToString
 public class DefaultParser
-        implements DocHandler, Configurable<DefaultParserConfig> {
+        implements ConfigurableDocHandler<DefaultParserConfig> {
 
     @Getter
     private final DefaultParserConfig configuration = new DefaultParserConfig();

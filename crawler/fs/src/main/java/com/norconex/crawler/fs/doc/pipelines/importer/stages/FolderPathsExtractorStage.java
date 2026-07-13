@@ -16,17 +16,24 @@ package com.norconex.crawler.fs.doc.pipelines.importer.stages;
 
 import java.util.Set;
 
+import org.apache.commons.lang3.StringUtils;
+
+import com.norconex.crawler.core.CrawlerConfig.ChangeDiscovery;
 import com.norconex.crawler.core.CrawlerException;
 import com.norconex.crawler.core.doc.pipelines.importer.ImporterPipelineContext;
 import com.norconex.crawler.core.doc.pipelines.importer.stages.AbstractImporterStage;
 import com.norconex.crawler.core.doc.pipelines.queue.QueuePipelineContext;
 import com.norconex.crawler.core.fetch.FetchDirective;
 import com.norconex.crawler.core.fetch.FetchException;
+import com.norconex.crawler.core.ledger.ProcessingOutcome;
 import com.norconex.crawler.fs.fetch.FolderPathsFetchRequest;
 import com.norconex.crawler.fs.fetch.FolderPathsFetchResponse;
 import com.norconex.crawler.fs.fetch.FsPath;
 import com.norconex.crawler.fs.ledger.FsCrawlerEntry;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 public class FolderPathsExtractorStage extends AbstractImporterStage {
 
     public FolderPathsExtractorStage(FetchDirective fetchDirective) {
@@ -49,14 +56,21 @@ public class FolderPathsExtractorStage extends AbstractImporterStage {
                 (FsCrawlerEntry) ctx.getDocContext().getCurrentCrawlEntry();
         if (fsEntry.isFolder()) {
             Set<FsPath> paths;
+            FolderPathsFetchResponse resp;
             try {
-                var resp = (FolderPathsFetchResponse) fetcher
+                resp = (FolderPathsFetchResponse) fetcher
                         .fetch(new FolderPathsFetchRequest(
                                 ctx.getDocContext().getDoc()));
                 paths = resp.getChildPaths();
             } catch (FetchException e) {
                 throw new CrawlerException("Could not fetch child paths of: "
                         + ctx.getDocContext().getReference(), e);
+            }
+            if (resp.getProcessingOutcome()
+                    .isOneOf(ProcessingOutcome.NOT_FOUND)) {
+                fsEntry.setProcessingOutcome(ProcessingOutcome.NOT_FOUND);
+                queueKnownDescendantsForDeletion(ctx, fsEntry);
+                return fsEntry.isFile();
             }
             for (FsPath fsPath : paths) {
                 var newEntry = (FsCrawlerEntry) crawlContext
@@ -75,5 +89,40 @@ public class FolderPathsExtractorStage extends AbstractImporterStage {
         // On some file systems, a folder could also be a file, so we
         // continue if it is a file, regardless of folder logic above.
         return fsEntry.isFile();
+    }
+
+    private void queueKnownDescendantsForDeletion(
+            ImporterPipelineContext ctx,
+            FsCrawlerEntry missingFolder) {
+        var crawlSession = ctx.getCrawlSession();
+        var crawlContext = crawlSession.getCrawlContext();
+        if (!crawlSession.isIncremental()
+                || crawlContext.getCrawlConfig()
+                        .getChangeDiscovery() != ChangeDiscovery.SOURCE_DELTA) {
+            return;
+        }
+
+        var descendantPrefix = missingFolder.getReference() + "/items/";
+        var queuedCount = 0;
+        var ledger = crawlContext.getCrawlEntryLedger();
+        var baselineEntries = new java.util.ArrayList<FsCrawlerEntry>();
+        ledger.forEachBaseline(entry -> {
+            if (entry instanceof FsCrawlerEntry fsBaseline
+                    && StringUtils.startsWith(
+                            fsBaseline.getReference(), descendantPrefix)) {
+                baselineEntries.add(fsBaseline);
+            }
+        });
+
+        for (FsCrawlerEntry fsBaseline : baselineEntries) {
+            ledger.queue(fsBaseline);
+            queuedCount++;
+        }
+
+        if (queuedCount > 0) {
+            LOG.info("Queued {} known descendants for deletion after folder "
+                    + "went missing in SOURCE_DELTA mode: {}",
+                    queuedCount, missingFolder.getReference());
+        }
     }
 }

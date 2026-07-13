@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.util.regex.Pattern;
 
 import com.norconex.commons.lang.config.Configurable;
+import com.norconex.importer.handler.ConfigurableDocHandler;
 import com.norconex.importer.handler.DocHandler;
 import com.norconex.importer.handler.DocHandlerContext;
 import com.norconex.importer.util.chunk.ChunkedTextUtil;
@@ -75,8 +76,7 @@ import lombok.Data;
 @SuppressWarnings("javadoc")
 @Data
 public class CollapseRepeatingTransformer
-        implements DocHandler,
-        Configurable<CollapseRepeatingTransformerConfig> {
+        implements ConfigurableDocHandler<CollapseRepeatingTransformerConfig> {
 
     private final CollapseRepeatingTransformerConfig configuration =
             new CollapseRepeatingTransformerConfig();

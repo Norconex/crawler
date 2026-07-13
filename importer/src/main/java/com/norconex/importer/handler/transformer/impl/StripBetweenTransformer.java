@@ -17,6 +17,7 @@ package com.norconex.importer.handler.transformer.impl;
 import java.io.IOException;
 
 import com.norconex.commons.lang.config.Configurable;
+import com.norconex.importer.handler.ConfigurableDocHandler;
 import com.norconex.importer.handler.DocHandler;
 import com.norconex.importer.handler.DocHandlerContext;
 import com.norconex.importer.util.chunk.ChunkedTextUtil;
@@ -69,7 +70,7 @@ import lombok.Data;
 @SuppressWarnings("javadoc")
 @Data
 public class StripBetweenTransformer
-        implements DocHandler, Configurable<StripBetweenTransformerConfig> {
+        implements ConfigurableDocHandler<StripBetweenTransformerConfig> {
 
     private final StripBetweenTransformerConfig configuration =
             new StripBetweenTransformerConfig();

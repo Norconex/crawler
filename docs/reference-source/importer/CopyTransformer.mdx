@@ -28,6 +28,10 @@ This functionality can be applied as either a `pre-parse` or `post-parse` handle
 
 ## Properties
 
+### label
+
+An optional, user-supplied label for this step in the importer pipeline. It has no effect on processing — it exists purely to help identify this step, for example in large configurations or in the visual configurator.
+
 ### onSet
 
 Defines what to do when the target field already has one or more values. When unspecified, new values are appended to existing ones by default.

@@ -14,6 +14,8 @@
  */
 package com.norconex.importer.handler.transformer.impl;
 
+import com.norconex.importer.handler.BaseDocHandlerConfig;
+
 import java.nio.charset.Charset;
 
 import com.norconex.commons.lang.io.TextReader;
@@ -58,7 +60,8 @@ import lombok.experimental.Accessors;
 @SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
-public class StripAfterTransformerConfig implements ChunkedTextSupport {
+public class StripAfterTransformerConfig extends BaseDocHandlerConfig
+        implements ChunkedTextSupport {
 
     private int maxReadSize = TextReader.DEFAULT_MAX_READ_SIZE;
     private Charset sourceCharset;

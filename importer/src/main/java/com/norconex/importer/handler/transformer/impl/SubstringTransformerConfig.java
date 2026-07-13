@@ -14,6 +14,8 @@
  */
 package com.norconex.importer.handler.transformer.impl;
 
+import com.norconex.importer.handler.BaseDocHandlerConfig;
+
 import java.nio.charset.Charset;
 
 import com.norconex.commons.lang.text.TextMatcher;
@@ -58,7 +60,7 @@ import lombok.experimental.Accessors;
 @SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
-public class SubstringTransformerConfig {
+public class SubstringTransformerConfig extends BaseDocHandlerConfig {
 
     private Charset sourceCharset;
     private final TextMatcher fieldMatcher = new TextMatcher();

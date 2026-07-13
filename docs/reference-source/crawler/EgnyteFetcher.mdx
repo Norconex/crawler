@@ -1,0 +1,117 @@
+---
+component: EgnyteFetcher
+module: crawler/fs
+locale: en
+propertyCoverage: all
+---
+
+# EgnyteFetcher
+
+## Summary
+
+Egnyte fetcher (`egnyte://`) for filesystem-like traversal and content download
+through Egnyte APIs.
+
+## Notes
+
+Fetches documents from Egnyte using stable ID-based references.
+
+Supported scheme:
+
+- `egnyte://{domain}/folders/{folderId}`
+- `egnyte://{domain}/folders/{folderId}/items/{itemId}`
+
+V1 authentication is bearer-token based.
+
+Incremental source-delta mode:
+
+- When crawler-level `changeDiscovery` is set to `SOURCE_DELTA` and the crawl
+  runs in incremental mode, the Egnyte root boundary uses the changes feed
+  instead of full child enumeration.
+- Valid `SOURCE_DELTA` root is:
+  - `egnyte://{domain}/folders/root`
+- Non-root folder boundaries are not valid `SOURCE_DELTA` roots in v1.
+- One delta cursor is persisted per configured root start reference for the
+  current crawler session and reused on the next incremental run.
+- If Egnyte rejects a stored cursor (`400`, `404`, or `410`), the fetcher
+  clears it and restarts delta discovery from a fresh start cursor.
+- Deletions are handled from explicit change events. Missing items are not
+  inferred from absence while `changeDiscovery=SOURCE_DELTA`.
+
+## Properties
+
+### accessToken
+
+OAuth access token used for Egnyte API requests.
+
+### apiBaseUrl
+
+Egnyte API base URL.
+
+Default: `https://{domain}.egnyte.com/pubapi/v1`
+
+The `{domain}` placeholder is replaced using the reference host.
+
+### validStatusCodes
+
+HTTP status codes treated as successful API responses.
+Defaults to `200`, `201`, `202`, and `204`.
+
+### notFoundStatusCodes
+
+HTTP status codes treated as "not found" outcomes.
+Defaults to `404`.
+
+### referenceFilters
+
+Filters applied to document references (URLs or file paths) to control which
+ones are fetched. Documents whose references do not pass the filters are
+skipped.
+
+## Examples
+
+The following example starts from the Egnyte root folder boundary.
+
+<ConfigBlock
+  json={{
+    "class": "EgnyteFetcher",
+    "accessToken": "<token>",
+    "apiBaseUrl": "https://{domain}.egnyte.com/pubapi/v1"
+  }}
+/>
+
+Use a start reference such as:
+
+`egnyte://acme/folders/root`
+
+For incremental delta crawling from the valid Egnyte boundary, configure
+crawler-level options:
+
+- `crawlMode: INCREMENTAL`
+- `changeDiscovery: SOURCE_DELTA`
+
+Then use this start reference:
+
+- `egnyte://acme/folders/root`
+
+## Example Crawl
+
+```yaml
+id: egnyte-root-delta
+crawlMode: INCREMENTAL
+changeDiscovery: SOURCE_DELTA
+startReferences:
+  - egnyte://acme/folders/root
+fetchers:
+  - class: EgnyteFetcher
+    accessToken: <token>
+committers:
+  - class: LogCommitter
+    ignoreContent: true
+```
+
+## Permissions
+
+Grant the minimum Egnyte read permissions required by your selected boundary.
+
+Prefer narrower scope and least-privilege API tokens when possible.

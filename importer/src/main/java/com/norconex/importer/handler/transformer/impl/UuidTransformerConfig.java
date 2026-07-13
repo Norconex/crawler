@@ -14,6 +14,8 @@
  */
 package com.norconex.importer.handler.transformer.impl;
 
+import com.norconex.importer.handler.BaseDocHandlerConfig;
+
 import com.norconex.commons.lang.map.PropertySetter;
 
 import lombok.Data;
@@ -58,7 +60,7 @@ import lombok.experimental.Accessors;
 @SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
-public class UuidTransformerConfig {
+public class UuidTransformerConfig extends BaseDocHandlerConfig {
 
     public static final String DEFAULT_FIELD = "document.uuid";
 

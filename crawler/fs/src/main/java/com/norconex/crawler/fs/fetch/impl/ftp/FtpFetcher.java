@@ -1,4 +1,4 @@
-/* Copyright 2023-2025 Norconex Inc.
+/* Copyright 2023-2026 Norconex Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,15 +15,22 @@
 package com.norconex.crawler.fs.fetch.impl.ftp;
 
 import static com.norconex.crawler.fs.fetch.impl.FileFetchUtil.referenceStartsWith;
-import static org.apache.commons.lang3.ArrayUtils.EMPTY_STRING_ARRAY;
 
-import java.util.Optional;
+import java.io.IOException;
+import java.net.URI;
+import java.nio.file.Path;
+import java.util.Map;
 
-import org.apache.commons.vfs2.FileSystemOptions;
-import org.apache.commons.vfs2.provider.ftps.FtpsFileSystemConfigBuilder;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.net.ftp.FTPClientConfig;
 
-import com.norconex.crawler.fs.fetch.FileFetchRequest;
-import com.norconex.crawler.fs.fetch.impl.AbstractAuthVfsFetcher;
+import com.github.robtimus.filesystems.ftp.ConnectionMode;
+import com.github.robtimus.filesystems.ftp.FTPEnvironment;
+import com.github.robtimus.filesystems.ftp.FTPSEnvironment;
+import com.norconex.commons.lang.encrypt.EncryptionUtil;
+import com.norconex.crawler.core.fetch.FetchRequest;
+import com.norconex.crawler.core.session.CrawlerSession;
+import com.norconex.crawler.fs.fetch.impl.AbstractNioFetcher;
 import com.norconex.crawler.fs.fetch.impl.sftp.SftpFetcher;
 
 import lombok.EqualsAndHashCode;
@@ -33,57 +40,115 @@ import lombok.ToString;
 
 /**
  * <p>
- * FTP (<code>ftp://</code>) and FTPS (<code>ftps://</code>) fetcher.
+ * FTP (<code>ftp://</code>) and FTPS (<code>ftps://</code>) fetcher, backed
+ * by the <a href="https://github.com/robtimus/ftp-fs">ftp-fs</a> NIO.2
+ * file system provider.
  * </p>
  *
  * @see SftpFetcher
  */
 @ToString
 @EqualsAndHashCode
-public class FtpFetcher extends AbstractAuthVfsFetcher<FtpFetcherConfig> {
+public class FtpFetcher extends AbstractNioFetcher<FtpFetcherConfig> {
 
     @Getter
     private final FtpFetcherConfig configuration = new FtpFetcherConfig();
 
+    private Map<String, Object> ftpEnv;
+    private Map<String, Object> ftpsEnv;
+
     @Override
-    protected boolean acceptFileRequest(
-            @NonNull FileFetchRequest fetchRequest) {
+    protected void fetcherStartup(CrawlerSession crawler) {
+        super.fetcherStartup(crawler);
+
+        var ftp = new FTPEnvironment();
+        applyCommonOptions(ftp);
+        ftpEnv = ftp;
+
+        var ftps = new FTPSEnvironment();
+        applyCommonOptions(ftps);
+        if (configuration.getSecurityMode() != null) {
+            ftps.withSecurityMode(configuration.getSecurityMode());
+        }
+        if (configuration.getDataChannelProtectionLevel() != null) {
+            ftps.withDataChannelProtectionLevel(
+                    configuration.getDataChannelProtectionLevel());
+        }
+        ftpsEnv = ftps;
+    }
+
+    private void applyCommonOptions(FTPEnvironment env) {
+        var cfg = configuration;
+        if (cfg.getCredentials().isSet()) {
+            env.withCredentials(
+                    cfg.getCredentials().getUsername(),
+                    EncryptionUtil.decryptPassword(
+                            cfg.getCredentials()).toCharArray());
+        }
+        if (cfg.getConnectTimeout() != null) {
+            env.withConnectTimeout((int) cfg.getConnectTimeout().toMillis());
+        }
+        if (StringUtils.isNotBlank(cfg.getControlEncoding())) {
+            env.withControlEncoding(cfg.getControlEncoding());
+        }
+        if (cfg.getDataTimeout() != null) {
+            env.withDataTimeout(cfg.getDataTimeout());
+        }
+        env.withConnectionMode(
+                cfg.isPassiveMode()
+                        ? ConnectionMode.PASSIVE
+                        : ConnectionMode.ACTIVE);
+        env.withRemoteVerificationEnabled(!cfg.isRemoteVerificationDisabled());
+        if (cfg.getSocketTimeout() != null) {
+            env.withSoTimeout((int) cfg.getSocketTimeout().toMillis());
+        }
+        if (cfg.getControlKeepAliveTimeout() != null) {
+            env.withControlKeepAliveTimeout(cfg.getControlKeepAliveTimeout());
+        }
+        if (cfg.getControlKeepAliveReplyTimeout() != null) {
+            env.withControlKeepAliveReplyTimeout(
+                    cfg.getControlKeepAliveReplyTimeout());
+        }
+        env.withAutodetectEncoding(cfg.isAutodetectUtf8());
+        env.withClientConfig(buildClientConfig(cfg));
+    }
+
+    private FTPClientConfig buildClientConfig(FtpFetcherConfig cfg) {
+        var clientConfig = new FTPClientConfig();
+        if (StringUtils.isNotBlank(cfg.getDefaultDateFormat())) {
+            clientConfig.setDefaultDateFormatStr(cfg.getDefaultDateFormat());
+        }
+        if (StringUtils.isNotBlank(cfg.getRecentDateFormat())) {
+            clientConfig.setRecentDateFormatStr(cfg.getRecentDateFormat());
+        }
+        if (StringUtils.isNotBlank(cfg.getServerLanguageCode())) {
+            clientConfig.setServerLanguageCode(cfg.getServerLanguageCode());
+        }
+        if (!cfg.getShortMonthNames().isEmpty()) {
+            clientConfig.setShortMonthNames(
+                    String.join("|", cfg.getShortMonthNames()));
+        }
+        return clientConfig;
+    }
+
+    @Override
+    protected boolean acceptRequest(@NonNull FetchRequest fetchRequest) {
         return referenceStartsWith(fetchRequest, "ftp://", "ftps://");
     }
 
     @Override
-    protected void applyFileSystemOptions(FileSystemOptions opts) {
-        var cfg = configuration;
-        var ftp = FtpsFileSystemConfigBuilder.getInstance();
-        ftp.setFtpsMode(opts, cfg.getConnectionMode());
-        ftp.setDataChannelProtectionLevel(
-                opts, cfg.getDataChannelProtectionLevel());
-        ftp.setAutodetectUtf8(opts, cfg.isAutodetectUtf8());
-        ftp.setConnectTimeout(opts, cfg.getConnectTimeout());
-        ftp.setControlEncoding(opts, cfg.getControlEncoding());
-        ftp.setDataTimeout(opts, cfg.getDataTimeout());
-        ftp.setDefaultDateFormat(opts, cfg.getDefaultDateFormat());
-        ftp.setFileType(opts, cfg.getFileType());
-        ftp.setPassiveMode(opts, cfg.isPassiveMode());
-        Optional.ofNullable(cfg.getProxySettings().toProxy()).ifPresent(
-                p -> ftp.setProxy(opts, p));
-        ftp.setRecentDateFormat(opts, cfg.getRecentDateFormat());
-        ftp.setRemoteVerification(opts, !cfg.isRemoteVerificationDisabled());
-        ftp.setServerLanguageCode(opts, cfg.getServerLanguageCode());
-        ftp.setServerTimeZoneId(opts, cfg.getServerTimeZoneId());
-        ftp.setShortMonthNames(
-                opts,
-                cfg.getShortMonthNames().toArray(EMPTY_STRING_ARRAY));
-        ftp.setSoTimeout(opts, cfg.getSocketTimeout());
-        ftp.setControlKeepAliveTimeout(opts, cfg.getControlKeepAliveTimeout());
-        ftp.setControlKeepAliveReplyTimeout(
-                opts, cfg.getControlKeepAliveReplyTimeout());
-        ftp.setUserDirIsRoot(opts, cfg.isUserDirIsRoot());
-        ftp.setTransferAbortedOkReplyCodes(
-                opts, cfg.getTransferAbortedOkReplyCodes());
-        ftp.setMdtmLastModifiedTime(opts, cfg.isMdtmLastModifiedTime());
-
-        //NOTE: Override this method if there is a need to set additional
-        //options, such as entryParserFactory, keyManager, or trustManager.
+    protected Path resolvePath(String reference) throws IOException {
+        var uri = URI.create(reference);
+        var env = "ftps".equalsIgnoreCase(uri.getScheme()) ? ftpsEnv : ftpEnv;
+        var fs = getOrOpenFileSystem(uri, env);
+        var path = uri.getPath();
+        if (configuration.isUserDirIsRoot()
+                && path != null
+                && path.startsWith("/")) {
+            // Reinterpret as relative to the connection's default
+            // (home) directory rather than the true file system root.
+            path = path.substring(1);
+        }
+        return fs.getPath(path);
     }
 }

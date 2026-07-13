@@ -19,12 +19,17 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
+import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -132,6 +137,88 @@ class ArchiveFetcherIT {
                 .anyMatch(r -> r.endsWith("world.txt"));
     }
 
+    // --- Local TAR test -----------------------------------------------
+
+    /**
+     * Crawls a local TAR (no compression) file, verifying the
+     * commons-compress-backed extraction path.
+     */
+    @Test
+    void testLocalTar() throws Exception {
+        var tarPath = tempDir.resolve("local.tar");
+        createTestTar(tarPath, null);
+
+        var fetcher = new ArchiveFetcher();
+        var startUrl = "tar:" + tarPath.toUri();
+
+        var mem = FsTestUtil.crawlWithFetcher(tempDir, fetcher, startUrl);
+
+        assertThat(mem.getUpsertCount()).isEqualTo(2);
+        assertThat(mem.getUpsertRequests())
+                .map(UpsertRequest::getReference)
+                .anyMatch(r -> r.endsWith("hello.txt"))
+                .anyMatch(r -> r.endsWith("world.txt"));
+        assertThat(FsTestUtil.getUpsertRequestContent(
+                mem, mem.getUpsertRequests().stream()
+                        .map(UpsertRequest::getReference)
+                        .filter(r -> r.endsWith("hello.txt"))
+                        .findFirst().orElseThrow()))
+                                .isEqualToIgnoringWhitespace(
+                                        "Hello from archive!");
+    }
+
+    // --- Local TAR.GZ test ----------------------------------------------
+
+    /**
+     * Crawls a local gzip-compressed TAR file (tgz), verifying the
+     * gzip decompression layer on top of tar extraction.
+     */
+    @Test
+    void testLocalTarGz() throws Exception {
+        var tgzPath = tempDir.resolve("local.tar.gz");
+        createTestTar(tgzPath, "gz");
+
+        var fetcher = new ArchiveFetcher();
+        var startUrl = "tgz:" + tgzPath.toUri();
+
+        var mem = FsTestUtil.crawlWithFetcher(tempDir, fetcher, startUrl);
+
+        assertThat(mem.getUpsertCount()).isEqualTo(2);
+        assertThat(mem.getUpsertRequests())
+                .map(UpsertRequest::getReference)
+                .anyMatch(r -> r.endsWith("hello.txt"))
+                .anyMatch(r -> r.endsWith("world.txt"));
+    }
+
+    // --- Local single-file GZ test ---------------------------------------
+
+    /**
+     * Crawls a local gzip-compressed single file (not a tar), verifying
+     * the single-file decompression path is exposed as one document.
+     */
+    @Test
+    void testLocalGz() throws Exception {
+        var gzPath = tempDir.resolve("hello.txt.gz");
+        try (var out = new GzipCompressorOutputStream(
+                Files.newOutputStream(gzPath))) {
+            out.write("Hello from archive!"
+                    .getBytes(StandardCharsets.UTF_8));
+        }
+
+        var fetcher = new ArchiveFetcher();
+        var startUrl = "gz:" + gzPath.toUri();
+
+        var mem = FsTestUtil.crawlWithFetcher(tempDir, fetcher, startUrl);
+
+        assertThat(mem.getUpsertCount()).isEqualTo(1);
+        assertThat(mem.getUpsertRequests())
+                .map(UpsertRequest::getReference)
+                .anyMatch(r -> r.endsWith("hello.txt"));
+        assertThat(FsTestUtil.getUpsertRequestContent(
+                mem, mem.getUpsertRequests().get(0).getReference()))
+                        .isEqualToIgnoringWhitespace("Hello from archive!");
+    }
+
     // --- BeanMapper round-trip test ---------------------------------------
 
     @Test
@@ -154,6 +241,35 @@ class ArchiveFetcherIT {
             addEntry(zos, "hello.txt", "Hello from archive!");
             addEntry(zos, "world.txt", "World from archive!");
         }
+    }
+
+    /**
+     * Creates a tar at {@code tarPath} containing two small text files
+     * with known content, optionally gzip-compressed when
+     * {@code compression} is {@code "gz"}.
+     */
+    static void createTestTar(Path tarPath, String compression)
+            throws IOException {
+        OutputStream out = Files.newOutputStream(tarPath);
+        if ("gz".equals(compression)) {
+            out = new GzipCompressorOutputStream(out);
+        }
+        try (var tos = new TarArchiveOutputStream(out)) {
+            addTarEntry(tos, "hello.txt", "Hello from archive!");
+            addTarEntry(tos, "world.txt", "World from archive!");
+            tos.finish();
+        }
+    }
+
+    private static void addTarEntry(
+            TarArchiveOutputStream tos, String name, String content)
+            throws IOException {
+        var bytes = content.getBytes(StandardCharsets.UTF_8);
+        var entry = new TarArchiveEntry(name);
+        entry.setSize(bytes.length);
+        tos.putArchiveEntry(entry);
+        tos.write(bytes);
+        tos.closeArchiveEntry();
     }
 
     private static void addEntry(

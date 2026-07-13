@@ -14,6 +14,8 @@
  */
 package com.norconex.importer.handler.transformer.impl;
 
+import com.norconex.importer.handler.BaseDocHandlerConfig;
+
 import com.norconex.commons.lang.map.PropertySetter;
 
 import lombok.Data;
@@ -60,7 +62,7 @@ import lombok.experimental.Accessors;
 @SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
-public class DocumentLengthTransformerConfig {
+public class DocumentLengthTransformerConfig extends BaseDocHandlerConfig {
 
     /**
      * Gets the target field.

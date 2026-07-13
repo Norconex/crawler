@@ -18,6 +18,7 @@ import java.io.IOException;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.norconex.commons.lang.config.Configurable;
+import com.norconex.importer.handler.ConfigurableDocHandler;
 import com.norconex.importer.handler.DocHandler;
 import com.norconex.importer.handler.DocHandlerContext;
 import com.norconex.importer.handler.parser.ParseState;
@@ -103,7 +104,7 @@ import lombok.ToString;
 @SuppressWarnings("javadoc")
 @Data
 public class ExternalParser
-        implements DocHandler, Configurable<ExternalTransformerConfig> {
+        implements ConfigurableDocHandler<ExternalTransformerConfig> {
 
     //TODO what about conditionally disabling some parsers? already covered?
 

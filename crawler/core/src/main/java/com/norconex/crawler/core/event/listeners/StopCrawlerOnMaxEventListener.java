@@ -37,7 +37,7 @@ import lombok.extern.slf4j.Slf4j;
  * <p>
  * Alternative to {@link CrawlerConfig#setMaxDocuments(int)} for issuing a
  * crawler stop request upon reaching specific event counts. The event counts
- * are only kept for a crawling session.  They are reset to zero upon restarting
+ * are only kept for a crawling session. They are reset to zero upon restarting
  * the crawler.
  * </p>
  * <p>
@@ -47,14 +47,14 @@ import lombok.extern.slf4j.Slf4j;
  * <p>
  * <b>Note</b> that when multiple threads/nodes are generating events, it is
  * very well possible to get more events fired after the stop request has been
- * issued.  In other words, running tasks usually finish cleanly if they can.
+ * issued. In other words, running tasks usually finish cleanly if they can.
  * </p>
  *
  * <h2>Difference with "maxDocuments"</h2>
  * <p>
- * The "maxDocuments" option deals with "processed" documents.  Those are
+ * The "maxDocuments" option deals with "processed" documents. Those are
  * documents that were initially queued for crawling and crawling was attempted
- * on them, whether that exercise what successful or not.  That is,
+ * on them, whether that exercise what successful or not. That is,
  * "maxDocuments" will not count documents that were sent to your committer
  * for additions or deletions, but also documents that were rejected
  * by your Importer configuration, produced errors, etc.
@@ -71,18 +71,18 @@ import lombok.extern.slf4j.Slf4j;
  * should be the expected behavior. Options are:
  * </p>
  * <ul>
- *   <li>
- *     <b>any</b>: Stop the crawler when any of the matching event count
- *     reaches the specified maximum.
- *   </li>
- *   <li>
- *     <b>all</b>: Stop the crawler when all of the matching event counts
- *     have reached the maximum.
- *   </li>
- *   <li>
- *     <b>sum</b>: Stop the crawler when the sum of all matching event counts
- *     have reached the maximum.
- *   </li>
+ * <li>
+ * <b>any</b>: Stop the crawler when any of the matching event count
+ * reaches the specified maximum.
+ * </li>
+ * <li>
+ * <b>all</b>: Stop the crawler when all of the matching event counts
+ * have reached the maximum.
+ * </li>
+ * <li>
+ * <b>sum</b>: Stop the crawler when the sum of all matching event counts
+ * have reached the maximum.
+ * </li>
  * </ul>
  */
 @Slf4j
@@ -109,10 +109,10 @@ public class StopCrawlerOnMaxEventListener implements
 
     @Override
     public void accept(Event event) {
-
-        if (event.is(CrawlerEvent.CRAWLER_CRAWL_BEGIN)) {
+        if (event instanceof CrawlerEvent crawlerEvent
+                && event.is(CrawlerEvent.CRAWLER_CRAWL_BEGIN)) {
             eventCounts.clear();
-            crawlSession = ((CrawlerEvent) event).getCrawlSession();
+            crawlSession = crawlerEvent.getCrawlSession();
         }
 
         if (!configuration.getEventMatcher().matches(event.getName())) {

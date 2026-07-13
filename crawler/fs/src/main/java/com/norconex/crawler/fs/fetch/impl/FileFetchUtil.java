@@ -67,14 +67,34 @@ public final class FileFetchUtil {
         if (path == null) {
             return null;
         }
-        var scheme = path.replaceFirst("^(.*?):.*", "$1");
-        if (scheme == null
-                || scheme.length() <= 1 || "file".equalsIgnoreCase(scheme)) {
-            // encode segments
+
+        // Extract URI scheme if present (only valid schemes at the beginning)
+        var schemeMatch =
+                Pattern.compile("^([a-zA-Z][a-zA-Z0-9+.-]*):").matcher(path);
+        String scheme = null;
+        int schemeEnd = 0;
+        if (schemeMatch.find()) {
+            scheme = schemeMatch.group(1);
+            schemeEnd = schemeMatch.end();
+        }
+
+        // For local paths (no scheme or "file" or single-letter Windows drive)
+        if (scheme == null || "file".equalsIgnoreCase(scheme)
+                || scheme.length() == 1) {
+            // Only treat "/" and "\" as path separators, not ":"
+            // This allows colons in filenames to be encoded
             var b = new StringBuilder();
-            var m = Pattern.compile("([^\\/:]+|[\\/:]+)").matcher(path);
+
+            // Preserve the scheme and colon if present
+            if (scheme != null) {
+                b.append(scheme).append(":");
+            }
+
+            // Encode the path part
+            var pathPart = path.substring(schemeEnd);
+            var m = Pattern.compile("([^\\\\/]+|[\\\\/]+)").matcher(pathPart);
             while (m.find()) {
-                if (StringUtils.containsAny(m.group(), "\\/:")) {
+                if (StringUtils.containsAny(m.group(), "\\/")) {
                     b.append(m.group());
                 } else {
                     b.append(uriEncodeSegment(m.group()));
@@ -90,8 +110,9 @@ public final class FileFetchUtil {
         // assuming all others are filename-valid on all major OSes.
         var b = new StringBuilder();
         for (char ch : value.toCharArray()) {
-            if (ch >= 0 && ch <= 31 || "<>:;@#=&$,\"/\\|?*".indexOf(ch) > -1) {
-                b.append("%" + Integer.toHexString(ch));
+            if (ch >= 0 && ch <= 31 || ch == ' '
+                    || "<>:;@#=&$,\"/\\|?*".indexOf(ch) > -1) {
+                b.append(String.format("%%%02x", (int) ch));
 
             } else {
                 b.append(ch);

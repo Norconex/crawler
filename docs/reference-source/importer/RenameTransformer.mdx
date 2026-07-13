@@ -22,6 +22,10 @@ Can be used both as a `pre-parse` or `post-parse` handler.
 
 ## Properties
 
+### label
+
+An optional, user-supplied label for this step in the importer pipeline. It has no effect on processing — it exists purely to help identify this step, for example in large configurations or in the visual configurator.
+
 ### operations
 
 A list of DOM extraction operations to perform, each targeting a specific element selector and specifying what to extract and where to store it.

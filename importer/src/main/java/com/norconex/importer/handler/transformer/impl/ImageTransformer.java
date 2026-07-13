@@ -22,6 +22,7 @@ import java.awt.Rectangle;
 import java.io.IOException;
 
 import com.norconex.commons.lang.config.Configurable;
+import com.norconex.importer.handler.ConfigurableDocHandler;
 import com.norconex.commons.lang.convert.DimensionConverter;
 import com.norconex.commons.lang.img.MutableImage;
 import com.norconex.importer.ImporterConfig;
@@ -94,7 +95,7 @@ import lombok.Data;
 @SuppressWarnings("javadoc")
 @Data
 public class ImageTransformer
-        implements DocHandler, Configurable<ImageTransformerConfig> {
+        implements ConfigurableDocHandler<ImageTransformerConfig> {
 
     private final ImageTransformerConfig configuration =
             new ImageTransformerConfig();

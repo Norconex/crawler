@@ -17,6 +17,7 @@ package com.norconex.importer.handler.transformer.impl;
 import java.io.IOException;
 
 import com.norconex.commons.lang.config.Configurable;
+import com.norconex.importer.handler.ConfigurableDocHandler;
 import com.norconex.importer.handler.DocHandler;
 import com.norconex.importer.handler.DocHandlerContext;
 import com.norconex.importer.util.chunk.ChunkedTextUtil;
@@ -60,7 +61,7 @@ import lombok.extern.slf4j.Slf4j;
 @Data
 @Slf4j
 public class StripAfterTransformer
-        implements DocHandler, Configurable<StripAfterTransformerConfig> {
+        implements ConfigurableDocHandler<StripAfterTransformerConfig> {
 
     private final StripAfterTransformerConfig configuration =
             new StripAfterTransformerConfig();

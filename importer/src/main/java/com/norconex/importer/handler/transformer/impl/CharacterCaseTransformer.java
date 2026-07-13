@@ -39,6 +39,7 @@ import org.apache.commons.text.WordUtils;
 
 import com.norconex.commons.lang.EqualsUtil;
 import com.norconex.commons.lang.config.Configurable;
+import com.norconex.importer.handler.ConfigurableDocHandler;
 import com.norconex.commons.lang.map.Properties;
 import com.norconex.importer.handler.DocHandler;
 import com.norconex.importer.handler.DocHandlerContext;
@@ -108,7 +109,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Data
 public class CharacterCaseTransformer
-        implements DocHandler, Configurable<CharacterCaseTransformerConfig> {
+        implements ConfigurableDocHandler<CharacterCaseTransformerConfig> {
 
     private final CharacterCaseTransformerConfig configuration =
             new CharacterCaseTransformerConfig();

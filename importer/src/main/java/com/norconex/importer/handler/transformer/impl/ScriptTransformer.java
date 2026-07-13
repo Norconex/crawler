@@ -19,6 +19,7 @@ import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.norconex.commons.lang.config.Configurable;
+import com.norconex.importer.handler.ConfigurableDocHandler;
 import com.norconex.commons.lang.map.Properties;
 import com.norconex.importer.handler.DocHandler;
 import com.norconex.importer.handler.DocHandlerContext;
@@ -117,7 +118,7 @@ import lombok.ToString;
 @SuppressWarnings("javadoc")
 @Data
 public class ScriptTransformer
-        implements DocHandler, Configurable<ScriptTransformerConfig> {
+        implements ConfigurableDocHandler<ScriptTransformerConfig> {
 
     private final ScriptTransformerConfig configuration =
             new ScriptTransformerConfig();

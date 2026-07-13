@@ -14,6 +14,8 @@
  */
 package com.norconex.importer.handler.transformer.impl;
 
+import com.norconex.importer.handler.BaseDocHandlerConfig;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -81,7 +83,7 @@ import lombok.experimental.Accessors;
 @SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
-public class SplitTransformerConfig {
+public class SplitTransformerConfig extends BaseDocHandlerConfig {
 
     @JsonXmlCollection(entryName = "op")
     private final List<SplitOperation> operations = new ArrayList<>();

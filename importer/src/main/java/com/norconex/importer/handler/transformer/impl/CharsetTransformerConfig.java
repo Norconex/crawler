@@ -14,6 +14,8 @@
  */
 package com.norconex.importer.handler.transformer.impl;
 
+import com.norconex.importer.handler.BaseDocHandlerConfig;
+
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.nio.charset.Charset;
@@ -78,7 +80,7 @@ import lombok.experimental.Accessors;
 @SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
-public class CharsetTransformerConfig {
+public class CharsetTransformerConfig extends BaseDocHandlerConfig {
 
     public static final Charset DEFAULT_TARGET_CHARSET = UTF_8;
 

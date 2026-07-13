@@ -18,6 +18,7 @@ import java.nio.charset.Charset;
 
 import com.norconex.commons.lang.text.TextMatcher;
 import com.norconex.importer.handler.CommonMatchers;
+import com.norconex.importer.handler.condition.BaseConditionConfig;
 import com.norconex.importer.util.DomUtil;
 import com.optimaize.langdetect.text.TextFilter;
 
@@ -134,7 +135,7 @@ import lombok.experimental.Accessors;
 @SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
-public class DomConditionConfig {
+public class DomConditionConfig extends BaseConditionConfig {
 
     private final TextMatcher fieldMatcher = new TextMatcher();
     private final TextMatcher valueMatcher = new TextMatcher();

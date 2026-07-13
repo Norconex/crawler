@@ -122,6 +122,10 @@ Null or empty strings are not matched by default. To have those considered as po
 
 Matches document fields based on specified patterns and methods
 
+### label
+
+An optional, user-supplied label for this step in the importer pipeline. It has no effect on processing — it exists purely to help identify this step, for example in large configurations or in the visual configurator.
+
 ### operations
 
 DomOperation is used to manipulate or extract specific parts from the DOM document by `selector`. For example, one DomOperation extract `TEXT` from `title` and the other DomOperation extract `HTML` from `div.content`.

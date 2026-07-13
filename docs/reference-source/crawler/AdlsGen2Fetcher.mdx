@@ -1,0 +1,99 @@
+---
+component: AdlsGen2Fetcher
+module: crawler/fs
+locale: en
+propertyCoverage: all
+---
+
+# AdlsGen2Fetcher
+
+## Summary
+
+Azure Data Lake Storage Gen2 fetcher (`abfs://` and `abfss://`).
+
+## Notes
+
+Fetches documents from Azure Data Lake Storage Gen2 using references such as
+`abfss://filesystem@account.dfs.core.windows.net/path/to/file`.
+
+Supports:
+
+- Shared key authentication via `credentials`
+- SAS token authentication via `sasToken`
+- Optional endpoint override via `endpoint`
+- Optional ACL/owner/group extraction control via `aclDisabled`
+
+When `endpoint` is not set, the endpoint is derived from the reference account
+as `https://<account>.dfs.core.windows.net`.
+
+The credentials username must match the account in the reference URI.
+
+## Properties
+
+### aclDisabled
+
+Whether ACL, owner, and group metadata extraction is disabled.
+
+### credentials
+
+Username and password used for ADLS Gen2 shared-key authentication:
+
+- Username: storage account name
+- Password: storage account key
+
+### domain
+
+The domain name for authentication when accessing the remote resource.
+
+### endpoint
+
+Optional service endpoint override. When omitted, the endpoint is derived from
+the reference account.
+
+### proxySettings
+
+Configures an optional HTTP proxy for outbound connections. Leave unset to
+connect directly.
+
+### referenceFilters
+
+Filters applied to document references (URLs or file paths) to control which
+ones are fetched. Documents whose references do not pass the filters are
+skipped.
+
+### sasToken
+
+Optional SAS token used instead of shared-key credentials.
+
+## Examples
+
+The following example uses shared-key authentication and crawls an ADLS Gen2
+file system.
+
+<ConfigBlock
+  json={{
+    "class": "AdlsGen2Fetcher",
+    "credentials": {
+      "username": "myaccount",
+      "password": "my-account-key"
+    }
+  }}
+/>
+
+The following example uses a SAS token.
+
+<ConfigBlock
+  json={{
+    "class": "AdlsGen2Fetcher",
+    "sasToken": "sv=2025-01-05&ss=bfqt&srt=sco&sp=rl&se=2027-01-01T00:00:00Z&sig=..."
+  }}
+/>
+
+The following example disables ACL extraction.
+
+<ConfigBlock
+  json={{
+    "class": "AdlsGen2Fetcher",
+    "aclDisabled": true
+  }}
+/>

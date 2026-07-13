@@ -19,7 +19,7 @@ import lombok.experimental.Accessors;
 
 @Data
 @Accessors(chain = true)
-public class RejectConfig {
+public class RejectConfig extends BaseDocHandlerConfig {
 
     private String message;
 }
