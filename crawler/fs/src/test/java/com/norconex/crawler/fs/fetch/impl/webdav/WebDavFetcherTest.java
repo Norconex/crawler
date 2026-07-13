@@ -46,16 +46,6 @@ class WebDavFetcherTest {
         assertThat(cfg.toString()).contains("keyStorePass=********");
         assertThatNoException()
                 .isThrownBy(() -> BeanMapper.DEFAULT.assertWriteRead(fetcher));
-
-        assertThat(fetcher.acceptFileRequest(new FileFetchRequest(
-                new Doc("webdav://host/path"), DOCUMENT))).isTrue();
-        assertThat(fetcher.acceptFileRequest(new FileFetchRequest(
-                new Doc("https://host/path"), DOCUMENT))).isTrue();
-        assertThat(fetcher.acceptFileRequest(new FileFetchRequest(
-                new Doc("ftp://host/path"), DOCUMENT))).isFalse();
-
-        assertThatNoException().isThrownBy(
-                () -> fetcher.applyFileSystemOptions(new FileSystemOptions()));
     }
 
     @Test

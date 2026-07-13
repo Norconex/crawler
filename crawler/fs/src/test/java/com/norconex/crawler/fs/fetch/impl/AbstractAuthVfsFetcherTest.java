@@ -16,76 +16,69 @@ package com.norconex.crawler.fs.fetch.impl;
 
 import static com.norconex.crawler.core.fetch.FetchDirective.DOCUMENT;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatNoException;
 
-import org.apache.commons.vfs2.FileSystemOptions;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import com.norconex.crawler.core.fetch.FetchRequest;
 import com.norconex.crawler.fs.fetch.FileFetchRequest;
 import com.norconex.crawler.fs.fetch.FolderPathsFetchRequest;
 import com.norconex.importer.doc.Doc;
 
 import lombok.Getter;
-import lombok.Setter;
+import lombok.NonNull;
 
 @Timeout(30)
 class AbstractAuthVfsFetcherTest {
 
     @Test
     void testAcceptRequest() {
-        var fetcher = new MockAuthFetcher();
-        fetcher.setAcceptFileRequests(true);
+        var fetcher = new MockNioFetcher();
         assertThat(fetcher.acceptRequest(
-                new FileFetchRequest(new Doc("sftp://host/path"), DOCUMENT)))
+                new FileFetchRequest(new Doc("mock://host/path"), DOCUMENT)))
                         .isTrue();
-
-        fetcher.setAcceptFileRequests(false);
         assertThat(fetcher.acceptRequest(
-                new FileFetchRequest(new Doc("sftp://host/path"), DOCUMENT)))
+                new FolderPathsFetchRequest(new Doc("mock://host/path"))))
+                        .isTrue();
+        assertThat(fetcher.acceptRequest(
+                new FileFetchRequest(new Doc("other://host/path"), DOCUMENT)))
                         .isFalse();
-
-        assertThat(fetcher.acceptRequest(
-                new FolderPathsFetchRequest(new Doc("sftp://host/path"))))
-                        .isTrue();
     }
 
     @Test
-    void testApplyAuthenticationOptions() {
-        var fetcher = new MockAuthFetcher();
-        var opts = new FileSystemOptions();
+    void testBaseAuthNioFetcherConfig() {
+        var cfg = new MockNioFetcherConfig();
 
-        assertThatNoException()
-                .isThrownBy(() -> fetcher.applyAuthenticationOptions(opts));
+        assertThat(cfg.getDomain()).isNull();
+        cfg.setDomain("testDomain");
+        assertThat(cfg.getDomain()).isEqualTo("testDomain");
 
-        fetcher.getConfiguration().setDomain("domain");
-        fetcher.getConfiguration().getCredentials()
-                .setUsername("user")
-                .setPassword("password");
-
-        assertThatNoException()
-                .isThrownBy(() -> fetcher.applyAuthenticationOptions(opts));
+        assertThat(cfg.getCredentials()).isNotNull();
+        cfg.getCredentials().setUsername("user").setPassword("password");
+        assertThat(cfg.getCredentials().getUsername()).isEqualTo("user");
     }
 
     @Getter
-    @Setter
-    private static class MockAuthFetcher
-            extends AbstractAuthVfsFetcher<MockAuthFetcherConfig> {
-        private final MockAuthFetcherConfig configuration =
-                new MockAuthFetcherConfig();
-        private boolean acceptFileRequests;
+    private static class MockNioFetcher
+            extends AbstractNioFetcher<MockNioFetcherConfig> {
+        private final MockNioFetcherConfig configuration =
+                new MockNioFetcherConfig();
 
         @Override
-        protected boolean acceptFileRequest(FileFetchRequest fetchRequest) {
-            return acceptFileRequests;
+        protected boolean acceptRequest(@NonNull FetchRequest fetchRequest) {
+            return fetchRequest.getDoc().getReference().startsWith("mock://");
         }
 
         @Override
-        protected void applyFileSystemOptions(FileSystemOptions opts) {
-            // NOOP
+        protected Path resolvePath(String reference) throws IOException {
+            return Paths.get("/");
         }
     }
 
-    private static class MockAuthFetcherConfig extends BaseAuthVfsFetcherConfig {
+    private static class MockNioFetcherConfig extends BaseAuthNioFetcherConfig {
     }
 }

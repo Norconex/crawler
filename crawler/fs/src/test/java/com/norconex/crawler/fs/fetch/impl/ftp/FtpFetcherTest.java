@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 
 import java.util.List;
 
-import org.apache.commons.vfs2.FileSystemOptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -37,26 +36,20 @@ class FtpFetcherTest {
         var fetcher = new FtpFetcher();
         var cfg = fetcher.getConfiguration();
         cfg.setShortMonthNames(List.of("jan", "feb"));
-        cfg.setTransferAbortedOkReplyCodes(List.of(426, 451));
         cfg.getProxySettings().setHost(new Host("127.0.0.1", 3128));
 
         assertThat(cfg.getShortMonthNames()).containsExactly("jan", "feb");
-        assertThat(cfg.getTransferAbortedOkReplyCodes())
-                .containsExactly(426, 451);
         assertThatNoException()
                 .isThrownBy(() -> BeanMapper.DEFAULT.assertWriteRead(fetcher));
 
-        assertThat(fetcher.acceptFileRequest(
+        assertThat(fetcher.acceptRequest(
                 new FileFetchRequest(new Doc("ftp://host/path"), DOCUMENT)))
                         .isTrue();
-        assertThat(fetcher.acceptFileRequest(
+        assertThat(fetcher.acceptRequest(
                 new FileFetchRequest(new Doc("ftps://host/path"), DOCUMENT)))
                         .isTrue();
-        assertThat(fetcher.acceptFileRequest(
+        assertThat(fetcher.acceptRequest(
                 new FileFetchRequest(new Doc("http://host/path"), DOCUMENT)))
                         .isFalse();
-
-        assertThatNoException().isThrownBy(
-                () -> fetcher.applyFileSystemOptions(new FileSystemOptions()));
     }
 }

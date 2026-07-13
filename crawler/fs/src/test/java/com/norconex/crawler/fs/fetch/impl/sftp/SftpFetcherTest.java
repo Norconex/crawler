@@ -16,15 +16,12 @@ package com.norconex.crawler.fs.fetch.impl.sftp;
 
 import static com.norconex.crawler.core.fetch.FetchDirective.DOCUMENT;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
-import org.apache.commons.vfs2.FileSystemOptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import com.norconex.commons.lang.bean.BeanMapper;
-import com.norconex.crawler.core.CrawlerException;
 import com.norconex.crawler.fs.fetch.FileFetchRequest;
 import com.norconex.importer.doc.Doc;
 
@@ -38,18 +35,11 @@ class SftpFetcherTest {
         assertThatNoException()
                 .isThrownBy(() -> BeanMapper.DEFAULT.assertWriteRead(fetcher));
 
-        assertThat(fetcher.acceptFileRequest(
+        assertThat(fetcher.acceptRequest(
                 new FileFetchRequest(new Doc("sftp://host/path"), DOCUMENT)))
                         .isTrue();
-        assertThat(fetcher.acceptFileRequest(
+        assertThat(fetcher.acceptRequest(
                 new FileFetchRequest(new Doc("ftp://host/path"), DOCUMENT)))
                         .isFalse();
-
-        assertThatNoException().isThrownBy(
-                () -> fetcher.applyFileSystemOptions(new FileSystemOptions()));
-
-        fetcher.getConfiguration().setStrictHostKeyChecking("invalid");
-        assertThatExceptionOfType(CrawlerException.class).isThrownBy(
-                () -> fetcher.applyFileSystemOptions(new FileSystemOptions()));
     }
 }
