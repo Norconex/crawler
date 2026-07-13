@@ -331,3 +331,4 @@ class S3ModelTest {
                         .hasMessageContaining(
                                 "Could not list S3 objects under");
     }
+}
