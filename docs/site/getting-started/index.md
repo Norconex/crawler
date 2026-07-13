@@ -21,19 +21,27 @@ pipelines — without vendor lock-in.
 Both crawlers share the same configuration model, pipeline, and committer system.
 Learn one, know both.
 
+:::tip[Built-in baseline, not a hard limit]
+The source types highlighted in this guide represent built-in support in
+Norconex Crawler v4. They are practical defaults, not a fixed ceiling.
+Teams can extend crawler behavior with custom connectors, parser logic, and
+pipeline components for customer-specific requirements.
+:::
+
 ## Core concepts at a glance
 
 - **Crawl session** — a named, resumable run with persistent state
 - **Pipeline** — every document flows through: Crawl → Process → Commit
 - **Committers** — pluggable output targets (Elasticsearch, Solr, Kafka, SQL, Neo4j, ...)
 
-A hosted companion tool, the [Visual Configurator](https://crawlerconfig.norconex.com),
+A hosted companion tool, the [Visual Configurator](https://configurator.norconex.com),
 lets you build and validate crawler configs visually — it is not part of the open-source
 distribution.
 
 ## Where to go next
 
-- **New to Norconex Crawler?** → [Installation](./installation.md) then [Web Quick Start](./quick-start-web.md) or [File System Quick Start](./quick-start-fs.md)
+- **New to Norconex Crawler?** → [Installation](./installation.md) then [Docker](./docker.md), [Web Quick Start](./quick-start-web.md), [File System Quick Start](./quick-start-fs.md), and [FS Fetchers Quickstart](./fs-fetchers-quickstart.md)
 - **Embedding in Java?** → [Java Integration](./java-integration.md)
+- **Need config rules and defaults?** → [Configuration Semantics](../concepts/configuration-semantics.md)
 - **How does it all work?** → [Concepts](../concepts/index.md)
 - **Upgrading from v3?** → [Migration Guide](../migration/index.md)

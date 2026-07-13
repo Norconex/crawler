@@ -16,25 +16,21 @@ package com.norconex.crawler.fs.fetch.impl.local;
 
 import static com.norconex.crawler.fs.fetch.impl.FileFetchUtil.referenceStartsWith;
 
-import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.attribute.AclEntry;
 import java.nio.file.attribute.AclEntryFlag;
 import java.nio.file.attribute.AclEntryPermission;
 import java.nio.file.attribute.AclFileAttributeView;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Objects;
-
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemException;
-import org.apache.commons.vfs2.FileSystemOptions;
-import org.apache.commons.vfs2.provider.local.LocalFile;
-import org.apache.commons.vfs2.provider.local.LocalFileName;
 
 import com.norconex.commons.lang.map.Properties;
 import com.norconex.crawler.core.fetch.FetchRequest;
 import com.norconex.crawler.fs.doc.FsDocMetadata;
-import com.norconex.crawler.fs.fetch.impl.AbstractVfsFetcher;
+import com.norconex.crawler.fs.fetch.impl.AbstractNioFetcher;
 import com.norconex.importer.doc.Doc;
 
 import lombok.EqualsAndHashCode;
@@ -45,10 +41,11 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * <p>
- * Fetcher for a local file system. Mounted file systems and mapped drives
- * not requiring special configuration to access can also be considered
- * "local". Paths starting with any of the following will be recognized as
- * local file system:
+ * Fetcher for a local file system, backed by the JDK's default
+ * {@link java.nio.file.spi.FileSystemProvider}. Mounted file systems and
+ * mapped drives not requiring special configuration to access can also be
+ * considered "local". Paths starting with any of the following will be
+ * recognized as local file system:
  * </p>
  * <ul>
  *   <li>{@code file:///some/directory}</li>
@@ -76,7 +73,7 @@ import lombok.extern.slf4j.Slf4j;
 @ToString
 @EqualsAndHashCode
 @Slf4j
-public class LocalFetcher extends AbstractVfsFetcher<LocalFetcherConfig> {
+public class LocalFetcher extends AbstractNioFetcher<LocalFetcherConfig> {
 
     @Getter
     private final LocalFetcherConfig configuration = new LocalFetcherConfig();
@@ -89,28 +86,32 @@ public class LocalFetcher extends AbstractVfsFetcher<LocalFetcherConfig> {
     }
 
     @Override
-    protected void fetchMetadata(Doc doc, @NonNull FileObject fileObject)
-            throws FileSystemException {
-        super.fetchMetadata(doc, fileObject);
+    protected Path resolvePath(String reference) {
+        if (reference.regionMatches(true, 0, "file:", 0, 5)) {
+            return Path.of(URI.create(reference));
+        }
+        return Path.of(reference);
+    }
 
-        if (!configuration.isAclDisabled()
-                && fileObject instanceof LocalFile localFile) {
-            fetchAcl(localFile, doc.getMetadata());
+    @Override
+    protected void fetchMetadata(
+            Doc doc, @NonNull Path path,
+            @NonNull BasicFileAttributes attrs)
+            throws IOException {
+        super.fetchMetadata(doc, path, attrs);
+
+        if (!configuration.isAclDisabled()) {
+            fetchAcl(path, doc.getMetadata());
         }
     }
 
-    void fetchAcl(LocalFile localFile, Properties metadata) {
+    void fetchAcl(Path path, Properties metadata) {
         try {
-            var localFileName = (LocalFileName) localFile.getName();
-            var file = new File(
-                    localFileName.getRootFile()
-                            + localFileName.getPathDecoded()).toPath();
-
             var aclFileAttributes = Files.getFileAttributeView(
-                    file, AclFileAttributeView.class);
+                    path, AclFileAttributeView.class);
 
             if (aclFileAttributes == null) {
-                LOG.debug("No ACL file attributes on " + file);
+                LOG.debug("No ACL file attributes on " + path);
                 return;
             }
 
@@ -140,10 +141,5 @@ public class LocalFetcher extends AbstractVfsFetcher<LocalFetcherConfig> {
         } catch (IOException e) {
             LOG.error("Could not retreive ACL data.", e);
         }
-    }
-
-    @Override
-    protected void applyFileSystemOptions(FileSystemOptions opts) {
-        //NOOP
     }
 }

@@ -1,4 +1,4 @@
-/* Copyright 2023-2025 Norconex Inc.
+/* Copyright 2023-2026 Norconex Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,19 @@ package com.norconex.crawler.fs.fetch.impl.sftp;
 
 import static com.norconex.crawler.fs.fetch.impl.FileFetchUtil.referenceStartsWith;
 
-import org.apache.commons.vfs2.FileSystemException;
-import org.apache.commons.vfs2.FileSystemOptions;
-import org.apache.commons.vfs2.provider.sftp.SftpFileSystemConfigBuilder;
+import java.io.IOException;
+import java.net.URI;
+import java.nio.charset.Charset;
+import java.nio.file.Path;
+import java.util.Map;
 
-import com.norconex.crawler.core.CrawlerException;
-import com.norconex.crawler.fs.fetch.FileFetchRequest;
-import com.norconex.crawler.fs.fetch.impl.AbstractAuthVfsFetcher;
-import com.norconex.crawler.fs.fetch.impl.ftp.FtpFetcher;
+import org.apache.commons.lang3.StringUtils;
+
+import com.github.robtimus.filesystems.sftp.SFTPEnvironment;
+import com.norconex.commons.lang.encrypt.EncryptionUtil;
+import com.norconex.crawler.core.fetch.FetchRequest;
+import com.norconex.crawler.core.session.CrawlerSession;
+import com.norconex.crawler.fs.fetch.impl.AbstractNioFetcher;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -32,38 +37,74 @@ import lombok.ToString;
 
 /**
  * <p>
- * SFTP fetcher (<code>sftp://</code>).
+ * SFTP fetcher (<code>sftp://</code>), backed by the
+ * <a href="https://github.com/robtimus/sftp-fs">sftp-fs</a> NIO.2
+ * file system provider.
  * </p>
- * @see FtpFetcher
+ * @see com.norconex.crawler.fs.fetch.impl.ftp.FtpFetcher
  */
 @ToString
 @EqualsAndHashCode
-public class SftpFetcher extends AbstractAuthVfsFetcher<SftpFetcherConfig> {
+public class SftpFetcher extends AbstractNioFetcher<SftpFetcherConfig> {
 
     @Getter
     private final SftpFetcherConfig configuration = new SftpFetcherConfig();
 
+    private Map<String, Object> env;
+
     @Override
-    protected boolean acceptFileRequest(
-            @NonNull FileFetchRequest fetchRequest) {
+    protected void fetcherStartup(CrawlerSession crawler) {
+        super.fetcherStartup(crawler);
+        var cfg = configuration;
+        var sftpEnv = new SFTPEnvironment()
+                .withConfig(
+                        "StrictHostKeyChecking",
+                        cfg.getStrictHostKeyChecking());
+        if (cfg.getCredentials().isSet()) {
+            sftpEnv.withUsername(cfg.getCredentials().getUsername())
+                    .withPassword(EncryptionUtil.decryptPassword(
+                            cfg.getCredentials()).toCharArray());
+        }
+        if (cfg.getConnectTimeout() != null) {
+            sftpEnv.withConnectTimeout(
+                    (int) cfg.getConnectTimeout().toMillis());
+        }
+        if (cfg.getKnownHosts() != null) {
+            sftpEnv.withKnownHosts(cfg.getKnownHosts());
+        }
+        if (StringUtils.isNotBlank(cfg.getFileNameEncoding())) {
+            sftpEnv.withFilenameEncoding(
+                    Charset.forName(cfg.getFileNameEncoding()));
+        }
+        if (StringUtils.isNotBlank(cfg.getPreferredAuthentications())) {
+            sftpEnv.withConfig(
+                    "PreferredAuthentications",
+                    cfg.getPreferredAuthentications());
+        }
+        if (StringUtils.isNotBlank(cfg.getCompression())) {
+            sftpEnv.withConfig("compression.s2c", cfg.getCompression());
+            sftpEnv.withConfig("compression.c2s", cfg.getCompression());
+        }
+        env = sftpEnv;
+    }
+
+    @Override
+    protected boolean acceptRequest(@NonNull FetchRequest fetchRequest) {
         return referenceStartsWith(fetchRequest, "sftp://");
     }
 
     @Override
-    protected void applyFileSystemOptions(FileSystemOptions opts) {
-        var sftp = SftpFileSystemConfigBuilder.getInstance();
-        sftp.setCompression(opts, configuration.getCompression());
-        sftp.setConnectTimeout(opts, configuration.getConnectTimeout());
-        sftp.setKnownHosts(opts, configuration.getKnownHosts());
-        sftp.setFileNameEncoding(opts, configuration.getFileNameEncoding());
-        sftp.setPreferredAuthentications(
-                opts, configuration.getPreferredAuthentications());
-        try {
-            sftp.setStrictHostKeyChecking(
-                    opts, configuration.getStrictHostKeyChecking());
-        } catch (FileSystemException e) {
-            throw new CrawlerException(e);
+    protected Path resolvePath(String reference) throws IOException {
+        var uri = URI.create(reference);
+        var fs = getOrOpenFileSystem(uri, env);
+        var path = uri.getPath();
+        if (configuration.isUserDirIsRoot()
+                && path != null
+                && path.startsWith("/")) {
+            // Reinterpret as relative to the connection's default
+            // (home) directory rather than the true file system root.
+            path = path.substring(1);
         }
-        sftp.setUserDirIsRoot(opts, configuration.isUserDirIsRoot());
+        return fs.getPath(path);
     }
 }

@@ -1,4 +1,4 @@
-/* Copyright 2023-2024 Norconex Inc.
+/* Copyright 2023-2026 Norconex Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  */
 package com.norconex.crawler.fs.fetch.impl.local;
 
-import com.norconex.crawler.fs.fetch.impl.BaseAuthVfsFetcherConfig;
+import com.norconex.crawler.core.fetch.BaseFetcherConfig;
 
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -26,7 +26,7 @@ import lombok.experimental.Accessors;
  */
 @Data
 @Accessors(chain = true)
-public class LocalFetcherConfig extends BaseAuthVfsFetcherConfig {
+public class LocalFetcherConfig extends BaseFetcherConfig {
 
     private boolean aclDisabled;
 

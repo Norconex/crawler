@@ -15,6 +15,12 @@ Provides direct access to Apache Tika's parsing capabilities
 
 The importer mostly uses Apache Tika as its default parser to automatically extract textual content and metadata from diverse file types (including PDFs, Microsoft Office documents, images, and HTML). The TikaParser class offers users explicit control over this parsing process, enabling advanced configurations like custom MIME type handling, embedded resource extraction, OCR support, and user-defined Tika configuration files. If direct interaction or detailed customization of Tika parsing is required beyond Norconex’s default settings, users should explicitly configure and use TikaParser.
 
+:::tip[Built-in baseline, not a hard limit]
+The parser behavior and format coverage available through `TikaParser` are a
+built-in baseline. They can be extended and customized through parser
+configuration and pipeline composition for customer-specific requirements.
+:::
+
 ## Properties
 
 ### label

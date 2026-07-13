@@ -75,11 +75,70 @@ The File System Crawler is installed identically — substitute `web` with `fs` 
 and command (e.g. `nx-crawler-fs-4.0.0-standard.zip`, `crawl-fs.sh`).
 :::
 
-## Option 2 — Maven dependency
+## Install external committers when using ZIP distributions
+
+ZIP distributions include built-in committer support from `nx-committer-core`
+(for example, `LogCommitter`).
+
+If you want an external committer such as Elasticsearch, Solr, SQL, Kafka, Neo4j,
+Amazon CloudSearch, or Azure Cognitive Search, download the matching
+`nx-committer-<name>-<version>.zip` package separately and copy its JAR files into
+the crawler `lib/` directory.
+
+Example (Linux/macOS):
+
+```bash
+# From the crawler installation directory
+unzip -j nx-committer-elasticsearch-4.0.0.zip "*/lib/*.jar" -d lib/
+```
+
+Example (Windows PowerShell):
+
+```powershell
+# From the crawler installation directory
+Expand-Archive .\nx-committer-elasticsearch-4.0.0.zip -DestinationPath .\tmp-committer
+Copy-Item .\tmp-committer\*\lib\*.jar -Destination .\lib\ -Force
+Remove-Item .\tmp-committer -Recurse -Force
+```
+
+After copying the JARs, start (or restart) the crawler normally.
+
+## Option 2 — Use Docker images
+
+Norconex publishes official images to both Docker registries:
+
+- Docker Hub: `norconex/crawler-web`, `norconex/crawler-fs`, `norconex/crawler-web-playwright`
+- GitHub Container Registry: `ghcr.io/norconex/crawler-web`, `ghcr.io/norconex/crawler-fs`, `ghcr.io/norconex/crawler-web-playwright`
+
+Registry pages:
+
+- https://hub.docker.com/u/norconex
+- https://github.com/orgs/Norconex/packages
+
+Example pulls:
+
+```bash
+docker pull norconex/crawler-web:latest
+docker pull ghcr.io/norconex/crawler-fs:latest
+```
+
+Official Docker images already bundle the external committer JARs,
+so no separate committer installation is required in containers.
+
+For Docker Compose examples, tag strategy (`latest` vs `edge`), and runtime tips,
+see [Docker](./docker.md).
+
+## Option 3 — Maven dependency
 
 For embedding the crawler in a Java application, see [Java Integration](./java-integration).
 
-## Option 3 — Build from source
+## Configuration rules and defaults
+
+Before authoring larger configs, read [Configuration Semantics](../concepts/configuration-semantics.md)
+for shared behavior such as defaults, null vs empty values, variable resolution,
+and reusable fragments.
+
+## Option 4 — Build from source
 
 ```bash
 git clone https://github.com/Norconex/crawlers.git
@@ -96,4 +155,4 @@ The distribution ZIP files will be in `crawler/web/target/` or `crawler/fs/targe
 
 ---
 
-Next: [Web Quick Start](./quick-start-web) or [File System Quick Start](./quick-start-fs)
+Next: [Docker](./docker), [Web Quick Start](./quick-start-web), or [File System Quick Start](./quick-start-fs)

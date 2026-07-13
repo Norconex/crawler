@@ -103,6 +103,8 @@ public final class CrawlerContextFactory {
                         .fetchers(config.getFetchers())
                         .maxRetries(config
                                 .getFetchersMaxRetries())
+                        .retryDelay(config
+                                .getFetchersRetryDelay())
                         .responseAggregator(
                                 driver.fetchDriver()
                                         .responseAggregator())

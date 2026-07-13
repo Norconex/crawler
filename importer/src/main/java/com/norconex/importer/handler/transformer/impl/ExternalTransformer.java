@@ -37,8 +37,6 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
 
-import com.norconex.commons.lang.config.Configurable;
-import com.norconex.importer.handler.ConfigurableDocHandler;
 import com.norconex.commons.lang.exec.SystemCommand;
 import com.norconex.commons.lang.exec.SystemCommandException;
 import com.norconex.commons.lang.io.CachedStream;
@@ -47,7 +45,7 @@ import com.norconex.commons.lang.map.Properties;
 import com.norconex.commons.lang.map.PropertySetter;
 import com.norconex.commons.lang.text.RegexFieldValueExtractor;
 import com.norconex.importer.ImporterRuntimeException;
-import com.norconex.importer.handler.DocHandler;
+import com.norconex.importer.handler.ConfigurableDocHandler;
 import com.norconex.importer.handler.DocHandlerContext;
 
 import lombok.Data;
@@ -310,8 +308,10 @@ public class ExternalTransformer
                     }
                 }
             }
-            // Set extracted metadata on actual metadata
-            externalMeta.forEach(
+            // Set extracted metadata on actual metadata.
+            // Listener callbacks can still flush a last line right after
+            // command completion, so wait for a stable snapshot first.
+            stableMetaSnapshot(externalMeta).forEach(
                     (k, v) -> PropertySetter
                             .orAppend(configuration.getOnSet())
                             .apply(docCtx.metadata(), k, v));
@@ -319,6 +319,27 @@ public class ExternalTransformer
             files.deleteAll();
         }
         return true;
+    }
+
+    private static Properties stableMetaSnapshot(Properties metadata) {
+        var previous = new Properties();
+        for (var i = 0; i < 10; i++) {
+            var current = new Properties();
+            current.putAll(metadata);
+            if (current.equals(previous)) {
+                return current;
+            }
+            previous = current;
+            try {
+                Thread.sleep(20);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+        var fallback = new Properties();
+        fallback.putAll(metadata);
+        return fallback;
     }
 
     private int executeCommand(

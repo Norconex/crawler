@@ -1,0 +1,115 @@
+---
+component: S3Fetcher
+module: crawler/fs
+locale: en
+propertyCoverage: all
+---
+
+# S3Fetcher
+
+## Summary
+
+Amazon S3 fetcher (`s3://`).
+
+## Notes
+
+Fetches documents from Amazon S3 using references such as
+`s3://my-bucket/path/to/object.txt`.
+
+Supports AWS default credentials, explicit access keys via `credentials`, and
+S3-compatible endpoints.
+
+The fetcher is designed to support common S3-compatible object stores (for
+example MinIO, Ceph RGW, and Cloudflare R2) by combining `endpoint`, `region`,
+and `forcePathStyle` as needed by the target platform.
+
+S3 has no real directories. Folder-like paths are derived from object key
+prefixes.
+
+## Properties
+
+### credentials
+
+Optional AWS credentials for authentication.
+
+- Username: access key ID
+- Password: secret access key
+
+If not set, the AWS SDK default credential provider chain is used.
+
+### domain
+
+The domain name for authentication when accessing the remote resource.
+
+### endpoint
+
+Optional custom endpoint URL for S3-compatible services (for example MinIO).
+
+### forcePathStyle
+
+Whether path-style bucket addressing is used (`endpoint/bucket/key`) instead of
+virtual-hosted style (`bucket.endpoint/key`).
+
+### referenceFilters
+
+Filters applied to document references (URLs or file paths) to control which
+ones are fetched. Documents whose references do not pass the filters are
+skipped.
+
+### region
+
+AWS region where the bucket lives (for example `us-east-1`). If not set, the
+AWS SDK default region provider chain is used.
+
+## Examples
+
+The following example uses AWS default credentials and region resolution.
+
+<ConfigBlock
+  json={{
+    "class": "S3Fetcher"
+  }}
+/>
+
+The following example targets a MinIO endpoint.
+
+<ConfigBlock
+  json={{
+    "class": "S3Fetcher",
+    "endpoint": "http://localhost:9000",
+    "forcePathStyle": true,
+    "credentials": {
+      "username": "minioadmin",
+      "password": "minioadmin"
+    }
+  }}
+/>
+
+The following example targets a Ceph RGW endpoint.
+
+<ConfigBlock
+  json={{
+    "class": "S3Fetcher",
+    "endpoint": "https://ceph.example.com",
+    "region": "us-east-1",
+    "forcePathStyle": true,
+    "credentials": {
+      "username": "access-key",
+      "password": "secret-key"
+    }
+  }}
+/>
+
+The following example targets a Cloudflare R2 endpoint.
+
+<ConfigBlock
+  json={{
+    "class": "S3Fetcher",
+    "endpoint": "https://<account-id>.r2.cloudflarestorage.com",
+    "region": "auto",
+    "credentials": {
+      "username": "r2-access-key",
+      "password": "r2-secret-key"
+    }
+  }}
+/>

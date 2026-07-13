@@ -235,6 +235,73 @@ class GoogleCloudSearchClientTest {
         assertThat(batchBody).contains("DELETE");
         assertThat(batchBody).contains("Example title");
         assertThat(batchBody).contains("reader@example.com");
+
+        // Item.version is a base64-encoded bytes field on the wire.
+        // Regression test for a bug where the raw, unencoded version
+        // string was sent as-is, which the real Cloud Search API
+        // rejected with "Base64 decoding failed".
+        var versionMatcher = java.util.regex.Pattern
+                .compile("\"version\":\"([^\"]+)\"")
+                .matcher(batchBody);
+        assertThat(versionMatcher.find()).isTrue();
+        var decodedVersion = new String(
+                java.util.Base64.getUrlDecoder()
+                        .decode(versionMatcher.group(1)),
+                UTF_8);
+        assertThat(decodedVersion).matches("\\d{19}-\\d{6}");
+    }
+
+    @Test
+    void rawUploadToleratesEmptyMediaUploadResponse() throws Exception {
+        var transport = new RecordingTransport();
+        // 1. indexing.datasources.items.upload (start upload session).
+        transport.enqueue(
+                jsonResponse(
+                        "application/json",
+                        "{\"name\":\"uploadItems/test-upload\"}"));
+        // 2. media.upload: the real Cloud Search API returns an empty
+        //    body on success here, unlike the Media-typed response the
+        //    generated client stub declares. Regression test for a bug
+        //    where that empty body failed to parse as JSON.
+        transport.enqueue(new MockLowLevelHttpResponse().setStatusCode(200));
+        // 3. batch execute.
+        transport.enqueue(
+                jsonResponse(
+                        successfulBatchResponseHeader(),
+                        successfulBatchResponseBody("operations/index-raw")));
+
+        var config = newConfig().setUploadFormat(UploadFormat.RAW);
+
+        var cloudSearch = new CloudSearch.Builder(
+                transport, GsonFactory.getDefaultInstance(),
+                noOpInitializer())
+                        .setApplicationName(config.getApplicationName())
+                        .setRootUrl("https://mock.local/")
+                        .build();
+
+        var client = new GoogleCloudSearchClient(
+                config, cloudSearch, () -> 1000L);
+
+        var metadata = new Properties();
+        metadata.set(
+                GoogleCloudSearchClient.FIELD_BINARY_CONTENT,
+                java.util.Base64.getEncoder().encodeToString(
+                        "test body".getBytes(UTF_8)));
+        metadata.set(GoogleCloudSearchClient.FIELD_CONTENT_TYPE, "text/plain");
+        metadata.set("title", "Raw title");
+
+        List<CommitterRequest> requests = new ArrayList<>();
+        requests.add(
+                new UpsertRequest(
+                        REFERENCE, metadata,
+                        new ByteArrayInputStream(
+                                "ignored".getBytes(UTF_8))));
+
+        client.post(requests.iterator());
+
+        assertThat(transport.getUrls())
+                .anyMatch(url -> url.contains("/upload/v1/media/"));
+        assertThat(transport.getUrls()).contains("https://mock.local/batch");
     }
 
     // --- Helpers ---------------------------------------------------------

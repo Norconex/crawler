@@ -14,7 +14,7 @@
  */
 package com.norconex.crawler.fs.fetch.impl.archive;
 
-import com.norconex.crawler.fs.fetch.impl.BaseAuthVfsFetcherConfig;
+import com.norconex.crawler.fs.fetch.impl.BaseAuthNioFetcherConfig;
 
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -24,9 +24,9 @@ import lombok.experimental.Accessors;
  */
 @Data
 @Accessors(chain = true)
-public class ArchiveFetcherConfig extends BaseAuthVfsFetcherConfig {
+public class ArchiveFetcherConfig extends BaseAuthNioFetcherConfig {
     // No extra config beyond inherited auth (credentials + domain).
     // If the inner file system (e.g. FTP, SFTP) requires authentication,
-    // set the credentials here; they will be forwarded automatically by VFS
-    // when resolving the inner scheme.
+    // set the credentials here; they will be forwarded automatically to
+    // the inner scheme.
 }
