@@ -22,6 +22,7 @@ import java.net.URI;
 import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
@@ -105,5 +106,51 @@ class SmbModelTest {
         assertThat(provider.openFileSystems()).isEmpty();
         assertThatThrownBy(() -> provider.getFileSystem(uri))
                 .isInstanceOf(FileSystemNotFoundException.class);
+    }
+
+    @Test
+    void testProviderAndPathEdgeCases() {
+        var provider = new SmbFileSystemProvider();
+        var ctx = mock(CIFSContext.class);
+        var uri = URI.create("smb://fileserver.example.com/share/root");
+        var fs = provider.getOrCreateFileSystem(uri, ctx);
+
+        assertThat(fs.getPathMatcher("glob:*.txt")).isNotNull();
+        assertThatThrownBy(() -> fs.getPathMatcher("regex:.*"))
+                .isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(() -> fs.getPathMatcher("invalid"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(fs::getUserPrincipalLookupService)
+                .isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(fs::newWatchService)
+                .isInstanceOf(UnsupportedOperationException.class);
+
+        var root = fs.getPath("/");
+        var nested = fs.getPath("/share/a/./b/../c.txt");
+
+        assertThat(root.getFileName()).isNull();
+        assertThat(root.getParent()).isNull();
+        assertThat(nested.toString()).isEqualTo("/share/a/c.txt");
+        assertThat(nested.startsWith("/share/a")).isTrue();
+        assertThat(nested.endsWith("/c.txt")).isTrue();
+        assertThat(nested.startsWith("/other")).isFalse();
+        assertThat(nested.endsWith("/other.txt")).isFalse();
+        assertThat(nested.relativize(fs.getPath("/share/a/d/e.txt")).toString())
+                .isEqualTo("/../d/e.txt");
+        assertThatThrownBy(() -> nested.relativize(Path.of("x")))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        assertThat(fs.getRootDirectories()).containsExactly(root);
+        assertThat(fs.supportedFileAttributeViews()).containsExactly("basic");
+        assertThat(fs.getFileStores()).isEmpty();
+        assertThat(fs.getPath("/share", "folder", "file.txt").toString())
+                .isEqualTo("/share/folder/file.txt");
+        assertThat(fs.getPath("/share/a/b.txt").normalize())
+                .isEqualTo(fs.getPath("/share/a/b.txt"));
+        assertThat(fs.getPath("/share/a/b.txt").toAbsolutePath())
+                .isEqualTo(fs.getPath("/share/a/b.txt"));
+
+        assertThatThrownBy(() -> provider.newFileSystem(uri, Map.of()))
+                .isInstanceOf(UnsupportedOperationException.class);
     }
 }

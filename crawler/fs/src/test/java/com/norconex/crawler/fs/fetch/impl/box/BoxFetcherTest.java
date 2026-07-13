@@ -39,24 +39,24 @@ import com.norconex.importer.doc.Doc;
 @Timeout(30)
 class BoxFetcherTest {
 
-        private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-        @Test
-        void testAcceptRequest() {
-                var f = new StubBoxFetcher();
+    @Test
+    void testAcceptRequest() {
+        var f = new StubBoxFetcher();
 
-                assertThat(f.accept(new FileFetchRequest(
-                                new Doc("box://ent-01/folders/0/items/123"),
-                                DOCUMENT))).isTrue();
-                assertThat(f.accept(new FileFetchRequest(
-                                new Doc("gdrive://tenant/drives/abc/items/123"),
-                                DOCUMENT))).isFalse();
-        }
+        assertThat(f.accept(new FileFetchRequest(
+                new Doc("box://ent-01/folders/0/items/123"),
+                DOCUMENT))).isTrue();
+        assertThat(f.accept(new FileFetchRequest(
+                new Doc("gdrive://tenant/drives/abc/items/123"),
+                DOCUMENT))).isFalse();
+    }
 
-        @Test
-        void testFetchFileItem() throws Exception {
-                var f = new StubBoxFetcher();
-                f.item = new BoxFetcher.BoxItem(objectMapper.readTree("""
+    @Test
+    void testFetchFileItem() throws Exception {
+        var f = new StubBoxFetcher();
+        f.item = new BoxFetcher.BoxItem(objectMapper.readTree("""
                 {
                   "id":"123",
                   "type":"file",
@@ -70,56 +70,56 @@ class BoxFetcherTest {
                 }
                 """), true, false);
 
-                var doc = new Doc("box://ent-01/folders/0/items/123");
-                var response = (FileFetchResponse) f.fetch(
-                                new FileFetchRequest(doc, DOCUMENT));
+        var doc = new Doc("box://ent-01/folders/0/items/123");
+        var response = (FileFetchResponse) f.fetch(
+                new FileFetchRequest(doc, DOCUMENT));
 
-                assertThat(response.getProcessingOutcome())
-                                .isEqualTo(ProcessingOutcome.NEW);
-                assertThat(response.isFile()).isTrue();
-                assertThat(response.isFolder()).isFalse();
-                assertThat(f.lastContentPath).isEqualTo("/files/123/content");
-                assertThat(doc.getInputStream()).isNotNull();
-                assertThat(doc.getMetadata().getString("crawler.box.id"))
-                                .isEqualTo("123");
-                assertThat(doc.getMetadata().getString("crawler.box.type"))
-                                .isEqualTo("file");
-        }
+        assertThat(response.getProcessingOutcome())
+                .isEqualTo(ProcessingOutcome.NEW);
+        assertThat(response.isFile()).isTrue();
+        assertThat(response.isFolder()).isFalse();
+        assertThat(f.lastContentPath).isEqualTo("/files/123/content");
+        assertThat(doc.getInputStream()).isNotNull();
+        assertThat(doc.getMetadata().getString("crawler.box.id"))
+                .isEqualTo("123");
+        assertThat(doc.getMetadata().getString("crawler.box.type"))
+                .isEqualTo("file");
+    }
 
-        @Test
-        void testFetchFileNonItemReferenceReturnsFolder() throws Exception {
-                var f = new StubBoxFetcher();
+    @Test
+    void testFetchFileNonItemReferenceReturnsFolder() throws Exception {
+        var f = new StubBoxFetcher();
 
-                var response = (FileFetchResponse) f.fetch(
-                                new FileFetchRequest(new Doc(
-                                                "box://ent-01/folders/0"),
-                                                DOCUMENT));
+        var response = (FileFetchResponse) f.fetch(
+                new FileFetchRequest(new Doc(
+                        "box://ent-01/folders/0"),
+                        DOCUMENT));
 
-                assertThat(response.getProcessingOutcome())
-                                .isEqualTo(ProcessingOutcome.NEW);
-                assertThat(response.isFolder()).isTrue();
-                assertThat(response.isFile()).isFalse();
-        }
+        assertThat(response.getProcessingOutcome())
+                .isEqualTo(ProcessingOutcome.NEW);
+        assertThat(response.isFolder()).isTrue();
+        assertThat(response.isFile()).isFalse();
+    }
 
-        @Test
-        void testFetchFileNotFoundWhenItemMissing() throws Exception {
-                var f = new StubBoxFetcher();
+    @Test
+    void testFetchFileNotFoundWhenItemMissing() throws Exception {
+        var f = new StubBoxFetcher();
 
-                var response = (FileFetchResponse) f.fetch(
-                                new FileFetchRequest(
-                                                new Doc("box://ent-01/folders/0/items/missing"),
-                                                DOCUMENT));
+        var response = (FileFetchResponse) f.fetch(
+                new FileFetchRequest(
+                        new Doc("box://ent-01/folders/0/items/missing"),
+                        DOCUMENT));
 
-                assertThat(response.getProcessingOutcome())
-                                .isEqualTo(ProcessingOutcome.NOT_FOUND);
-        }
+        assertThat(response.getProcessingOutcome())
+                .isEqualTo(ProcessingOutcome.NOT_FOUND);
+    }
 
-        @Test
-        void testFetchFileFolderSkipsContentAndSupportsNullContentBytes()
-                        throws Exception {
-                var folderFetcher = new StubBoxFetcher();
-                folderFetcher.item =
-                                new BoxFetcher.BoxItem(objectMapper.readTree("""
+    @Test
+    void testFetchFileFolderSkipsContentAndSupportsNullContentBytes()
+            throws Exception {
+        var folderFetcher = new StubBoxFetcher();
+        folderFetcher.item =
+                new BoxFetcher.BoxItem(objectMapper.readTree("""
                 {
                   "id":"200",
                   "type":"folder",
@@ -127,64 +127,64 @@ class BoxFetcherTest {
                 }
                 """), false, true);
 
-                var folderDoc = new Doc("box://ent-01/folders/0/items/200");
-                var folderResponse = (FileFetchResponse) folderFetcher.fetch(
-                                new FileFetchRequest(folderDoc, DOCUMENT));
+        var folderDoc = new Doc("box://ent-01/folders/0/items/200");
+        var folderResponse = (FileFetchResponse) folderFetcher.fetch(
+                new FileFetchRequest(folderDoc, DOCUMENT));
 
-                assertThat(folderResponse.getProcessingOutcome())
-                                .isEqualTo(ProcessingOutcome.NEW);
-                assertThat(folderResponse.isFolder()).isTrue();
-                assertThat(folderFetcher.lastContentPath).isNull();
+        assertThat(folderResponse.getProcessingOutcome())
+                .isEqualTo(ProcessingOutcome.NEW);
+        assertThat(folderResponse.isFolder()).isTrue();
+        assertThat(folderFetcher.lastContentPath).isNull();
 
-                var fileFetcher = new StubBoxFetcher();
-                fileFetcher.item = new BoxFetcher.BoxItem(objectMapper.readTree("""
+        var fileFetcher = new StubBoxFetcher();
+        fileFetcher.item = new BoxFetcher.BoxItem(objectMapper.readTree("""
                 {
                   "id":"300",
                   "type":"file",
                   "name":"null-content.txt"
                 }
                 """), true, false);
-                fileFetcher.returnNullContentBytes = true;
-                var fileDoc = new Doc("box://ent-01/folders/0/items/300");
+        fileFetcher.returnNullContentBytes = true;
+        var fileDoc = new Doc("box://ent-01/folders/0/items/300");
 
-                var fileResponse = (FileFetchResponse) fileFetcher.fetch(
-                                new FileFetchRequest(fileDoc, DOCUMENT));
+        var fileResponse = (FileFetchResponse) fileFetcher.fetch(
+                new FileFetchRequest(fileDoc, DOCUMENT));
 
-                assertThat(fileResponse.getProcessingOutcome())
-                                .isEqualTo(ProcessingOutcome.NEW);
-                assertThat(fileFetcher.lastContentPath)
-                                .isEqualTo("/files/300/content");
-        }
+        assertThat(fileResponse.getProcessingOutcome())
+                .isEqualTo(ProcessingOutcome.NEW);
+        assertThat(fileFetcher.lastContentPath)
+                .isEqualTo("/files/300/content");
+    }
 
-        @Test
-        void testFetchFileBadStatusAndIoHandling() throws Exception {
-                var badStatusFetcher = new StubBoxFetcher();
-                badStatusFetcher.throwItemStatus = true;
+    @Test
+    void testFetchFileBadStatusAndIoHandling() throws Exception {
+        var badStatusFetcher = new StubBoxFetcher();
+        badStatusFetcher.throwItemStatus = true;
 
-                var badStatusResponse =
-                                (FileFetchResponse) badStatusFetcher.fetch(
-                                                new FileFetchRequest(
-                                                                new Doc("box://ent-01/folders/0/items/123"),
-                                                                DOCUMENT));
-                assertThat(badStatusResponse.getProcessingOutcome())
-                                .isEqualTo(ProcessingOutcome.BAD_STATUS);
+        var badStatusResponse =
+                (FileFetchResponse) badStatusFetcher.fetch(
+                        new FileFetchRequest(
+                                new Doc("box://ent-01/folders/0/items/123"),
+                                DOCUMENT));
+        assertThat(badStatusResponse.getProcessingOutcome())
+                .isEqualTo(ProcessingOutcome.BAD_STATUS);
 
-                var ioFetcher = new StubBoxFetcher();
-                ioFetcher.throwItemIo = true;
-                assertThatThrownBy(() -> ioFetcher.fetch(
-                                new FileFetchRequest(
-                                                new Doc("box://ent-01/folders/0/items/123"),
-                                                DOCUMENT)))
-                                                                .isInstanceOf(
-                                                                                com.norconex.crawler.core.fetch.FetchException.class)
-                                                                .hasMessageContaining(
-                                                                                "Could not fetch Box reference");
-        }
+        var ioFetcher = new StubBoxFetcher();
+        ioFetcher.throwItemIo = true;
+        assertThatThrownBy(() -> ioFetcher.fetch(
+                new FileFetchRequest(
+                        new Doc("box://ent-01/folders/0/items/123"),
+                        DOCUMENT)))
+                                .isInstanceOf(
+                                        com.norconex.crawler.core.fetch.FetchException.class)
+                                .hasMessageContaining(
+                                        "Could not fetch Box reference");
+    }
 
-        @Test
-        void testFetchFolderReturnsChildPathsAcrossPages() throws Exception {
-                var f = new StubBoxFetcher();
-                f.folderPages.add(objectMapper.readTree("""
+    @Test
+    void testFetchFolderReturnsChildPathsAcrossPages() throws Exception {
+        var f = new StubBoxFetcher();
+        f.folderPages.add(objectMapper.readTree("""
                 {
                   "entries":[
                     {"id":"100","type":"file"},
@@ -194,7 +194,7 @@ class BoxFetcherTest {
                   "total_count":3
                 }
                 """));
-                f.folderPages.add(objectMapper.readTree("""
+        f.folderPages.add(objectMapper.readTree("""
                 {
                   "entries":[
                     {"id":"300","type":"file"}
@@ -204,61 +204,61 @@ class BoxFetcherTest {
                 }
                 """));
 
-                var response = (FolderPathsFetchResponse) f.fetch(
-                                new FolderPathsFetchRequest(new Doc(
-                                                "box://ent-01/folders/0")));
+        var response = (FolderPathsFetchResponse) f.fetch(
+                new FolderPathsFetchRequest(new Doc(
+                        "box://ent-01/folders/0")));
 
-                assertThat(response.getProcessingOutcome())
-                                .isEqualTo(ProcessingOutcome.NEW);
-                assertThat(response.getChildPaths())
-                                .extracting(path -> path.getUri())
-                                .containsExactlyInAnyOrder(
-                                                "box://ent-01/folders/0/items/100",
-                                                "box://ent-01/folders/0/items/200",
-                                                "box://ent-01/folders/0/items/300");
-        }
+        assertThat(response.getProcessingOutcome())
+                .isEqualTo(ProcessingOutcome.NEW);
+        assertThat(response.getChildPaths())
+                .extracting(path -> path.getUri())
+                .containsExactlyInAnyOrder(
+                        "box://ent-01/folders/0/items/100",
+                        "box://ent-01/folders/0/items/200",
+                        "box://ent-01/folders/0/items/300");
+    }
 
-        @Test
-        void testFetchFolderNotFound() throws Exception {
-                var f = new StubBoxFetcher();
-                f.returnNullFolderPage = true;
+    @Test
+    void testFetchFolderNotFound() throws Exception {
+        var f = new StubBoxFetcher();
+        f.returnNullFolderPage = true;
 
-                var response = (FolderPathsFetchResponse) f.fetch(
-                                new FolderPathsFetchRequest(
-                                                new Doc("box://ent-01/folders/999")));
+        var response = (FolderPathsFetchResponse) f.fetch(
+                new FolderPathsFetchRequest(
+                        new Doc("box://ent-01/folders/999")));
 
-                assertThat(response.getProcessingOutcome())
-                                .isEqualTo(ProcessingOutcome.NOT_FOUND);
-        }
+        assertThat(response.getProcessingOutcome())
+                .isEqualTo(ProcessingOutcome.NOT_FOUND);
+    }
 
-        @Test
-        void testFetchFolderBadStatusAndIoHandling() throws Exception {
-                var badStatusFetcher = new StubBoxFetcher();
-                badStatusFetcher.throwFolderStatus = true;
+    @Test
+    void testFetchFolderBadStatusAndIoHandling() throws Exception {
+        var badStatusFetcher = new StubBoxFetcher();
+        badStatusFetcher.throwFolderStatus = true;
 
-                var badStatus = (FolderPathsFetchResponse) badStatusFetcher
-                                .fetch(
-                                                new FolderPathsFetchRequest(
-                                                                new Doc("box://ent-01/folders/0")));
-                assertThat(badStatus.getProcessingOutcome())
-                                .isEqualTo(ProcessingOutcome.BAD_STATUS);
-                assertThat(badStatus.getChildPaths()).isEmpty();
+        var badStatus = (FolderPathsFetchResponse) badStatusFetcher
+                .fetch(
+                        new FolderPathsFetchRequest(
+                                new Doc("box://ent-01/folders/0")));
+        assertThat(badStatus.getProcessingOutcome())
+                .isEqualTo(ProcessingOutcome.BAD_STATUS);
+        assertThat(badStatus.getChildPaths()).isEmpty();
 
-                var ioFetcher = new StubBoxFetcher();
-                ioFetcher.throwFolderIo = true;
-                assertThatThrownBy(() -> ioFetcher.fetch(
-                                new FolderPathsFetchRequest(new Doc(
-                                                "box://ent-01/folders/0"))))
-                                                                .isInstanceOf(
-                                                                                com.norconex.crawler.core.fetch.FetchException.class)
-                                                                .hasMessageContaining(
-                                                                                "Could not fetch Box child references");
-        }
+        var ioFetcher = new StubBoxFetcher();
+        ioFetcher.throwFolderIo = true;
+        assertThatThrownBy(() -> ioFetcher.fetch(
+                new FolderPathsFetchRequest(new Doc(
+                        "box://ent-01/folders/0"))))
+                                .isInstanceOf(
+                                        com.norconex.crawler.core.fetch.FetchException.class)
+                                .hasMessageContaining(
+                                        "Could not fetch Box child references");
+    }
 
-        @Test
-        void testFetchFolderIgnoresMissingIdAndUnknownType() throws Exception {
-                var f = new StubBoxFetcher();
-                f.folderPages.add(objectMapper.readTree("""
+    @Test
+    void testFetchFolderIgnoresMissingIdAndUnknownType() throws Exception {
+        var f = new StubBoxFetcher();
+        f.folderPages.add(objectMapper.readTree("""
                 {
                   "entries":[
                     {"id":"100","type":"file"},
@@ -271,27 +271,27 @@ class BoxFetcherTest {
                 }
                 """));
 
-                var response = (FolderPathsFetchResponse) f.fetch(
-                                new FolderPathsFetchRequest(new Doc(
-                                                "box://ent-01/folders/0")));
+        var response = (FolderPathsFetchResponse) f.fetch(
+                new FolderPathsFetchRequest(new Doc(
+                        "box://ent-01/folders/0")));
 
-                assertThat(response.getProcessingOutcome())
-                                .isEqualTo(ProcessingOutcome.NEW);
-                assertThat(response.getChildPaths())
-                                .extracting(path -> path.getUri() + ":"
-                                                + path.isFile() + ":"
-                                                + path.isFolder())
-                                .containsExactlyInAnyOrder(
-                                                "box://ent-01/folders/0/items/100:true:false",
-                                                "box://ent-01/folders/0/items/200:false:true",
-                                                "box://ent-01/folders/0/items/300:false:false");
-        }
+        assertThat(response.getProcessingOutcome())
+                .isEqualTo(ProcessingOutcome.NEW);
+        assertThat(response.getChildPaths())
+                .extracting(path -> path.getUri() + ":"
+                        + path.isFile() + ":"
+                        + path.isFolder())
+                .containsExactlyInAnyOrder(
+                        "box://ent-01/folders/0/items/100:true:false",
+                        "box://ent-01/folders/0/items/200:false:true",
+                        "box://ent-01/folders/0/items/300:false:false");
+    }
 
-        @Test
-        void testFetchMetadataStoresInvalidDateFallback() throws Exception {
-                var f = new StubBoxFetcher();
-                var doc = new Doc("box://ent-01/folders/0/items/123");
-                var item = new BoxFetcher.BoxItem(objectMapper.readTree("""
+    @Test
+    void testFetchMetadataStoresInvalidDateFallback() throws Exception {
+        var f = new StubBoxFetcher();
+        var doc = new Doc("box://ent-01/folders/0/items/123");
+        var item = new BoxFetcher.BoxItem(objectMapper.readTree("""
                 {
                   "id":"123",
                   "type":"file",
@@ -300,68 +300,68 @@ class BoxFetcherTest {
                 }
                 """), true, false);
 
-                f.fetchMetadata(doc, item);
+        f.fetchMetadata(doc, item);
 
-                assertThat(doc.getMetadata().getLong("crawler.box.created"))
-                                .isNull();
-                assertThat(doc.getMetadata().getLong("fs.lastModified"))
-                                .isNull();
-                assertThat(doc.getMetadata().getString(
-                                "crawler.box.invalidDate.crawler.box.created"))
-                                                .isEqualTo("not-a-date");
-                assertThat(doc.getMetadata().getString(
-                                "crawler.box.invalidDate."
-                                                + FsDocMetadata.LAST_MODIFIED))
-                                                                .isEqualTo("invalid-modified");
+        assertThat(doc.getMetadata().getLong("crawler.box.created"))
+                .isNull();
+        assertThat(doc.getMetadata().getLong("fs.lastModified"))
+                .isNull();
+        assertThat(doc.getMetadata().getString(
+                "crawler.box.invalidDate.crawler.box.created"))
+                        .isEqualTo("not-a-date");
+        assertThat(doc.getMetadata().getString(
+                "crawler.box.invalidDate."
+                        + FsDocMetadata.LAST_MODIFIED))
+                                .isEqualTo("invalid-modified");
+    }
+
+    private static class StubBoxFetcher extends BoxFetcher {
+        private final Deque<JsonNode> folderPages = new ArrayDeque<>();
+        private BoxFetcher.BoxItem item;
+        private String lastContentPath;
+        private boolean returnNullFolderPage;
+        private boolean returnNullContentBytes;
+        private boolean throwItemStatus;
+        private boolean throwItemIo;
+        private boolean throwFolderStatus;
+        private boolean throwFolderIo;
+
+        @Override
+        BoxFetcher.BoxItem fetchBoxItemNode(BoxReference ref)
+                throws IOException {
+            if (throwItemStatus) {
+                throw new BoxFetcher.BoxHttpStatusException(500,
+                        "bad");
+            }
+            if (throwItemIo) {
+                throw new IOException("boom-item");
+            }
+            return item;
         }
 
-        private static class StubBoxFetcher extends BoxFetcher {
-                private final Deque<JsonNode> folderPages = new ArrayDeque<>();
-                private BoxFetcher.BoxItem item;
-                private String lastContentPath;
-                private boolean returnNullFolderPage;
-                private boolean returnNullContentBytes;
-                private boolean throwItemStatus;
-                private boolean throwItemIo;
-                private boolean throwFolderStatus;
-                private boolean throwFolderIo;
-
-                @Override
-                BoxFetcher.BoxItem fetchBoxItemNode(BoxReference ref)
-                                throws IOException {
-                        if (throwItemStatus) {
-                                throw new BoxFetcher.BoxHttpStatusException(500,
-                                                "bad");
-                        }
-                        if (throwItemIo) {
-                                throw new IOException("boom-item");
-                        }
-                        return item;
-                }
-
-                @Override
-                JsonNode fetchFolderItemsNode(BoxReference ref, int offset)
-                                throws IOException {
-                        if (returnNullFolderPage) {
-                                return null;
-                        }
-                        if (throwFolderStatus) {
-                                throw new BoxFetcher.BoxHttpStatusException(500,
-                                                "bad");
-                        }
-                        if (throwFolderIo) {
-                                throw new IOException("boom-folder");
-                        }
-                        return folderPages.pollFirst();
-                }
-
-                @Override
-                byte[] fetchContentBytes(String path) throws IOException {
-                        lastContentPath = path;
-                        if (returnNullContentBytes) {
-                                return null;
-                        }
-                        return "payload".getBytes(StandardCharsets.UTF_8);
-                }
+        @Override
+        JsonNode fetchFolderItemsNode(BoxReference ref, int offset)
+                throws IOException {
+            if (returnNullFolderPage) {
+                return null;
+            }
+            if (throwFolderStatus) {
+                throw new BoxFetcher.BoxHttpStatusException(500,
+                        "bad");
+            }
+            if (throwFolderIo) {
+                throw new IOException("boom-folder");
+            }
+            return folderPages.pollFirst();
         }
+
+        @Override
+        byte[] fetchContentBytes(String path) throws IOException {
+            lastContentPath = path;
+            if (returnNullContentBytes) {
+                return null;
+            }
+            return "payload".getBytes(StandardCharsets.UTF_8);
+        }
+    }
 }
