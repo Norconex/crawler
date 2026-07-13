@@ -79,7 +79,6 @@ public class CliConfigRender extends CliBase {
         } catch (InvalidPathException | IOException e) {
             var msg = "Could not render config: "
                     + ExceptionUtil.getFormattedMessages(e);
-            err().println(msg);
             throw new CliException(msg, e);
         }
     }
