@@ -17,11 +17,10 @@ package com.norconex.importer.handler.condition.impl;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.norconex.commons.lang.config.Configurable;
 import com.norconex.commons.lang.map.PropertyMatcher;
 import com.norconex.commons.lang.text.TextMatcher;
 import com.norconex.importer.handler.DocHandlerContext;
-import com.norconex.importer.handler.condition.Condition;
+import com.norconex.importer.handler.condition.ConfigurableCondition;
 import com.norconex.importer.util.chunk.ChunkedTextReader;
 
 import lombok.Data;
@@ -60,7 +59,7 @@ import lombok.Data;
 @SuppressWarnings("javadoc")
 @Data
 public class TextCondition
-        implements Condition, Configurable<TextConditionConfig> {
+        implements ConfigurableCondition<TextConditionConfig> {
 
     private final TextConditionConfig configuration =
             new TextConditionConfig();

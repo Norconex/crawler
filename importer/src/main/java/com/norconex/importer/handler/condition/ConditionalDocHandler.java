@@ -22,16 +22,17 @@ import java.util.List;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import tools.jackson.databind.annotation.JsonDeserialize;
-import tools.jackson.databind.annotation.JsonSerialize;
 import com.norconex.commons.lang.collection.CollectionUtil;
 import com.norconex.importer.handler.DocHandler;
 import com.norconex.importer.handler.DocHandlerContext;
 import com.norconex.importer.handler.DocHandlerListDeserializer;
 import com.norconex.importer.handler.DocHandlerListSerializer;
+import com.norconex.importer.handler.Labelable;
 
 import lombok.Data;
 import lombok.NonNull;
+import tools.jackson.databind.annotation.JsonDeserialize;
+import tools.jackson.databind.annotation.JsonSerialize;
 
 /**
  * Conditionally execute one or more doc handlers (possibly including other
@@ -44,7 +45,9 @@ import lombok.NonNull;
     use = JsonTypeInfo.Id.NAME,
     include = JsonTypeInfo.As.WRAPPER_OBJECT
 )
-public abstract class ConditionalDocHandler implements DocHandler {
+public abstract class ConditionalDocHandler implements DocHandler, Labelable {
+
+    private String label;
 
     @JsonIgnore
     private final boolean negated;

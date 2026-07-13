@@ -13,29 +13,25 @@ Apache Hadoop File System (HDFS) fetcher.
 
 ## Notes
 
-Fetches documents from Apache Hadoop File System (HDFS). Supports credential configuration and loading of additional HDFS configuration resources by name, path, or URL to override default settings.
+Fetches documents from Apache Hadoop File System (HDFS) using the `webhdfs://` scheme. Supports simple authentication and Kerberos/SPNEGO authentication.
 
 ## Properties
 
-### configNames
+### authMethod
 
-Names of configuration resources to be loaded after the defaults, to override any specific HDFS settings.
-
-### configPaths
-
-Paths of local file system configuration files to be loaded after the defaults, to override any specific HDFS settings.
-
-### configUrls
-
-URLs of configuration files to be loaded after the defaults, to override any specific HDFS settings.
+Authentication method. Defaults to `SIMPLE`. Set to `KERBEROS` to use Kerberos/SPNEGO authentication.
 
 ### credentials
 
-Username and password to a protected HDFS.
+Optional credentials for the target HDFS. With `SIMPLE`, the username is sent as the `user.name` query parameter. With `KERBEROS`, credentials can be used for username/password-based JAAS login.
 
 ### domain
 
 The domain name for authentication when accessing the remote resource.
+
+### kerberosConfig
+
+Kerberos/SPNEGO settings used when `authMethod` is `KERBEROS`. See `KerberosConfig` for details.
 
 ### referenceFilters
 

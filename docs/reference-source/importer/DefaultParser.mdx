@@ -15,6 +15,13 @@ Generic document parser for raw content passthrough or text decoding
 
 It uses Apacke Tika for most of its supported content types. For unknown content types, it falls back to Tika generic media detector/parser.
 
+:::tip[Built-in baseline, not a hard limit]
+The format coverage described for `DefaultParser` reflects built-in importer
+capabilities in Norconex Crawler. It is a practical baseline, not a fixed
+ceiling. Teams can extend parser behavior and pipeline logic for
+customer-specific formats and extraction requirements.
+:::
+
 ### Embedded
 
 By default, embedded documents (e.g., attachments in emails, files in ZIP archives) are merged into their container (parent) document. You can configure the parser to split embedded documents, allowing each to be processed individually through the full import cycle. You can also control whether embedded documents should be skipped during processing.
@@ -92,6 +99,10 @@ Save Error Parse to a directory
 ### grobid
 
 TODO: Add documentation for this property.
+
+### label
+
+An optional, user-supplied label for this step in the importer pipeline. It has no effect on processing — it exists purely to help identify this step, for example in large configurations or in the visual configurator.
 
 ### ocr
 

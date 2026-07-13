@@ -17,68 +17,58 @@ package com.norconex.crawler.fs.fetch.impl.hdfs;
 import static com.norconex.crawler.core.fetch.FetchDirective.DOCUMENT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.net.URL;
-import java.util.List;
-
-import org.apache.commons.vfs2.FileSystemOptions;
-import org.apache.commons.vfs2.provider.hdfs.HdfsFileSystemConfigBuilder;
-import org.apache.hadoop.fs.Path;
+import org.apache.hc.core5.http.HttpHost;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import com.norconex.commons.lang.bean.BeanMapper;
-import com.norconex.commons.lang.url.HttpURL;
+import com.norconex.crawler.core.CrawlerException;
+import com.norconex.crawler.fs.FsTestUtil;
 import com.norconex.crawler.fs.fetch.FileFetchRequest;
 import com.norconex.importer.doc.Doc;
 
 @Timeout(30)
 class HdfsFetcherTest {
 
-    //TODO find a way to unit test HDFS.
+    @Test
+    void testAcceptRequest() {
+        var f = new HdfsFetcher();
+        assertThat(f.acceptRequest(new FileFetchRequest(
+                new Doc("webhdfs://host:9870/path"), DOCUMENT))).isTrue();
+        assertThat(f.acceptRequest(new FileFetchRequest(
+                new Doc("hdfs://host:8020/path"), DOCUMENT))).isFalse();
+        assertThat(f.acceptRequest(new FileFetchRequest(
+                new Doc("http://host/path"), DOCUMENT))).isFalse();
+    }
 
     @Test
-    void testHdfsFetcher() {
-        List<String> names = List.of("name1", "name2");
-        List<Path> paths =
-                List.of(new Path("/path1"), new Path("/path2"));
-        List<URL> urls = List.of(
-                HttpURL.toURL("http://url1.com"),
-                HttpURL.toURL("http://url2.com"));
+    void testWriteRead() {
+        assertThatNoException().isThrownBy(
+                () -> BeanMapper.DEFAULT.assertWriteRead(
+                        FsTestUtil.randomize(HdfsFetcher.class)));
+    }
 
+    @Test
+    void testSimpleAuthClientHasNoDefaultCredentials() {
         var f = new HdfsFetcher();
         assertThatNoException().isThrownBy(() -> {
-            f.getConfiguration()
-                    .setConfigNames(names)
-                    .setConfigPaths(paths)
-                    .setConfigUrls(urls);
-            assertThatNoException()
-                    .isThrownBy(() -> BeanMapper.DEFAULT
-                            .assertWriteRead(f));
+            try (var client = f.buildHttpClient(
+                    new HttpHost("http", "localhost", 9870))) {
+                assertThat(client).isNotNull();
+            }
         });
+    }
 
-        assertThat(f.getConfiguration().getConfigNames())
-                .containsExactlyElementsOf(names);
-        assertThat(f.getConfiguration().getConfigPaths())
-                .containsExactlyElementsOf(paths);
-        assertThat(f.getConfiguration().getConfigUrls())
-                .containsExactlyElementsOf(urls);
-
-        assertThat(f.acceptRequest(new FileFetchRequest(
-                new Doc("hdfs://blah"),
-                DOCUMENT))).isTrue();
-        assertThat(f.acceptRequest(new FileFetchRequest(
-                new Doc("http://blah"),
-                DOCUMENT))).isFalse();
-
-        var opts = new FileSystemOptions();
-        f.applyFileSystemOptions(opts);
-        var cfg = HdfsFileSystemConfigBuilder.getInstance();
-        assertThat(cfg.getConfigNames(opts))
-                .containsExactlyElementsOf(names);
-        assertThat(cfg.getConfigPaths(opts))
-                .containsExactlyElementsOf(paths);
-        assertThat(cfg.getConfigURLs(opts))
-                .containsExactlyElementsOf(urls);
+    @Test
+    void testKerberosAuthWithoutConfigFailsOnStartup() {
+        var f = new HdfsFetcher();
+        f.getConfiguration().setAuthMethod(HdfsAuthMethod.KERBEROS);
+        // Full Kerberos login requires a real KDC/krb5.conf; only the
+        // pre-flight "config is required" guard is unit-testable here.
+        assertThatThrownBy(() -> f.fetcherStartup(null))
+                .isInstanceOf(CrawlerException.class)
+                .hasMessageContaining("Kerberos configuration is required");
     }
 }

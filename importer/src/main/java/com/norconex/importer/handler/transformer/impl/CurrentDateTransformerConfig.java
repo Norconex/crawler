@@ -14,6 +14,8 @@
  */
 package com.norconex.importer.handler.transformer.impl;
 
+import com.norconex.importer.handler.BaseDocHandlerConfig;
+
 import java.text.SimpleDateFormat;
 import java.util.Locale;
 
@@ -77,7 +79,7 @@ import lombok.experimental.Accessors;
 @SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
-public class CurrentDateTransformerConfig {
+public class CurrentDateTransformerConfig extends BaseDocHandlerConfig {
 
     public static final String DEFAULT_FIELD = DocMetaConstants.IMPORTED_DATE;
 

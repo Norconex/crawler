@@ -1,0 +1,222 @@
+---
+component: GoogleDriveFetcher
+module: crawler/fs
+locale: en
+propertyCoverage: all
+---
+
+# GoogleDriveFetcher
+
+## Summary
+
+Google Drive fetcher (`gdrive://`) for Google Workspace My Drive and Shared
+Drives.
+
+## Notes
+
+Fetches documents from Google Drive using stable item-ID-based references.
+
+Supported schemes:
+
+- `gdrive://{workspaceId}/users/{userId}`
+- `gdrive://{workspaceId}/users/{userId}/items/{itemId}`
+- `gdrive://{workspaceId}/drives/{driveId}`
+- `gdrive://{workspaceId}/drives/{driveId}/items/{itemId}`
+
+V1 authentication is service-account based.
+
+Use `delegatedUser` when your Google Workspace setup requires domain-wide
+delegation to access user-owned content. Shared Drive starts use the drive
+boundary directly.
+
+Google-native document content:
+
+- Regular binary files are downloaded directly.
+- Google-native files such as Docs, Sheets, and Slides are fetched through the
+  Drive export API.
+- `nativeDocumentFormatPolicy` supplies default export formats.
+- `exportMimeTypeMap` can override a specific Google-native source mime type.
+- If a Google-native mime type has no effective export mapping, the fetcher
+  leaves content unset and records metadata such as
+  `crawler.gdrive.content.status=unsupported-google-native-mime`.
+
+Incremental source-delta mode:
+
+- When crawler-level `changeDiscovery` is set to `SOURCE_DELTA` and the crawl
+  runs in incremental mode, user and shared-drive start references use the
+  Google Drive `changes` feed instead of full child enumeration.
+- Valid `SOURCE_DELTA` roots are:
+  - `gdrive://{workspaceId}/users/{userId}`
+  - `gdrive://{workspaceId}/drives/{driveId}`
+- Item references are not valid `SOURCE_DELTA` roots.
+- One delta cursor is persisted per configured start reference for the current
+  crawler session and reused on the next incremental run.
+- If Google Drive rejects a stored cursor (`400`, `404`, or `410`), the
+  fetcher clears it and restarts delta discovery from a fresh start-page token.
+- Deletions are handled from explicit Drive change events marked as removed.
+  Missing items are not inferred from absence while
+  `changeDiscovery=SOURCE_DELTA`.
+
+## Properties
+
+### applicationName
+
+Optional Google API application name.
+
+### clientEmail
+
+Service-account client email.
+
+### delegatedUser
+
+Optional Google Workspace user email used for domain-wide delegation.
+
+### exportMimeTypeMap
+
+Explicit export overrides for Google-native document mime types.
+
+Key: source mime type such as `application/vnd.google-apps.document`
+
+Value: export mime type such as `text/plain` or `application/pdf`
+
+Set a source mime key to an empty value to disable the default export policy
+for that mime type.
+
+### nativeDocumentFormatPolicy
+
+Default export policy for Google-native document families when no explicit
+override is configured.
+
+Supported values:
+
+- `TEXT`
+- `PDF`
+- `OOXML`
+
+Default is `TEXT`.
+
+### privateKey
+
+PEM private key content used with the service account.
+
+### referenceFilters
+
+Filters applied to document references (URLs or file paths) to control which
+ones are fetched. Documents whose references do not pass the filters are
+skipped.
+
+## Examples
+
+The following example starts from a Google Workspace user boundary.
+
+<ConfigBlock
+  json={{
+    "class": "GoogleDriveFetcher",
+    "clientEmail": "svc-account@my-project.iam.gserviceaccount.com",
+    "privateKey": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----",
+    "delegatedUser": "alex@example.com"
+  }}
+/>
+
+Use a start reference such as:
+
+`gdrive://example-workspace/users/alex@example.com`
+
+The following example starts from a Shared Drive boundary and keeps native
+Google document exports in PDF form by default.
+
+<ConfigBlock
+  json={{
+    "class": "GoogleDriveFetcher",
+    "clientEmail": "svc-account@my-project.iam.gserviceaccount.com",
+    "privateKey": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----",
+    "nativeDocumentFormatPolicy": "PDF"
+  }}
+/>
+
+Use a start reference such as:
+
+`gdrive://example-workspace/drives/{driveId}`
+
+The following example keeps OOXML defaults but overrides Google Slides to PDF.
+
+<ConfigBlock
+  json={{
+    "class": "GoogleDriveFetcher",
+    "clientEmail": "svc-account@my-project.iam.gserviceaccount.com",
+    "privateKey": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----",
+    "nativeDocumentFormatPolicy": "OOXML",
+    "exportMimeTypeMap": {
+      "application/vnd.google-apps.presentation": "application/pdf"
+    }
+  }}
+/>
+
+For incremental delta crawling from a valid Google Drive boundary, configure
+the crawler itself with:
+
+- `crawlMode: INCREMENTAL`
+- `changeDiscovery: SOURCE_DELTA`
+
+Then use one of these start references:
+
+- `gdrive://example-workspace/users/alex@example.com`
+- `gdrive://example-workspace/drives/{driveId}`
+
+## Example Crawls
+
+The following example shows a complete filesystem crawler configuration for a
+Google Workspace user boundary using domain-wide delegation.
+
+```yaml
+id: google-drive-user-crawl
+numThreads: 5
+startReferences:
+  - gdrive://example-workspace/users/alex@example.com
+fetchers:
+  - class: GoogleDriveFetcher
+    clientEmail: svc-account@my-project.iam.gserviceaccount.com
+    privateKey: |
+      -----BEGIN PRIVATE KEY-----
+      ...
+      -----END PRIVATE KEY-----
+    delegatedUser: alex@example.com
+committers:
+  - class: LogCommitter
+    ignoreContent: true
+```
+
+The following example runs incremental `SOURCE_DELTA` crawling from a Shared
+Drive boundary and keeps exported Google-native content in PDF form by default.
+
+```yaml
+id: google-drive-shared-drive-delta
+crawlMode: INCREMENTAL
+changeDiscovery: SOURCE_DELTA
+startReferences:
+  - gdrive://example-workspace/drives/0AExampleDriveIdUk9PVA
+fetchers:
+  - class: GoogleDriveFetcher
+    clientEmail: svc-account@my-project.iam.gserviceaccount.com
+    privateKey: |
+      -----BEGIN PRIVATE KEY-----
+      ...
+      -----END PRIVATE KEY-----
+    nativeDocumentFormatPolicy: PDF
+committers:
+  - class: LogCommitter
+    ignoreContent: true
+```
+
+## Permissions
+
+For service-account crawling, grant the minimum Google Drive read permissions
+required by your selected boundary.
+
+- User-boundary crawling commonly requires domain-wide delegation plus read
+  access to the target user's Drive content.
+- Shared Drive crawling requires the service account or delegated principal to
+  have access to the target Shared Drive.
+
+If your Workspace policies allow it, prefer narrower user or Shared Drive
+boundaries in `startReferences` instead of broad tenant-wide access.

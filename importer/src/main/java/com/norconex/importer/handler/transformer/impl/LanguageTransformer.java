@@ -25,6 +25,7 @@ import org.apache.tika.language.detect.LanguageResult;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.norconex.commons.lang.config.Configurable;
+import com.norconex.importer.handler.ConfigurableDocHandler;
 import com.norconex.importer.doc.DocMetaConstants;
 import com.norconex.importer.handler.DocHandler;
 import com.norconex.importer.handler.DocHandlerContext;
@@ -189,7 +190,7 @@ import lombok.extern.slf4j.Slf4j;
 @Data
 @Slf4j
 public class LanguageTransformer
-        implements DocHandler, Configurable<LanguageTransformerConfig> {
+        implements ConfigurableDocHandler<LanguageTransformerConfig> {
 
     private final LanguageTransformerConfig configuration =
             new LanguageTransformerConfig();

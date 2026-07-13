@@ -26,6 +26,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
 import com.norconex.commons.lang.config.Configurable;
+import com.norconex.importer.handler.ConfigurableDocHandler;
 import com.norconex.commons.lang.map.PropertySetter;
 import com.norconex.importer.handler.CommonRestrictions;
 import com.norconex.importer.handler.DocHandler;
@@ -196,7 +197,7 @@ import lombok.Data;
 @SuppressWarnings("javadoc")
 @Data
 public class DomTransformer
-        implements DocHandler, Configurable<DomTransformerConfig> {
+        implements ConfigurableDocHandler<DomTransformerConfig> {
 
     private final DomTransformerConfig configuration =
             new DomTransformerConfig();

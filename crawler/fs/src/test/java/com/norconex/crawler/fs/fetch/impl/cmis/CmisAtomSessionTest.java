@@ -15,20 +15,18 @@
 package com.norconex.crawler.fs.fetch.impl.cmis;
 
 import static org.assertj.core.api.Assertions.assertThatException;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 
-import org.apache.http.HttpVersion;
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.message.BasicStatusLine;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.core5.http.HttpHost;
+import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoSettings;
 
 @MockitoSettings
@@ -41,14 +39,16 @@ class CmisAtomSessionTest {
     private CloseableHttpResponse httpResponse;
 
     @Test
-    void test() throws ClientProtocolException, IOException {
-        when(httpClient.execute(Mockito.any())).thenReturn(httpResponse);
-        when(httpResponse.getStatusLine()).thenReturn(
-                new BasicStatusLine(HttpVersion.HTTP_1_1, 500, "Too bad"));
+    void test() throws IOException {
+        when(httpClient.execute(any(HttpHost.class), any()))
+                .thenReturn(httpResponse);
+        when(httpResponse.getCode()).thenReturn(500);
+        when(httpResponse.getReasonPhrase()).thenReturn("Too bad");
         when(httpResponse.getEntity()).thenReturn(
                 new StringEntity("Really too bad"));
 
         var cmis = new CmisAtomSession(httpClient);
-        assertThatException().isThrownBy(() -> cmis.getStream("badone"));
+        assertThatException().isThrownBy(
+                () -> cmis.getStream("http://localhost/badone"));
     }
 }

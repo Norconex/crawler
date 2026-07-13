@@ -15,6 +15,12 @@ Parses and extracts text from a file using an external application
 
 Content and metadata are extracted from documents using an external parser. The `ExternalParser` functions similarly to the `ExternalTransformer`, but with a key difference: after parsing, the document is marked with the status `"parsed"`. As a result, only handlers that support `post-parse` processing can be applied afterward. In contrast, the `ExternalTransformer` does not alter the document’s status. To use an external application to change a file content after parsing has already occurred, consider using `ExternalTransformer` instead.
 
+:::tip[Built-in baseline, not a hard limit]
+`ExternalParser` is part of the built-in importer toolbox, and can be combined
+with custom external applications and extraction logic for
+customer-specific needs.
+:::
+
 ### Command-line arguments:
 
 When constructing the command to launch the external application, it will look for specific tokens to be replaced by file paths arguments (in addition to other arguments you may have). The path arguments are created by this class. They are case-sensitive and the file they represent are temporary (will be deleted after they have been dealt with). It is possible to omit one or more tokens to use standard streams instead where applicable.
@@ -58,6 +64,10 @@ Defines environment variables to set when executing the external command.
 ### extractionPatterns
 
 Pattern only used when `metadataOutputFormat` is not specified
+
+### label
+
+An optional, user-supplied label for this step in the importer pipeline. It has no effect on processing — it exists purely to help identify this step, for example in large configurations or in the visual configurator.
 
 ### metadataInputFormat
 

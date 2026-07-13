@@ -6,6 +6,13 @@ title: File System Crawler Quick Start
 
 This guide gets you from zero to a running file system crawl in under 5 minutes.
 
+:::tip[Built-in baseline, not a hard limit]
+The source protocols and examples in this guide represent built-in support in
+Norconex Crawler v4. They are practical defaults, not a fixed ceiling.
+Teams can extend crawler behavior with custom connectors, parser logic, and
+pipeline components for customer-specific requirements.
+:::
+
 :::note[Windows users]
 Replace `crawl-fs.sh` with `crawl-fs.bat` and `./` with `.\` in all commands below.
 :::
@@ -56,6 +63,20 @@ referenceFilters:
 
 You'll see log output as files are fetched, filtered, and committed.
 
+### Docker alternative
+
+If you prefer running with Docker, mount your config and logs, then run:
+
+```bash
+docker run --rm \
+  -v "${PWD}:/opt/norconex/crawler/configs" \
+  -v "${PWD}/logs:/opt/norconex/crawler/logs" \
+  -e COLLECTOR_CONFIG_FILE=my-fs-crawl.yaml \
+  norconex/crawler-fs:latest
+```
+
+For Docker Compose examples and release-tag guidance, see [Docker](./docker.md).
+
 ## Step 4 — Stop and resume
 
 Stop the crawl at any time:
@@ -87,6 +108,9 @@ Alternatively, you can combine "clean" with the start command:
 The file system crawler supports remote protocols out of the box. A few
 examples:
 
+If you are unsure which scheme or start reference format to use for a given
+fetcher, see [FS Fetchers Quickstart](./fs-fetchers-quickstart.md).
+
 **SFTP:**
 
 ```yaml
@@ -114,13 +138,30 @@ credentials:
 ```yaml
 id: my-first-crawl
 startReferences:
-  - hdfs://namenode:9000/user/data/corpus
+  - webhdfs://namenode:9870/user/data/corpus
 ```
+
+For Box, Google Drive, Egnyte, and M365-specific examples, use the dedicated fetcher
+reference pages so configuration examples stay canonical in one place:
+
+- [CmisFetcher](../reference-source/crawler/CmisFetcher)
+- [BoxFetcher](../reference-source/crawler/BoxFetcher)
+- [GoogleDriveFetcher](../reference-source/crawler/GoogleDriveFetcher)
+- [EgnyteFetcher](../reference-source/crawler/EgnyteFetcher)
+- [M365GraphFetcher](../reference-source/crawler/M365GraphFetcher)
+
+For CMIS product readiness and caveats, see
+[CMIS Compatibility Matrix](../concepts/cmis-compatibility-matrix.md).
 
 ## Step 6 — Send to a real target
 
 Replace the `LogCommitter` with your actual destination. See the
 [Integrations](/integrations) page for all available committers and their configuration.
+
+When using ZIP distributions, external committers are downloaded separately as
+`nx-committer-<name>-<version>.zip` and their `lib/*.jar` files must be copied into
+the crawler `lib/` directory. Built-in committers such as `LogCommitter` do not
+require this extra step.
 
 ## CLI reference
 
@@ -134,4 +175,4 @@ Replace the `LogCommitter` with your actual destination. See the
 
 - Use the [Visual Configurator](https://crawlerconfig.norconex.com) to build your config visually
 - Read [Concepts: Crawl Pipeline](../concepts/crawl-pipeline) to understand how documents are processed
-- Read [Concepts: Sessions](../concepts/sessions) to understand resume, deduplication, and scheduling
+- Read [Concepts: Sessions](../concepts/sessions) to understand resume, deduplication, recrawl policy, and external run scheduling

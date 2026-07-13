@@ -14,6 +14,8 @@
  */
 package com.norconex.importer.handler.transformer.impl;
 
+import com.norconex.importer.handler.BaseDocHandlerConfig;
+
 import java.nio.file.Path;
 
 import com.norconex.commons.lang.text.StringUtil;
@@ -69,7 +71,7 @@ import lombok.experimental.Accessors;
 @SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
-public class SaveDocumentTransformerConfig {
+public class SaveDocumentTransformerConfig extends BaseDocHandlerConfig {
 
     public static final String DEFAULT_SAVE_DIR_PATH = "./savedDocuments";
     public static final String DEFAULT_SPLIT_PATTERN = "[\\:/]";

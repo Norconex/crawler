@@ -16,6 +16,7 @@ package com.norconex.crawler.core.cmd.crawl.pipeline;
 
 import java.util.ArrayList;
 
+import com.norconex.crawler.core.CrawlerConfig.ChangeDiscovery;
 import com.norconex.crawler.core.CrawlerConfig.OrphansStrategy;
 import com.norconex.crawler.core.cluster.pipeline.Pipeline;
 import com.norconex.crawler.core.cluster.pipeline.Step;
@@ -53,6 +54,19 @@ public class DefaultCrawlPipelineFactory implements CrawlerPipelineFactory {
         var orphStrategy =
                 session.getCrawlContext().getCrawlConfig()
                         .getOrphansStrategy();
+
+        var changeDiscovery = session.getCrawlContext().getCrawlConfig()
+                .getChangeDiscovery();
+        var suppressOrphanRequeue = session.isIncremental()
+                && changeDiscovery == ChangeDiscovery.SOURCE_DELTA;
+
+        if (suppressOrphanRequeue) {
+            LOG.info("Skipping orphan requeue steps: incremental run is "
+                    + "configured with changeDiscovery=SOURCE_DELTA, where "
+                    + "reference absence is non-authoritative.");
+            return new Pipeline("crawlPipeline", steps);
+        }
+
         if (orphStrategy == null
                 || orphStrategy == OrphansStrategy.IGNORE) {
             LOG.info("Ignoring possible orphans as per orphan strategy.");

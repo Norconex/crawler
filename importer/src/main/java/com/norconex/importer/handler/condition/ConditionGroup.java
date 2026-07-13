@@ -20,21 +20,25 @@ import java.util.Collections;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import tools.jackson.databind.annotation.JsonDeserialize;
-import tools.jackson.databind.annotation.JsonSerialize;
 import com.norconex.commons.lang.collection.CollectionUtil;
 import com.norconex.importer.ImporterRuntimeException;
 import com.norconex.importer.handler.DocHandlerContext;
+import com.norconex.importer.handler.Labelable;
 
 import lombok.Data;
 import lombok.NonNull;
+import tools.jackson.databind.annotation.JsonDeserialize;
+import tools.jackson.databind.annotation.JsonSerialize;
 
 @JsonTypeInfo(
     use = JsonTypeInfo.Id.NAME,
     include = JsonTypeInfo.As.WRAPPER_OBJECT
 )
 @Data
-public abstract class ConditionGroup implements Condition {
+public abstract class ConditionGroup implements Condition, Labelable {
+
+    private String label;
+
     @JsonSerialize(contentUsing = ConditionSerializer.class)
     @JsonDeserialize(contentUsing = ConditionDeserializer.class)
     //        @JsonUnwrapped

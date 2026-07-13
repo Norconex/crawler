@@ -14,6 +14,8 @@
  */
 package com.norconex.importer.handler.transformer.impl;
 
+import com.norconex.importer.handler.BaseDocHandlerConfig;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -94,7 +96,7 @@ import lombok.experimental.Accessors;
 @SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
-public class HierarchyTransformerConfig {
+public class HierarchyTransformerConfig extends BaseDocHandlerConfig {
 
     /**
      * The list of operations to perform.

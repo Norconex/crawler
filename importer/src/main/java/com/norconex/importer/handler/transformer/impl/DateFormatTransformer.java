@@ -27,6 +27,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import com.norconex.commons.lang.collection.CollectionUtil;
 import com.norconex.commons.lang.config.Configurable;
+import com.norconex.importer.handler.ConfigurableDocHandler;
 import com.norconex.commons.lang.map.PropertySetter;
 import com.norconex.commons.lang.time.ZonedDateTimeParser;
 import com.norconex.importer.handler.DocHandler;
@@ -106,7 +107,7 @@ import lombok.extern.slf4j.Slf4j;
 @Data
 @Slf4j
 public class DateFormatTransformer
-        implements DocHandler, Configurable<DateFormatTransformerConfig> {
+        implements ConfigurableDocHandler<DateFormatTransformerConfig> {
 
     private final DateFormatTransformerConfig configuration =
             new DateFormatTransformerConfig();

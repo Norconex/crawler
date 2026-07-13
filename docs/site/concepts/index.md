@@ -11,12 +11,14 @@ Understanding these ideas will help you configure and extend the crawler effecti
 
 ## Topics in this section
 
-| Topic                                           | What it covers                                       |
-| ----------------------------------------------- | ---------------------------------------------------- |
-| [Crawl Pipeline](./crawl-pipeline.md)           | How documents move from source to destination        |
-| [Sessions](./sessions.md)                       | Resumable crawl state, deduplication, and scheduling |
-| [Document Processing](./document-processing.md) | The Import module: parsing, enrichment, metadata     |
-| [Extending the Crawler](./extending.md)         | Custom components, SPI, event listeners              |
+| Topic                                                       | What it covers                                           |
+| ----------------------------------------------------------- | -------------------------------------------------------- |
+| [Crawl Pipeline](./crawl-pipeline.md)                       | How documents move from source to destination            |
+| [Sessions](./sessions.md)                                   | Resumable crawl state, deduplication, and recrawl policy |
+| [Configuration Semantics](./configuration-semantics.md)     | Defaults, null/empty behavior, variables, and fragments  |
+| [Document Processing](./document-processing.md)             | The Import module: parsing, enrichment, metadata         |
+| [Extending the Crawler](./extending.md)                     | Custom components, SPI, event listeners                  |
+| [CMIS Compatibility Matrix](./cmis-compatibility-matrix.md) | Verified coverage and known CMIS product gaps            |
 
 ## The big picture
 
@@ -38,3 +40,12 @@ All configuration lives in a single file (XML, YAML, or JSON).
 
 - [Reference](/docs/reference/) — all built-in extension points with examples
 - The [Visual Configurator](https://crawlerconfig.norconex.com) provides a visual way to build and validate configs.
+
+## File System Fetcher Start References
+
+For filesystem crawling, the most common first issue is choosing the right
+start reference scheme for the fetcher you want to use.
+
+Use [FS Fetchers Quickstart](../getting-started/fs-fetchers-quickstart.md)
+for a compact table covering all supported filesystem fetchers, including
+start reference examples and the first configuration step for each.

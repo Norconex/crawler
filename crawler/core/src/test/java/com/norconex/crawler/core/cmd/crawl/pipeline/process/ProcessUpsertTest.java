@@ -219,9 +219,10 @@ class ProcessUpsertTest {
         ProcessUpsert.execute(ctx);
 
         verify(committerPipeline).accept(any());
-        // ProcessFinalize is NOT called directly for success path by
-        // ProcessUpsert, so finalized flag remains false here
-        assertThat(ctx.finalized()).isFalse();
+        // ProcessFinalize is now called on the success path too (so
+        // children get ledger-tracked); safe for the top-level context
+        // since its caller finalizing it again afterward is a no-op.
+        assertThat(ctx.finalized()).isTrue();
     }
 
     // -----------------------------------------------------------------
@@ -277,5 +278,31 @@ class ProcessUpsertTest {
                 .isEqualTo(ProcessingOutcome.REJECTED);
         // Parent committer invoke: 1 time
         verify(committerPipeline, times(1)).accept(any());
+    }
+
+    @Test
+    void execute_successResponseWithChildren_marksChildAsProcessedInLedger() {
+        var child = new ImporterResponse("ref:child-ledger",
+                Status.SUCCESS);
+        child.setDoc(new Doc("ref:child-ledger"));
+
+        var parent = new ImporterResponse("ref:parent-ledger",
+                Status.SUCCESS);
+        parent.setNestedResponses(List.of(child));
+
+        when(importerPipeline.apply(any())).thenReturn(parent);
+        var childEntry = new CrawlerEntry("ref:child-ledger");
+        when(crawlCtx.createCrawlEntry("ref:child-ledger"))
+                .thenReturn(childEntry);
+
+        var ctx = buildCtx("ref:parent-ledger", ProcessingOutcome.NEW);
+        ProcessUpsert.execute(ctx);
+
+        // A successfully-committed child must be written to the ledger,
+        // the same as a top-level document. Otherwise it can never be
+        // detected as an orphan (and deleted from the target repository)
+        // on a later crawl if it disappears from its parent (e.g. an
+        // attachment removed from an email, or a file removed from a zip).
+        verify(ledger).updateEntry(childEntry);
     }
 }

@@ -18,9 +18,8 @@ import java.io.IOException;
 
 import org.apache.commons.lang3.math.NumberUtils;
 
-import com.norconex.commons.lang.config.Configurable;
 import com.norconex.importer.handler.DocHandlerContext;
-import com.norconex.importer.handler.condition.Condition;
+import com.norconex.importer.handler.condition.ConfigurableCondition;
 
 import lombok.Data;
 import lombok.Getter;
@@ -87,7 +86,7 @@ import lombok.experimental.FieldNameConstants;
 @FieldNameConstants
 @Data
 public class NumericCondition
-        implements Condition, Configurable<NumericConditionConfig> {
+        implements ConfigurableCondition<NumericConditionConfig> {
 
     @Getter
     private final NumericConditionConfig configuration =

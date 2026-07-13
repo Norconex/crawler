@@ -124,7 +124,7 @@
       <forceContentTypeDetection>true</forceContentTypeDetection>
       <forceCharsetDetection>true</forceCharsetDetection>
       <headersPrefix>myprefix</headersPrefix>
-      <redirectUrlProvider fallbackCharset="UTF-8"/>
+      <redirectUrlProvider class="GenericRedirectUrlProvider" fallbackCharset="UTF-8"/>
       <cookieSpec>ignore</cookieSpec>
       <authentication>
         <formParams>

@@ -14,6 +14,8 @@
  */
 package com.norconex.importer.handler.transformer.impl;
 
+import com.norconex.importer.handler.BaseDocHandlerConfig;
+
 import com.norconex.commons.lang.text.TextMatcher;
 
 import lombok.Data;
@@ -80,7 +82,7 @@ import lombok.experimental.Accessors;
 @SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
-public class CharacterCaseTransformerConfig {
+public class CharacterCaseTransformerConfig extends BaseDocHandlerConfig {
 
     public static final String CASE_WORDS = "words";
     public static final String CASE_WORDS_FULLY = "wordsFully";

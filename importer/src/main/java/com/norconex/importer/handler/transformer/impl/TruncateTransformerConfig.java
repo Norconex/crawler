@@ -14,6 +14,8 @@
  */
 package com.norconex.importer.handler.transformer.impl;
 
+import com.norconex.importer.handler.BaseDocHandlerConfig;
+
 import com.norconex.commons.lang.map.PropertySetter;
 import com.norconex.commons.lang.text.TextMatcher;
 
@@ -82,7 +84,7 @@ import lombok.experimental.Accessors;
 @SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
-public class TruncateTransformerConfig {
+public class TruncateTransformerConfig extends BaseDocHandlerConfig {
 
     private final TextMatcher fieldMatcher = new TextMatcher();
     private int maxLength;

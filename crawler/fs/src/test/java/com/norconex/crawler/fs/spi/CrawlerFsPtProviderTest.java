@@ -21,10 +21,17 @@ import org.junit.jupiter.api.Timeout;
 
 import com.norconex.commons.lang.bean.BeanMapper;
 import com.norconex.crawler.fs.doc.operations.checksum.FsMetadataChecksummer;
+import com.norconex.crawler.fs.fetch.impl.adlsgen2.AdlsGen2Fetcher;
+import com.norconex.crawler.fs.fetch.impl.azureblob.AzureBlobFetcher;
+import com.norconex.crawler.fs.fetch.impl.box.BoxFetcher;
 import com.norconex.crawler.fs.fetch.impl.cmis.CmisFetcher;
+import com.norconex.crawler.fs.fetch.impl.egnyte.EgnyteFetcher;
 import com.norconex.crawler.fs.fetch.impl.ftp.FtpFetcher;
+import com.norconex.crawler.fs.fetch.impl.gcs.GcsFetcher;
 import com.norconex.crawler.fs.fetch.impl.hdfs.HdfsFetcher;
 import com.norconex.crawler.fs.fetch.impl.local.LocalFetcher;
+import com.norconex.crawler.fs.fetch.impl.m365graph.M365GraphFetcher;
+import com.norconex.crawler.fs.fetch.impl.s3.S3Fetcher;
 import com.norconex.crawler.fs.fetch.impl.sftp.SftpFetcher;
 import com.norconex.crawler.fs.fetch.impl.smb.SmbFetcher;
 import com.norconex.crawler.fs.fetch.impl.webdav.WebDavFetcher;
@@ -37,10 +44,17 @@ class CrawlerFsPtProviderTest {
         assertThat(BeanMapper.DEFAULT.getPolymorphicTypes().values())
                 .contains(
                         FsMetadataChecksummer.class,
+                        AdlsGen2Fetcher.class,
+                        AzureBlobFetcher.class,
+                        BoxFetcher.class,
                         CmisFetcher.class,
+                        EgnyteFetcher.class,
                         FtpFetcher.class,
+                        GcsFetcher.class,
                         HdfsFetcher.class,
                         LocalFetcher.class,
+                        M365GraphFetcher.class,
+                        S3Fetcher.class,
                         SftpFetcher.class,
                         SmbFetcher.class,
                         WebDavFetcher.class);

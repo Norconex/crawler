@@ -24,10 +24,9 @@ import java.util.Map.Entry;
 
 import org.apache.commons.lang3.StringUtils;
 
-import com.norconex.commons.lang.config.Configurable;
 import com.norconex.commons.lang.time.ZonedDateTimeParser;
 import com.norconex.importer.handler.DocHandlerContext;
-import com.norconex.importer.handler.condition.Condition;
+import com.norconex.importer.handler.condition.ConfigurableCondition;
 
 import lombok.Data;
 import lombok.Getter;
@@ -182,7 +181,7 @@ import lombok.extern.slf4j.Slf4j;
 @FieldNameConstants
 @Slf4j
 public class DateCondition
-        implements Condition, Configurable<DateConditionConfig> {
+        implements ConfigurableCondition<DateConditionConfig> {
 
     public enum TimeUnit {
         YEAR(ChronoUnit.YEARS, "Y"),

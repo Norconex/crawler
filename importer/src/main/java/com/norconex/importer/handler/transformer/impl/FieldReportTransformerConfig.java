@@ -14,6 +14,8 @@
  */
 package com.norconex.importer.handler.transformer.impl;
 
+import com.norconex.importer.handler.BaseDocHandlerConfig;
+
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -69,7 +71,7 @@ import lombok.experimental.Accessors;
 @SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
-public class FieldReportTransformerConfig {
+public class FieldReportTransformerConfig extends BaseDocHandlerConfig {
 
     public static final int DEFAULT_MAX_SAMPLES = 3;
     public static final Path DEFAULT_FILE = Paths.get("./field-report.csv");

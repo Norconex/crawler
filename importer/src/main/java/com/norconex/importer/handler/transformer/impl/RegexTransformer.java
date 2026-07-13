@@ -17,6 +17,7 @@ package com.norconex.importer.handler.transformer.impl;
 import java.io.IOException;
 
 import com.norconex.commons.lang.config.Configurable;
+import com.norconex.importer.handler.ConfigurableDocHandler;
 import com.norconex.commons.lang.map.PropertySetter;
 import com.norconex.commons.lang.text.RegexFieldValueExtractor;
 import com.norconex.importer.handler.DocHandler;
@@ -96,7 +97,7 @@ import lombok.Data;
 @SuppressWarnings("javadoc")
 @Data
 public class RegexTransformer
-        implements DocHandler, Configurable<RegexTransformerConfig> {
+        implements ConfigurableDocHandler<RegexTransformerConfig> {
 
     private final RegexTransformerConfig configuration =
             new RegexTransformerConfig();

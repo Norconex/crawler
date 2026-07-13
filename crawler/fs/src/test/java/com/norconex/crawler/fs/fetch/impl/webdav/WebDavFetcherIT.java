@@ -19,13 +19,12 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 
 import java.io.File;
 
-import org.apache.commons.vfs2.FileSystemException;
-import org.apache.commons.vfs2.FileSystemOptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.testcontainers.containers.BindMode;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
@@ -37,9 +36,12 @@ import com.norconex.crawler.fs.FsTestUtil;
 import com.norconex.crawler.fs.fetch.impl.AbstractFileFetcherTest;
 
 @Testcontainers(disabledWithoutDocker = true)
-@Timeout(30)
+@Timeout(60)
 class WebDavFetcherIT extends AbstractFileFetcherTest {
 
+    // This image has no shell, so Testcontainers' default exec-based
+    // readiness check fails and retries for ~30s before giving up. A plain
+    // listening-port check is both correct here and far faster.
     @SuppressWarnings("resource")
     @Container
     public GenericContainer<?> webdavContainer =
@@ -47,6 +49,7 @@ class WebDavFetcherIT extends AbstractFileFetcherTest {
                     DockerImageName.parse(
                             "mwader/webdav:update-to-go-1.12"))
                                     .withExposedPorts(8080)
+                                    .waitingFor(Wait.forListeningPort())
                                     .withFileSystemBind(
                                             new File(FsTestUtil.TEST_FS_PATH)
                                                     .getAbsolutePath(),
@@ -69,7 +72,7 @@ class WebDavFetcherIT extends AbstractFileFetcherTest {
     }
 
     @BeforeEach
-    protected void setUp() throws FileSystemException {
+    protected void setUp() {
         var host = webdavContainer.getHost();
         var port = webdavContainer.getFirstMappedPort();
         webdavUrl = "webdav://%s:%s".formatted(host, port);
@@ -86,14 +89,16 @@ class WebDavFetcherIT extends AbstractFileFetcherTest {
     }
 
     @Test
-    void testConfigureProxyOnFsOptions() {
+    void testConfigureProxyBuildsClient() {
         assertThatNoException().isThrownBy(() -> {
             var fetcher = new WebDavFetcher();
             var cfg = fetcher.getConfiguration();
             cfg.getProxySettings()
                     .setCredentials(new Credentials("one", "two"))
                     .setHost(new Host("0.0.0.0", 0));
-            fetcher.applyFileSystemOptions(new FileSystemOptions());
+            try (var client = fetcher.buildHttpClient()) {
+                assertThat(client).isNotNull();
+            }
         });
     }
 }

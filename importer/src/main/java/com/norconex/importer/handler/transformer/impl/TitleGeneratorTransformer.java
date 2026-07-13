@@ -30,6 +30,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.norconex.commons.lang.config.Configurable;
+import com.norconex.importer.handler.ConfigurableDocHandler;
 import com.norconex.commons.lang.map.PropertySetter;
 import com.norconex.importer.handler.DocHandler;
 import com.norconex.importer.handler.DocHandlerContext;
@@ -129,7 +130,7 @@ import lombok.ToString;
 @SuppressWarnings("javadoc")
 @Data
 public class TitleGeneratorTransformer
-        implements DocHandler, Configurable<TitleGeneratorTransformerConfig> {
+        implements ConfigurableDocHandler<TitleGeneratorTransformerConfig> {
 
     // Min. length a term should have to be considered valuable
     private static final int MIN_TERM_LENGTH = 4;

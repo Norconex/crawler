@@ -34,10 +34,9 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.NullInputStream;
-import org.apache.commons.vfs2.FileSystemOptions;
-import org.apache.commons.vfs2.impl.StandardFileSystemManager;
 import org.jeasy.random.EasyRandom;
 import org.jeasy.random.EasyRandomParameters;
+import org.jeasy.random.FieldPredicates;
 import org.jeasy.random.api.Randomizer;
 import org.jeasy.random.randomizers.misc.BooleanRandomizer;
 import org.jeasy.random.randomizers.number.IntegerRandomizer;
@@ -50,8 +49,8 @@ import com.norconex.committer.core.DeleteRequest;
 import com.norconex.committer.core.UpsertRequest;
 import com.norconex.committer.core.impl.MemoryCommitter;
 import com.norconex.commons.lang.map.Properties;
-import com.norconex.crawler.core.CrawlerConfig;
 import com.norconex.crawler.core.Crawler;
+import com.norconex.crawler.core.CrawlerConfig;
 import com.norconex.crawler.core.doc.operations.checksum.DocumentChecksummer;
 import com.norconex.crawler.core.doc.operations.checksum.MetadataChecksummer;
 import com.norconex.crawler.core.doc.operations.checksum.impl.GenericMetadataChecksummer;
@@ -160,11 +159,47 @@ public final class FsTestUtil {
                             DocumentChecksummer.class,
                             Md5DocumentChecksummer::new)
 
-                    .excludeType(StandardFileSystemManager.class::equals)
-                    .excludeType(FileSystemOptions.class::equals)
+                    .excludeType(java.nio.file.FileSystem.class::equals)
                     .excludeType(ReferencesProvider.class::equals)
                     .excludeType(OnMatch.class::equals)
-                    .excludeType(ReferenceFilter.class::equals));
+                    .excludeType(ReferenceFilter.class::equals)
+                    // Runtime-only NIO.2 connection environments (built
+                    // from config at fetcherStartup, not themselves part
+                    // of the config): randomizing their generic
+                    // Map<String, Object> shape is slow/unstable and
+                    // irrelevant to the XML/JSON round-trip being tested.
+                    .excludeField(FieldPredicates
+                            .named("env")
+                            .and(FieldPredicates
+                                    .ofType(java.util.Map.class)))
+                    .excludeField(FieldPredicates.named(
+                            "openFileSystems"))
+                    .excludeField(FieldPredicates
+                            .named("ftpEnv"))
+                    .excludeField(FieldPredicates
+                            .named("ftpsEnv"))
+                    .excludeField(FieldPredicates
+                            .named("sftpEnv"))
+                    // Runtime-only custom NIO.2 FileSystemProvider (CMIS,
+                    // WebDAV, SMB): its file-system cache eventually holds
+                    // a CloseableHttpClient (abstract; not instantiable by
+                    // EasyRandom), and whether that map ends up empty is a
+                    // matter of chance given the time-seeded random size
+                    // draw, making its exclusion here necessary rather
+                    // than incidental.
+                    .excludeField(FieldPredicates
+                            .named("provider"))
+                    // Runtime-only jcifs-ng CIFSContext (SMB), built from
+                    // config at fetcherStartup: it is an interface with no
+                    // concrete type EasyRandom can instantiate (classpath
+                    // scanning for concrete types is disabled above).
+                    .excludeField(FieldPredicates
+                            .named("context"))
+                    // Runtime-only Kerberos Subject (HDFS), populated by a
+                    // JAAS login at fetcherStartup, not part of the config
+                    // being round-trip tested.
+                    .excludeField(FieldPredicates.named(
+                            "kerberosSubject")));
 
     //MAYBE: maybe move some of the common test classes/methods to core
     // and make it a usable test artifact?

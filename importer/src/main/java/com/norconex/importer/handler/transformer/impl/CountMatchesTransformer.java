@@ -21,6 +21,7 @@ import java.util.regex.Pattern;
 import org.apache.commons.lang3.StringUtils;
 
 import com.norconex.commons.lang.config.Configurable;
+import com.norconex.importer.handler.ConfigurableDocHandler;
 import com.norconex.commons.lang.io.TextReader;
 import com.norconex.commons.lang.map.Properties;
 import com.norconex.commons.lang.map.PropertySetter;
@@ -86,7 +87,7 @@ import lombok.Data;
 @SuppressWarnings("javadoc")
 @Data
 public class CountMatchesTransformer
-        implements DocHandler, Configurable<CountMatchesTransformerConfig> {
+        implements ConfigurableDocHandler<CountMatchesTransformerConfig> {
 
     private final CountMatchesTransformerConfig configuration =
             new CountMatchesTransformerConfig();
