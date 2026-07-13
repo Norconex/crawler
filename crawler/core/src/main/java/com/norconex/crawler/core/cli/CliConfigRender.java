@@ -77,9 +77,10 @@ public class CliConfigRender extends CliBase {
                 out().println(((StringWriter) out).toString());
             }
         } catch (InvalidPathException | IOException e) {
-            err().println("Could not render config: "
-                    + ExceptionUtil.getFormattedMessages(e));
-            throw new CliException(e);
+            var msg = "Could not render config: "
+                    + ExceptionUtil.getFormattedMessages(e);
+            err().println(msg);
+            throw new CliException(msg, e);
         }
     }
 }
