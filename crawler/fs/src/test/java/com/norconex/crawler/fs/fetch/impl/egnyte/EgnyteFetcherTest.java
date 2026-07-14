@@ -561,16 +561,6 @@ class EgnyteFetcherTest {
         private boolean throwContentIo;
         private boolean throwFolderIo;
         private boolean returnNullContentBytes;
-        private String apiBaseUrl;
-
-        @Override
-        public EgnyteFetcherConfig getConfiguration() {
-            var config = super.getConfiguration();
-            if (apiBaseUrl != null) {
-                config.setApiBaseUrl(apiBaseUrl);
-            }
-            return config;
-        }
 
         @Override
         EgnyteFetcher.EgnyteItem
