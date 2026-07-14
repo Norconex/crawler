@@ -14,62 +14,37 @@
  */
 package com.norconex.crawler.fs.fetch.impl.adlsgen2;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.file.LinkOption;
 import java.nio.file.Path;
-import java.nio.file.WatchEvent.Kind;
-import java.nio.file.WatchEvent.Modifier;
-import java.nio.file.WatchKey;
-import java.nio.file.WatchService;
-import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Objects;
+
+import com.norconex.crawler.fs.fetch.impl.ReadOnlyPath;
 
 /**
  * A path within an ADLS Gen2 file system.
  */
-final class AdlsGen2Path implements Path {
+final class AdlsGen2Path extends ReadOnlyPath {
 
     private final AdlsGen2FileSystem fs;
-    private final List<String> segments;
 
     AdlsGen2Path(AdlsGen2FileSystem fs, String path) {
-        this(fs, parse(path));
+        this(fs, ReadOnlyPath.parse(path));
     }
 
     private AdlsGen2Path(AdlsGen2FileSystem fs, List<String> segments) {
+        super(fs, List.copyOf(segments), "AdlsGen2Path");
         this.fs = fs;
-        this.segments = segments;
-    }
-
-    private static List<String> parse(String path) {
-        List<String> result = new ArrayList<>();
-        for (String segment : path.split("/")) {
-            if (segment.isEmpty() || ".".equals(segment)) {
-                continue;
-            }
-            if ("..".equals(segment)) {
-                if (!result.isEmpty()) {
-                    result.remove(result.size() - 1);
-                }
-            } else {
-                result.add(segment);
-            }
-        }
-        return result;
     }
 
     String path() {
-        return "/" + String.join("/", segments);
+        return normalizedPath();
     }
 
     String pathName() {
-        return String.join("/", segments);
+        return String.join("/", segments());
     }
 
     @Override
@@ -78,124 +53,8 @@ final class AdlsGen2Path implements Path {
     }
 
     @Override
-    public boolean isAbsolute() {
-        return true;
-    }
-
-    @Override
-    public Path getRoot() {
-        return new AdlsGen2Path(fs, List.of());
-    }
-
-    @Override
-    public Path getFileName() {
-        if (segments.isEmpty()) {
-            return null;
-        }
-        return new AdlsGen2Path(fs, List.of(segments.get(segments.size() - 1)));
-    }
-
-    @Override
-    public Path getParent() {
-        if (segments.isEmpty()) {
-            return null;
-        }
-        return new AdlsGen2Path(fs, segments.subList(0, segments.size() - 1));
-    }
-
-    @Override
-    public int getNameCount() {
-        return segments.size();
-    }
-
-    @Override
-    public Path getName(int index) {
-        return new AdlsGen2Path(fs, List.of(segments.get(index)));
-    }
-
-    @Override
-    public Path subpath(int beginIndex, int endIndex) {
-        return new AdlsGen2Path(fs,
-                new ArrayList<>(segments.subList(beginIndex, endIndex)));
-    }
-
-    @Override
-    public boolean startsWith(Path other) {
-        return other instanceof AdlsGen2Path o && o.fs == fs
-                && segments.size() >= o.segments.size()
-                && segments.subList(0, o.segments.size()).equals(o.segments);
-    }
-
-    @Override
-    public boolean startsWith(String other) {
-        return startsWith(fs.getPath(other));
-    }
-
-    @Override
-    public boolean endsWith(Path other) {
-        return other instanceof AdlsGen2Path o && o.fs == fs
-                && segments.size() >= o.segments.size()
-                && segments.subList(segments.size() - o.segments.size(),
-                        segments.size()).equals(o.segments);
-    }
-
-    @Override
-    public boolean endsWith(String other) {
-        return endsWith(fs.getPath(other));
-    }
-
-    @Override
-    public Path normalize() {
-        return this;
-    }
-
-    @Override
-    public Path resolve(Path other) {
-        if (!(other instanceof AdlsGen2Path o)) {
-            throw new IllegalArgumentException(
-                    "Not an AdlsGen2Path: " + other);
-        }
-        if (o.isAbsolute()) {
-            return o;
-        }
-        var combined = new ArrayList<>(segments);
-        combined.addAll(o.segments);
-        return new AdlsGen2Path(fs, combined);
-    }
-
-    @Override
-    public Path resolve(String other) {
-        return resolve(fs.getPath(other));
-    }
-
-    @Override
-    public Path resolveSibling(Path other) {
-        var parent = getParent();
-        return parent == null ? other : parent.resolve(other);
-    }
-
-    @Override
-    public Path resolveSibling(String other) {
-        return resolveSibling(fs.getPath(other));
-    }
-
-    @Override
-    public Path relativize(Path other) {
-        if (!(other instanceof AdlsGen2Path o) || o.fs != fs) {
-            throw new IllegalArgumentException(
-                    "Not an AdlsGen2Path: " + other);
-        }
-        var common = 0;
-        while (common < segments.size() && common < o.segments.size()
-                && segments.get(common).equals(o.segments.get(common))) {
-            common++;
-        }
-        var result = new ArrayList<String>();
-        for (var i = common; i < segments.size(); i++) {
-            result.add("..");
-        }
-        result.addAll(o.segments.subList(common, o.segments.size()));
-        return new AdlsGen2Path(fs, result);
+    protected Path createPath(List<String> segments) {
+        return new AdlsGen2Path(fs, segments);
     }
 
     @Override
@@ -212,63 +71,5 @@ final class AdlsGen2Path implements Path {
         } catch (URISyntaxException e) {
             throw new UncheckedIOException(new IOException(e));
         }
-    }
-
-    @Override
-    public Path toAbsolutePath() {
-        return this;
-    }
-
-    @Override
-    public Path toRealPath(LinkOption... options) {
-        return this;
-    }
-
-    @Override
-    public File toFile() {
-        throw new UnsupportedOperationException(
-                "ADLS Gen2 paths have no local file representation.");
-    }
-
-    @Override
-    public WatchKey register(
-            WatchService watcher, Kind<?>[] events, Modifier... modifiers) {
-        throw new UnsupportedOperationException(
-                "ADLS Gen2 paths do not support watching.");
-    }
-
-    @Override
-    public Iterator<Path> iterator() {
-        List<Path> names = new ArrayList<>();
-        for (var i = 0; i < segments.size(); i++) {
-            names.add(getName(i));
-        }
-        return names.iterator();
-    }
-
-    @Override
-    public int compareTo(Path other) {
-        return path().compareTo(((AdlsGen2Path) other).path());
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(fs, segments);
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (!(obj instanceof AdlsGen2Path other)) {
-            return false;
-        }
-        return fs == other.fs && segments.equals(other.segments);
-    }
-
-    @Override
-    public String toString() {
-        return path();
     }
 }

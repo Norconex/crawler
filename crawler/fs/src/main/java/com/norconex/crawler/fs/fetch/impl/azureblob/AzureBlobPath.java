@@ -14,62 +14,37 @@
  */
 package com.norconex.crawler.fs.fetch.impl.azureblob;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.file.LinkOption;
 import java.nio.file.Path;
-import java.nio.file.WatchEvent.Kind;
-import java.nio.file.WatchEvent.Modifier;
-import java.nio.file.WatchKey;
-import java.nio.file.WatchService;
-import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Objects;
+
+import com.norconex.crawler.fs.fetch.impl.ReadOnlyPath;
 
 /**
  * A path within an {@link AzureBlobFileSystem}.
  */
-final class AzureBlobPath implements Path {
+final class AzureBlobPath extends ReadOnlyPath {
 
     private final AzureBlobFileSystem fs;
-    private final List<String> segments;
 
     AzureBlobPath(AzureBlobFileSystem fs, String path) {
-        this(fs, parse(path));
+        this(fs, ReadOnlyPath.parse(path));
     }
 
     private AzureBlobPath(AzureBlobFileSystem fs, List<String> segments) {
+        super(fs, List.copyOf(segments), "AzureBlobPath");
         this.fs = fs;
-        this.segments = segments;
-    }
-
-    private static List<String> parse(String path) {
-        List<String> result = new ArrayList<>();
-        for (String segment : path.split("/")) {
-            if (segment.isEmpty() || ".".equals(segment)) {
-                continue;
-            }
-            if ("..".equals(segment)) {
-                if (!result.isEmpty()) {
-                    result.remove(result.size() - 1);
-                }
-            } else {
-                result.add(segment);
-            }
-        }
-        return result;
     }
 
     String path() {
-        return "/" + String.join("/", segments);
+        return normalizedPath();
     }
 
     String blobName() {
-        return String.join("/", segments);
+        return String.join("/", segments());
     }
 
     String blobPrefix() {
@@ -83,126 +58,8 @@ final class AzureBlobPath implements Path {
     }
 
     @Override
-    public boolean isAbsolute() {
-        return true;
-    }
-
-    @Override
-    public Path getRoot() {
-        return new AzureBlobPath(fs, List.of());
-    }
-
-    @Override
-    public Path getFileName() {
-        if (segments.isEmpty()) {
-            return null;
-        }
-        return new AzureBlobPath(fs,
-                List.of(segments.get(segments.size() - 1)));
-    }
-
-    @Override
-    public Path getParent() {
-        if (segments.isEmpty()) {
-            return null;
-        }
-        return new AzureBlobPath(fs, segments.subList(0, segments.size() - 1));
-    }
-
-    @Override
-    public int getNameCount() {
-        return segments.size();
-    }
-
-    @Override
-    public Path getName(int index) {
-        return new AzureBlobPath(fs, List.of(segments.get(index)));
-    }
-
-    @Override
-    public Path subpath(int beginIndex, int endIndex) {
-        return new AzureBlobPath(
-                fs, new ArrayList<>(segments.subList(beginIndex, endIndex)));
-    }
-
-    @Override
-    public boolean startsWith(Path other) {
-        return other instanceof AzureBlobPath o && o.fs == fs
-                && segments.size() >= o.segments.size()
-                && segments.subList(0, o.segments.size()).equals(o.segments);
-    }
-
-    @Override
-    public boolean startsWith(String other) {
-        return startsWith(fs.getPath(other));
-    }
-
-    @Override
-    public boolean endsWith(Path other) {
-        return other instanceof AzureBlobPath o && o.fs == fs
-                && segments.size() >= o.segments.size()
-                && segments.subList(
-                        segments.size() - o.segments.size(), segments.size())
-                        .equals(o.segments);
-    }
-
-    @Override
-    public boolean endsWith(String other) {
-        return endsWith(fs.getPath(other));
-    }
-
-    @Override
-    public Path normalize() {
-        return this;
-    }
-
-    @Override
-    public Path resolve(Path other) {
-        if (!(other instanceof AzureBlobPath o)) {
-            throw new IllegalArgumentException(
-                    "Not an AzureBlobPath: " + other);
-        }
-        if (o.isAbsolute()) {
-            return o;
-        }
-        var combined = new ArrayList<>(segments);
-        combined.addAll(o.segments);
-        return new AzureBlobPath(fs, combined);
-    }
-
-    @Override
-    public Path resolve(String other) {
-        return resolve(fs.getPath(other));
-    }
-
-    @Override
-    public Path resolveSibling(Path other) {
-        var parent = getParent();
-        return parent == null ? other : parent.resolve(other);
-    }
-
-    @Override
-    public Path resolveSibling(String other) {
-        return resolveSibling(fs.getPath(other));
-    }
-
-    @Override
-    public Path relativize(Path other) {
-        if (!(other instanceof AzureBlobPath o) || o.fs != fs) {
-            throw new IllegalArgumentException(
-                    "Not an AzureBlobPath: " + other);
-        }
-        var common = 0;
-        while (common < segments.size() && common < o.segments.size()
-                && segments.get(common).equals(o.segments.get(common))) {
-            common++;
-        }
-        var result = new ArrayList<String>();
-        for (var i = common; i < segments.size(); i++) {
-            result.add("..");
-        }
-        result.addAll(o.segments.subList(common, o.segments.size()));
-        return new AzureBlobPath(fs, result);
+    protected Path createPath(List<String> segments) {
+        return new AzureBlobPath(fs, segments);
     }
 
     @Override
@@ -219,63 +76,5 @@ final class AzureBlobPath implements Path {
         } catch (URISyntaxException e) {
             throw new UncheckedIOException(new IOException(e));
         }
-    }
-
-    @Override
-    public Path toAbsolutePath() {
-        return this;
-    }
-
-    @Override
-    public Path toRealPath(LinkOption... options) {
-        return this;
-    }
-
-    @Override
-    public File toFile() {
-        throw new UnsupportedOperationException(
-                "Azure Blob paths have no local file representation.");
-    }
-
-    @Override
-    public WatchKey register(
-            WatchService watcher, Kind<?>[] events, Modifier... modifiers) {
-        throw new UnsupportedOperationException(
-                "Azure Blob paths do not support watching.");
-    }
-
-    @Override
-    public Iterator<Path> iterator() {
-        List<Path> names = new ArrayList<>();
-        for (var i = 0; i < segments.size(); i++) {
-            names.add(getName(i));
-        }
-        return names.iterator();
-    }
-
-    @Override
-    public int compareTo(Path other) {
-        return path().compareTo(((AzureBlobPath) other).path());
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(fs, segments);
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (!(obj instanceof AzureBlobPath other)) {
-            return false;
-        }
-        return fs == other.fs && segments.equals(other.segments);
-    }
-
-    @Override
-    public String toString() {
-        return path();
     }
 }
