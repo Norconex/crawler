@@ -14,7 +14,6 @@
  */
 package com.norconex.crawler.fs.fetch.impl.cmis;
 
-import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.time.ZonedDateTime;
 
@@ -22,6 +21,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 
 import com.norconex.commons.lang.xml.Xml;
+import com.norconex.crawler.fs.fetch.impl.ReadOnlyFileAttributes;
 
 import lombok.Getter;
 
@@ -32,7 +32,7 @@ import lombok.Getter;
  * directly instead of issuing a separate request for CMIS-specific
  * metadata (core Atom fields, properties, ACL).
  */
-public class CmisFileAttributes implements BasicFileAttributes {
+public class CmisFileAttributes extends ReadOnlyFileAttributes {
 
     private static final String PROP_OBJECT_TYPE_ID = "cmis:objectTypeId";
     private static final String PROP_BASE_TYPE_ID = "cmis:baseTypeId";
@@ -45,31 +45,27 @@ public class CmisFileAttributes implements BasicFileAttributes {
     private final Xml document;
     @Getter
     private final boolean recognized;
-    private final boolean directory;
-    private final long size;
-    private final FileTime lastModifiedTime;
 
     public CmisFileAttributes(Xml document) {
+        super(
+                !"cmis:document".equalsIgnoreCase(resolveType(document)),
+                NumberUtils.toLong(
+                        getPropertyValue(document, PROP_CONTENT_STREAM_LENGTH),
+                        -1),
+                toFileTime(getPropertyValue(
+                        document, PROP_LAST_MODIFICATION_DATE)));
         this.document = document;
-        var type = resolveType();
+        var type = resolveType(document);
         recognized = type != null;
-        directory = !"cmis:document".equalsIgnoreCase(type);
-        size = NumberUtils.toLong(
-                getPropertyValue(PROP_CONTENT_STREAM_LENGTH), -1);
-        var date = getPropertyValue(PROP_LAST_MODIFICATION_DATE);
-        lastModifiedTime = StringUtils.isNotEmpty(date)
-                ? FileTime.fromMillis(
-                        ZonedDateTime.parse(date).toInstant().toEpochMilli())
-                : FileTime.fromMillis(0);
     }
 
     // Returns the recognized CMIS type ("cmis:folder" / "cmis:document"),
     // or null if neither the object nor base type is recognized (mirrors
     // the prior VFS-based fetcher treating such objects as non-existent).
-    private String resolveType() {
+    private static String resolveType(Xml document) {
         for (var propId : new String[] {
                 PROP_OBJECT_TYPE_ID, PROP_BASE_TYPE_ID }) {
-            var type = getPropertyValue(propId);
+            var type = getPropertyValue(document, propId);
             if ("cmis:folder".equalsIgnoreCase(type)
                     || "cmis:document".equalsIgnoreCase(type)) {
                 return type;
@@ -78,7 +74,7 @@ public class CmisFileAttributes implements BasicFileAttributes {
         return null;
     }
 
-    private String getPropertyValue(String propertyDefId) {
+    private static String getPropertyValue(Xml document, String propertyDefId) {
         return document.getString(
                 """
                         /entry/object/properties/\
@@ -87,48 +83,10 @@ public class CmisFileAttributes implements BasicFileAttributes {
                         .formatted(propertyDefId));
     }
 
-    @Override
-    public FileTime lastModifiedTime() {
-        return lastModifiedTime;
-    }
-
-    @Override
-    public FileTime lastAccessTime() {
-        return lastModifiedTime;
-    }
-
-    @Override
-    public FileTime creationTime() {
-        return lastModifiedTime;
-    }
-
-    @Override
-    public boolean isRegularFile() {
-        return !directory;
-    }
-
-    @Override
-    public boolean isDirectory() {
-        return directory;
-    }
-
-    @Override
-    public boolean isSymbolicLink() {
-        return false;
-    }
-
-    @Override
-    public boolean isOther() {
-        return false;
-    }
-
-    @Override
-    public long size() {
-        return Math.max(size, 0);
-    }
-
-    @Override
-    public Object fileKey() {
-        return null;
+    private static FileTime toFileTime(String date) {
+        return StringUtils.isNotEmpty(date)
+                ? FileTime.fromMillis(
+                        ZonedDateTime.parse(date).toInstant().toEpochMilli())
+                : FileTime.fromMillis(0);
     }
 }

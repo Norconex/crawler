@@ -14,69 +14,17 @@
  */
 package com.norconex.crawler.fs.fetch.impl.adlsgen2;
 
-import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
+
+import com.norconex.crawler.fs.fetch.impl.ReadOnlyFileAttributes;
 
 /**
  * Attributes of an ADLS Gen2 file or directory.
  */
-final class AdlsGen2FileAttributes implements BasicFileAttributes {
-
-    private final boolean directory;
-    private final long size;
-    private final FileTime lastModifiedTime;
+final class AdlsGen2FileAttributes extends ReadOnlyFileAttributes {
 
     AdlsGen2FileAttributes(
             boolean directory, long size, FileTime lastModifiedTime) {
-        this.directory = directory;
-        this.size = size;
-        this.lastModifiedTime = lastModifiedTime == null
-                ? FileTime.fromMillis(0)
-                : lastModifiedTime;
-    }
-
-    @Override
-    public FileTime lastModifiedTime() {
-        return lastModifiedTime;
-    }
-
-    @Override
-    public FileTime lastAccessTime() {
-        return lastModifiedTime;
-    }
-
-    @Override
-    public FileTime creationTime() {
-        return lastModifiedTime;
-    }
-
-    @Override
-    public boolean isRegularFile() {
-        return !directory;
-    }
-
-    @Override
-    public boolean isDirectory() {
-        return directory;
-    }
-
-    @Override
-    public boolean isSymbolicLink() {
-        return false;
-    }
-
-    @Override
-    public boolean isOther() {
-        return false;
-    }
-
-    @Override
-    public long size() {
-        return Math.max(size, 0);
-    }
-
-    @Override
-    public Object fileKey() {
-        return null;
+        super(directory, size, lastModifiedTime);
     }
 }

@@ -14,68 +14,18 @@
  */
 package com.norconex.crawler.fs.fetch.impl.smb;
 
-import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
+
+import com.norconex.crawler.fs.fetch.impl.ReadOnlyFileAttributes;
 
 /**
  * Attributes of an SMB resource. Built either from a directory listing
  * (where jcifs-ng already populates these from the enumeration response,
  * at no extra cost) or from a dedicated stat call.
  */
-final class SmbFileAttributes implements BasicFileAttributes {
-
-    private final boolean directory;
-    private final long size;
-    private final FileTime lastModifiedTime;
+final class SmbFileAttributes extends ReadOnlyFileAttributes {
 
     SmbFileAttributes(boolean directory, long size, long lastModifiedMillis) {
-        this.directory = directory;
-        this.size = size;
-        lastModifiedTime = FileTime.fromMillis(lastModifiedMillis);
-    }
-
-    @Override
-    public FileTime lastModifiedTime() {
-        return lastModifiedTime;
-    }
-
-    @Override
-    public FileTime lastAccessTime() {
-        return lastModifiedTime;
-    }
-
-    @Override
-    public FileTime creationTime() {
-        return lastModifiedTime;
-    }
-
-    @Override
-    public boolean isRegularFile() {
-        return !directory;
-    }
-
-    @Override
-    public boolean isDirectory() {
-        return directory;
-    }
-
-    @Override
-    public boolean isSymbolicLink() {
-        return false;
-    }
-
-    @Override
-    public boolean isOther() {
-        return false;
-    }
-
-    @Override
-    public long size() {
-        return Math.max(size, 0);
-    }
-
-    @Override
-    public Object fileKey() {
-        return null;
+        super(directory, size, FileTime.fromMillis(lastModifiedMillis));
     }
 }
