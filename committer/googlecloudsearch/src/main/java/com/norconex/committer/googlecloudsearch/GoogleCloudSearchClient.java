@@ -366,14 +366,20 @@ class GoogleCloudSearchClient {
         var parentValue =
                 metadataValue(metadata, aclInheritance.getFromField());
         var hasInheritance = StringUtils.isNotBlank(parentValue);
-        if (readers.isEmpty() && deniedReaders.isEmpty() && owners.isEmpty()
-                && !hasInheritance) {
-            return null;
-        }
 
         var acl = new ItemAcl();
         if (!readers.isEmpty()) {
             acl.setReaders(readers);
+        } else if (!hasInheritance) {
+            // Cloud Search rejects items with no ACL at all ("Missing Acl in
+            // request"), and inheritance alone does not grant access unless a
+            // parent is set. When no reader mapping resolved to a value and
+            // there is no ACL to inherit from, default to the entire domain
+            // being able to read the item, matching the original Google-built
+            // Norconex connector's documented default of granting read access
+            // to everyone when no ACL information is supplied.
+            acl.setReaders(Collections.singletonList(
+                    toPrincipal(PrincipalType.CUSTOMER, null)));
         }
         if (!deniedReaders.isEmpty()) {
             acl.setDeniedReaders(deniedReaders);

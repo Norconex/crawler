@@ -18,6 +18,13 @@ import static com.norconex.crawler.core.fetch.FetchDirective.DOCUMENT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+
+import java.lang.reflect.Method;
+import java.nio.file.Path;
+import java.util.Map;
 
 import org.apache.hc.core5.http.HttpHost;
 import org.junit.jupiter.api.Test;
@@ -70,5 +77,66 @@ class HdfsFetcherTest {
         assertThatThrownBy(() -> f.fetcherStartup(null))
                 .isInstanceOf(CrawlerException.class)
                 .hasMessageContaining("Kerberos configuration is required");
+    }
+
+    @Test
+    void testResolvePathRootAndFilePath() throws Exception {
+        var f = new HdfsFetcher();
+        f.getConfiguration().getCredentials().setUsername("alice");
+
+        Path root = f.resolvePath("webhdfs://namenode.example.com:9870");
+        Path child = f.resolvePath(
+                "webhdfs://namenode.example.com:9870/dir/file.txt");
+
+        assertThat(root.toString()).isEqualTo("/");
+        assertThat(child.toString()).isEqualTo("/dir/file.txt");
+
+        assertThatNoException().isThrownBy(() -> f.fetcherShutdown(null));
+    }
+
+    @Test
+    void testFetcherShutdownSwallowsCloseRuntimeException() throws Exception {
+        var f = new HdfsFetcher();
+        var providerField = HdfsFetcher.class.getDeclaredField("provider");
+        providerField.setAccessible(true);
+        var provider = providerField.get(f);
+
+        var mapField = provider.getClass().getDeclaredField("fileSystems");
+        mapField.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        Map<String, HdfsFileSystem> map =
+                (Map<String, HdfsFileSystem>) mapField.get(provider);
+
+        var fs = mock(HdfsFileSystem.class);
+        doThrow(new RuntimeException("boom")).when(fs).close();
+        map.put("badhost:9870", fs);
+
+        assertThatNoException().isThrownBy(() -> f.fetcherShutdown(null));
+        verify(fs).close();
+    }
+
+    @Test
+    void testKerberosWithCustomLoginModuleWrapsLoginException() {
+        var f = new HdfsFetcher();
+        f.getConfiguration().setAuthMethod(HdfsAuthMethod.KERBEROS);
+        f.getConfiguration().setKerberosConfig(
+                new KerberosConfig().setLoginModuleName("NoSuchLoginModule"));
+
+        assertThatThrownBy(() -> f.fetcherStartup(null))
+                .isInstanceOf(CrawlerException.class)
+                .hasMessageContaining("Failed to perform Kerberos login");
+    }
+
+    @Test
+    void testToCharArrayNullAndValue() throws Exception {
+        Method m = HdfsFetcher.class.getDeclaredMethod("toCharArray",
+                String.class);
+        m.setAccessible(true);
+
+        var fromNull = (char[]) m.invoke(null, new Object[] { null });
+        var fromValue = (char[]) m.invoke(null, "ab");
+
+        assertThat(fromNull).isEmpty();
+        assertThat(fromValue).containsExactly('a', 'b');
     }
 }
