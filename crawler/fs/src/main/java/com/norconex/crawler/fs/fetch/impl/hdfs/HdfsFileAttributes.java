@@ -14,71 +14,23 @@
  */
 package com.norconex.crawler.fs.fetch.impl.hdfs;
 
-import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
+
+import com.norconex.crawler.fs.fetch.impl.ReadOnlyFileAttributes;
 
 /**
  * Attributes of an HDFS resource, parsed from a WebHDFS
  * {@code GETFILESTATUS}/{@code LISTSTATUS} {@code FileStatus} JSON object.
  */
-final class HdfsFileAttributes implements BasicFileAttributes {
-
-    private final boolean directory;
-    private final long size;
-    private final FileTime modificationTime;
-    private final FileTime accessTime;
+final class HdfsFileAttributes extends ReadOnlyFileAttributes {
 
     HdfsFileAttributes(
             boolean directory, long size, long modificationTimeMillis,
             long accessTimeMillis) {
-        this.directory = directory;
-        this.size = size;
-        modificationTime = FileTime.fromMillis(modificationTimeMillis);
-        accessTime = FileTime.fromMillis(accessTimeMillis);
-    }
-
-    @Override
-    public FileTime lastModifiedTime() {
-        return modificationTime;
-    }
-
-    @Override
-    public FileTime lastAccessTime() {
-        return accessTime;
-    }
-
-    @Override
-    public FileTime creationTime() {
-        return modificationTime;
-    }
-
-    @Override
-    public boolean isRegularFile() {
-        return !directory;
-    }
-
-    @Override
-    public boolean isDirectory() {
-        return directory;
-    }
-
-    @Override
-    public boolean isSymbolicLink() {
-        return false;
-    }
-
-    @Override
-    public boolean isOther() {
-        return false;
-    }
-
-    @Override
-    public long size() {
-        return Math.max(size, 0);
-    }
-
-    @Override
-    public Object fileKey() {
-        return null;
+        super(
+                directory,
+                size,
+                FileTime.fromMillis(modificationTimeMillis),
+                FileTime.fromMillis(accessTimeMillis));
     }
 }

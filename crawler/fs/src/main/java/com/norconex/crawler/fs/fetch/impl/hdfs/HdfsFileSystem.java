@@ -15,27 +15,21 @@
 package com.norconex.crawler.fs.fetch.impl.hdfs;
 
 import java.io.IOException;
-import java.nio.file.FileStore;
-import java.nio.file.FileSystem;
 import java.nio.file.Path;
-import java.nio.file.PathMatcher;
-import java.nio.file.WatchService;
-import java.nio.file.attribute.UserPrincipalLookupService;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.regex.Pattern;
 
 import javax.security.auth.Subject;
 
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 
+import com.norconex.crawler.fs.fetch.impl.ReadOnlyFileSystem;
+
 /**
  * A read-only HDFS file system, reached over the WebHDFS REST API,
  * representing one authority (host + port).
  */
-final class HdfsFileSystem extends FileSystem {
+final class HdfsFileSystem extends ReadOnlyFileSystem {
 
     private final HdfsFileSystemProvider provider;
     private final String key;
@@ -44,7 +38,6 @@ final class HdfsFileSystem extends FileSystem {
     private final String username;
     private final Subject kerberosSubject;
     private final CloseableHttpClient httpClient;
-    private final AtomicBoolean open = new AtomicBoolean(true);
 
     // GETFILESTATUS/LISTSTATUS return attributes for every listed child in
     // one round trip. Caching them here lets the subsequent per-child
@@ -57,6 +50,7 @@ final class HdfsFileSystem extends FileSystem {
             HdfsFileSystemProvider provider, String key, String host,
             int port, String username, Subject kerberosSubject,
             CloseableHttpClient httpClient) {
+        super("HDFS");
         this.provider = provider;
         this.key = key;
         this.host = host;
@@ -97,7 +91,7 @@ final class HdfsFileSystem extends FileSystem {
 
     @Override
     public void close() {
-        if (open.compareAndSet(true, false)) {
+        if (markClosed()) {
             provider.closeFileSystem(key);
             try {
                 httpClient.close();
@@ -108,74 +102,12 @@ final class HdfsFileSystem extends FileSystem {
     }
 
     @Override
-    public boolean isOpen() {
-        return open.get();
-    }
-
-    @Override
-    public boolean isReadOnly() {
-        return true;
-    }
-
-    @Override
-    public String getSeparator() {
-        return "/";
-    }
-
-    @Override
-    public Iterable<Path> getRootDirectories() {
-        return Set.of(getPath("/"));
-    }
-
-    @Override
-    public Iterable<FileStore> getFileStores() {
-        return Set.of();
-    }
-
-    @Override
-    public Set<String> supportedFileAttributeViews() {
-        return Set.of("basic");
-    }
-
-    @Override
     public HdfsPath getPath(String first, String... more) {
-        var path = first;
-        for (var part : more) {
-            path += "/" + part;
-        }
+        return (HdfsPath) super.getPath(first, more);
+    }
+
+    @Override
+    protected Path createPath(String path) {
         return new HdfsPath(this, path);
-    }
-
-    @Override
-    public PathMatcher getPathMatcher(String syntaxAndPattern) {
-        var sep = syntaxAndPattern.indexOf(':');
-        if (sep <= 0) {
-            throw new IllegalArgumentException(
-                    "Invalid syntax and pattern: " + syntaxAndPattern);
-        }
-        var syntax = syntaxAndPattern.substring(0, sep);
-        var pattern = syntaxAndPattern.substring(sep + 1);
-        if (!"glob".equalsIgnoreCase(syntax)) {
-            throw new UnsupportedOperationException(
-                    "Unsupported path matcher syntax: " + syntax);
-        }
-        var regex = Pattern.compile(
-                pattern
-                        .replace(".", "\\.")
-                        .replace("*", ".*")
-                        .replace("?", "."));
-        return p -> regex.matcher(p.toString()).matches();
-    }
-
-    @Override
-    public UserPrincipalLookupService getUserPrincipalLookupService() {
-        throw new UnsupportedOperationException(
-                "HDFS file systems do not support user principal lookup.");
-    }
-
-    @Override
-    public WatchService newWatchService() {
-        throw new UnsupportedOperationException(
-                "HDFS file systems do not support watching.");
     }
 }

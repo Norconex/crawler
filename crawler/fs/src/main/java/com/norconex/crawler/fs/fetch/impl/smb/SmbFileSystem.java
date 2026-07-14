@@ -14,17 +14,11 @@
  */
 package com.norconex.crawler.fs.fetch.impl.smb;
 
-import java.nio.file.FileStore;
-import java.nio.file.FileSystem;
 import java.nio.file.Path;
-import java.nio.file.PathMatcher;
-import java.nio.file.WatchService;
-import java.nio.file.attribute.UserPrincipalLookupService;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.regex.Pattern;
+
+import com.norconex.crawler.fs.fetch.impl.ReadOnlyFileSystem;
 
 import jcifs.CIFSContext;
 
@@ -32,14 +26,13 @@ import jcifs.CIFSContext;
  * A read-only SMB (CIFS) file system, representing one authority
  * (host + port), backed by jcifs-ng.
  */
-final class SmbFileSystem extends FileSystem {
+final class SmbFileSystem extends ReadOnlyFileSystem {
 
     private final SmbFileSystemProvider provider;
     private final String key;
     private final String host;
     private final int port;
     private final CIFSContext context;
-    private final AtomicBoolean open = new AtomicBoolean(true);
 
     // Directory listings enumerate every child's attributes in one round
     // trip (jcifs-ng populates them from the FIND response). Caching them
@@ -52,6 +45,7 @@ final class SmbFileSystem extends FileSystem {
     SmbFileSystem(
             SmbFileSystemProvider provider, String key, String host,
             int port, CIFSContext context) {
+        super("SMB");
         this.provider = provider;
         this.key = key;
         this.host = host;
@@ -82,80 +76,18 @@ final class SmbFileSystem extends FileSystem {
 
     @Override
     public void close() {
-        if (open.compareAndSet(true, false)) {
+        if (markClosed()) {
             provider.closeFileSystem(key);
         }
     }
 
     @Override
-    public boolean isOpen() {
-        return open.get();
-    }
-
-    @Override
-    public boolean isReadOnly() {
-        return true;
-    }
-
-    @Override
-    public String getSeparator() {
-        return "/";
-    }
-
-    @Override
-    public Iterable<Path> getRootDirectories() {
-        return Set.of(getPath("/"));
-    }
-
-    @Override
-    public Iterable<FileStore> getFileStores() {
-        return Set.of();
-    }
-
-    @Override
-    public Set<String> supportedFileAttributeViews() {
-        return Set.of("basic");
-    }
-
-    @Override
     public SmbPath getPath(String first, String... more) {
-        var path = first;
-        for (var part : more) {
-            path += "/" + part;
-        }
+        return (SmbPath) super.getPath(first, more);
+    }
+
+    @Override
+    protected Path createPath(String path) {
         return new SmbPath(this, path);
-    }
-
-    @Override
-    public PathMatcher getPathMatcher(String syntaxAndPattern) {
-        var sep = syntaxAndPattern.indexOf(':');
-        if (sep <= 0) {
-            throw new IllegalArgumentException(
-                    "Invalid syntax and pattern: " + syntaxAndPattern);
-        }
-        var syntax = syntaxAndPattern.substring(0, sep);
-        var pattern = syntaxAndPattern.substring(sep + 1);
-        if (!"glob".equalsIgnoreCase(syntax)) {
-            throw new UnsupportedOperationException(
-                    "Unsupported path matcher syntax: " + syntax);
-        }
-        var regex = Pattern.compile(
-                pattern
-                        .replace(".", "\\.")
-                        .replace("*", ".*")
-                        .replace("?", "."));
-        return p -> regex.matcher(p.toString()).matches();
-    }
-
-    @Override
-    public UserPrincipalLookupService getUserPrincipalLookupService() {
-        throw new UnsupportedOperationException(
-                "SMB file systems do not support user principal lookup.");
-    }
-
-    @Override
-    public WatchService newWatchService() {
-        throw new UnsupportedOperationException(
-                "SMB file systems do not support watching.");
     }
 }

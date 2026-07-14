@@ -14,24 +14,17 @@
  */
 package com.norconex.crawler.fs.fetch.impl.azureblob;
 
-import java.nio.file.FileStore;
-import java.nio.file.FileSystem;
 import java.nio.file.Path;
-import java.nio.file.PathMatcher;
-import java.nio.file.WatchService;
-import java.nio.file.attribute.UserPrincipalLookupService;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.regex.Pattern;
 
 import com.azure.storage.blob.BlobContainerClient;
+import com.norconex.crawler.fs.fetch.impl.ReadOnlyFileSystem;
 
 /**
  * A read-only Azure Blob file system representing one blob container.
  */
-final class AzureBlobFileSystem extends FileSystem {
+final class AzureBlobFileSystem extends ReadOnlyFileSystem {
 
     private final AzureBlobFileSystemProvider provider;
     private final String key;
@@ -39,13 +32,13 @@ final class AzureBlobFileSystem extends FileSystem {
     private final String account;
     private final String container;
     private final BlobContainerClient client;
-    private final AtomicBoolean open = new AtomicBoolean(true);
     private final Map<String, AzureBlobFileAttributes> attrsCache =
             new ConcurrentHashMap<>();
 
     AzureBlobFileSystem(
             AzureBlobFileSystemProvider provider, AzureBlobLocation location,
             BlobContainerClient client) {
+        super("Azure Blob");
         this.provider = provider;
         key = location.key();
         scheme = location.scheme();
@@ -81,80 +74,18 @@ final class AzureBlobFileSystem extends FileSystem {
 
     @Override
     public void close() {
-        if (open.compareAndSet(true, false)) {
+        if (markClosed()) {
             provider.closeFileSystem(key);
         }
     }
 
     @Override
-    public boolean isOpen() {
-        return open.get();
-    }
-
-    @Override
-    public boolean isReadOnly() {
-        return true;
-    }
-
-    @Override
-    public String getSeparator() {
-        return "/";
-    }
-
-    @Override
-    public Iterable<Path> getRootDirectories() {
-        return Set.of(getPath("/"));
-    }
-
-    @Override
-    public Iterable<FileStore> getFileStores() {
-        return Set.of();
-    }
-
-    @Override
-    public Set<String> supportedFileAttributeViews() {
-        return Set.of("basic");
-    }
-
-    @Override
     public AzureBlobPath getPath(String first, String... more) {
-        var path = first;
-        for (var part : more) {
-            path += "/" + part;
-        }
+        return (AzureBlobPath) super.getPath(first, more);
+    }
+
+    @Override
+    protected Path createPath(String path) {
         return new AzureBlobPath(this, path);
-    }
-
-    @Override
-    public PathMatcher getPathMatcher(String syntaxAndPattern) {
-        var sep = syntaxAndPattern.indexOf(':');
-        if (sep <= 0) {
-            throw new IllegalArgumentException(
-                    "Invalid syntax and pattern: " + syntaxAndPattern);
-        }
-        var syntax = syntaxAndPattern.substring(0, sep);
-        var pattern = syntaxAndPattern.substring(sep + 1);
-        if (!"glob".equalsIgnoreCase(syntax)) {
-            throw new UnsupportedOperationException(
-                    "Unsupported path matcher syntax: " + syntax);
-        }
-        var regex = Pattern.compile(
-                pattern
-                        .replace(".", "\\.")
-                        .replace("*", ".*")
-                        .replace("?", "."));
-        return p -> regex.matcher(p.toString()).matches();
-    }
-
-    @Override
-    public UserPrincipalLookupService getUserPrincipalLookupService() {
-        throw new UnsupportedOperationException(
-                "Azure Blob file systems do not support principal lookup.");
-    }
-
-    @Override
-    public WatchService newWatchService() {
-        throw new UnsupportedOperationException(
-                "Azure Blob file systems do not support watching.");
     }
 }

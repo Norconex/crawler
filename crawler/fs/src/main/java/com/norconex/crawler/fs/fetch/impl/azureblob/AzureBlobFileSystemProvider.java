@@ -259,13 +259,8 @@ final class AzureBlobFileSystemProvider extends FileSystemProvider {
             var options = new ListBlobsOptions()
                     .setPrefix(path.blobPrefix())
                     .setMaxResultsPerPage(1);
-            var exists = false;
             for (BlobItem ignored : fs.client().listBlobsByHierarchy("/",
                     options, null)) {
-                exists = true;
-                break;
-            }
-            if (exists) {
                 return new AzureBlobFileAttributes(true, 0, null);
             }
         } catch (BlobStorageException e) {

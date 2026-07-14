@@ -14,26 +14,19 @@
  */
 package com.norconex.crawler.fs.fetch.impl.adlsgen2;
 
-import java.nio.file.FileStore;
-import java.nio.file.FileSystem;
 import java.nio.file.Path;
-import java.nio.file.PathMatcher;
-import java.nio.file.WatchService;
-import java.nio.file.attribute.UserPrincipalLookupService;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.regex.Pattern;
 
 import com.azure.storage.file.datalake.DataLakeFileSystemClient;
 import com.norconex.commons.lang.map.Properties;
+import com.norconex.crawler.fs.fetch.impl.ReadOnlyFileSystem;
 
 /**
  * A read-only ADLS Gen2 file system representing one file system in one
  * storage account.
  */
-final class AdlsGen2FileSystem extends FileSystem {
+final class AdlsGen2FileSystem extends ReadOnlyFileSystem {
 
     private final AdlsGen2FileSystemProvider provider;
     private final String key;
@@ -42,7 +35,6 @@ final class AdlsGen2FileSystem extends FileSystem {
     private final String account;
     private final String host;
     private final DataLakeFileSystemClient client;
-    private final AtomicBoolean open = new AtomicBoolean(true);
     private final Map<String, AdlsGen2FileAttributes> attrsCache =
             new ConcurrentHashMap<>();
     private final Map<String, Properties> aclCache = new ConcurrentHashMap<>();
@@ -50,6 +42,7 @@ final class AdlsGen2FileSystem extends FileSystem {
     AdlsGen2FileSystem(
             AdlsGen2FileSystemProvider provider, AdlsGen2Location location,
             DataLakeFileSystemClient client) {
+        super("ADLS Gen2");
         this.provider = provider;
         key = location.key();
         scheme = location.scheme();
@@ -94,78 +87,18 @@ final class AdlsGen2FileSystem extends FileSystem {
 
     @Override
     public void close() {
-        if (open.compareAndSet(true, false)) {
+        if (markClosed()) {
             provider.closeFileSystem(key);
         }
     }
 
     @Override
-    public boolean isOpen() {
-        return open.get();
-    }
-
-    @Override
-    public boolean isReadOnly() {
-        return true;
-    }
-
-    @Override
-    public String getSeparator() {
-        return "/";
-    }
-
-    @Override
-    public Iterable<Path> getRootDirectories() {
-        return Set.of(getPath("/"));
-    }
-
-    @Override
-    public Iterable<FileStore> getFileStores() {
-        return Set.of();
-    }
-
-    @Override
-    public Set<String> supportedFileAttributeViews() {
-        return Set.of("basic");
-    }
-
-    @Override
     public AdlsGen2Path getPath(String first, String... more) {
-        var path = first;
-        for (var part : more) {
-            path += "/" + part;
-        }
+        return (AdlsGen2Path) super.getPath(first, more);
+    }
+
+    @Override
+    protected Path createPath(String path) {
         return new AdlsGen2Path(this, path);
-    }
-
-    @Override
-    public PathMatcher getPathMatcher(String syntaxAndPattern) {
-        var sep = syntaxAndPattern.indexOf(':');
-        if (sep <= 0) {
-            throw new IllegalArgumentException(
-                    "Invalid syntax and pattern: " + syntaxAndPattern);
-        }
-        var syntax = syntaxAndPattern.substring(0, sep);
-        var pattern = syntaxAndPattern.substring(sep + 1);
-        if (!"glob".equalsIgnoreCase(syntax)) {
-            throw new UnsupportedOperationException(
-                    "Unsupported path matcher syntax: " + syntax);
-        }
-        var regex = Pattern.compile(
-                pattern.replace(".", "\\.").replace("*", ".*")
-                        .replace("?", "."));
-        return p -> regex.matcher(p.toString()).matches();
-    }
-
-    @Override
-    public UserPrincipalLookupService getUserPrincipalLookupService() {
-        throw new UnsupportedOperationException(
-                "ADLS Gen2 file systems do not support principal lookup.");
-    }
-
-    @Override
-    public WatchService newWatchService() {
-        throw new UnsupportedOperationException(
-                "ADLS Gen2 file systems do not support watching.");
     }
 }

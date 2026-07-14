@@ -15,29 +15,21 @@
 package com.norconex.crawler.fs.fetch.impl.cmis;
 
 import java.io.IOException;
-import java.nio.file.FileStore;
-import java.nio.file.FileSystem;
 import java.nio.file.Path;
-import java.nio.file.PathMatcher;
-import java.nio.file.WatchService;
-import java.nio.file.attribute.UserPrincipalLookupService;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.regex.Pattern;
 
 import com.norconex.commons.lang.xml.Xml;
+import com.norconex.crawler.fs.fetch.impl.ReadOnlyFileSystem;
 
 /**
  * A read-only, single-repository CMIS Atom file system.
  */
-final class CmisFileSystem extends FileSystem {
+final class CmisFileSystem extends ReadOnlyFileSystem {
 
     private final CmisFileSystemProvider provider;
     private final String endpointUrl;
     private final CmisAtomSession session;
-    private final AtomicBoolean open = new AtomicBoolean(true);
 
     // Caches the entry document per CMIS object path so a single crawl
     // pass (existence/type check, metadata, content, and directory
@@ -47,6 +39,7 @@ final class CmisFileSystem extends FileSystem {
     CmisFileSystem(
             CmisFileSystemProvider provider, String endpointUrl,
             CmisAtomSession session) {
+        super("CMIS");
         this.provider = provider;
         this.endpointUrl = endpointUrl;
         this.session = session;
@@ -77,81 +70,19 @@ final class CmisFileSystem extends FileSystem {
 
     @Override
     public void close() {
-        if (open.compareAndSet(true, false)) {
+        if (markClosed()) {
             provider.closeFileSystem(endpointUrl);
             session.close();
         }
     }
 
     @Override
-    public boolean isOpen() {
-        return open.get();
-    }
-
-    @Override
-    public boolean isReadOnly() {
-        return true;
-    }
-
-    @Override
-    public String getSeparator() {
-        return "/";
-    }
-
-    @Override
-    public Iterable<Path> getRootDirectories() {
-        return Set.of(getPath("/"));
-    }
-
-    @Override
-    public Iterable<FileStore> getFileStores() {
-        return Set.of();
-    }
-
-    @Override
-    public Set<String> supportedFileAttributeViews() {
-        return Set.of("basic");
-    }
-
-    @Override
     public CmisPath getPath(String first, String... more) {
-        var path = first;
-        for (var part : more) {
-            path += "/" + part;
-        }
+        return (CmisPath) super.getPath(first, more);
+    }
+
+    @Override
+    protected Path createPath(String path) {
         return new CmisPath(this, path);
-    }
-
-    @Override
-    public PathMatcher getPathMatcher(String syntaxAndPattern) {
-        var sep = syntaxAndPattern.indexOf(':');
-        if (sep <= 0) {
-            throw new IllegalArgumentException(
-                    "Invalid syntax and pattern: " + syntaxAndPattern);
-        }
-        var syntax = syntaxAndPattern.substring(0, sep);
-        var pattern = syntaxAndPattern.substring(sep + 1);
-        if (!"glob".equalsIgnoreCase(syntax)) {
-            throw new UnsupportedOperationException(
-                    "Unsupported path matcher syntax: " + syntax);
-        }
-        var regex = Pattern.compile(
-                pattern
-                        .replace(".", "\\.")
-                        .replace("*", ".*")
-                        .replace("?", "."));
-        return p -> regex.matcher(p.toString()).matches();
-    }
-
-    @Override
-    public UserPrincipalLookupService getUserPrincipalLookupService() {
-        throw new UnsupportedOperationException(
-                "CMIS file systems do not support user principal lookup.");
-    }
-
-    @Override
-    public WatchService newWatchService() {
-        throw new UnsupportedOperationException(
-                "CMIS file systems do not support watching.");
     }
 }

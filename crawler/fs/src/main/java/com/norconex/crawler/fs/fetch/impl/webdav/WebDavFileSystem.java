@@ -16,25 +16,19 @@ package com.norconex.crawler.fs.fetch.impl.webdav;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.file.FileStore;
-import java.nio.file.FileSystem;
 import java.nio.file.Path;
-import java.nio.file.PathMatcher;
-import java.nio.file.WatchService;
-import java.nio.file.attribute.UserPrincipalLookupService;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.regex.Pattern;
 
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+
+import com.norconex.crawler.fs.fetch.impl.ReadOnlyFileSystem;
 
 /**
  * A read-only WebDAV (or plain HTTP) file system, representing one
  * authority (scheme + host + port).
  */
-final class WebDavFileSystem extends FileSystem {
+final class WebDavFileSystem extends ReadOnlyFileSystem {
 
     private final WebDavFileSystemProvider provider;
     private final String key;
@@ -43,7 +37,6 @@ final class WebDavFileSystem extends FileSystem {
     private final String host;
     private final int port;
     private final CloseableHttpClient httpClient;
-    private final AtomicBoolean open = new AtomicBoolean(true);
 
     // Directory listings (PROPFIND, Depth: 1) return attributes for every
     // child in one request. Caching them here lets the subsequent
@@ -57,6 +50,7 @@ final class WebDavFileSystem extends FileSystem {
             WebDavFileSystemProvider provider, String key,
             String declaredScheme, String transportScheme, String host,
             int port, CloseableHttpClient httpClient) {
+        super("WebDAV");
         this.provider = provider;
         this.key = key;
         this.declaredScheme = declaredScheme;
@@ -97,7 +91,7 @@ final class WebDavFileSystem extends FileSystem {
 
     @Override
     public void close() {
-        if (open.compareAndSet(true, false)) {
+        if (markClosed()) {
             provider.closeFileSystem(key);
             try {
                 httpClient.close();
@@ -108,74 +102,12 @@ final class WebDavFileSystem extends FileSystem {
     }
 
     @Override
-    public boolean isOpen() {
-        return open.get();
-    }
-
-    @Override
-    public boolean isReadOnly() {
-        return true;
-    }
-
-    @Override
-    public String getSeparator() {
-        return "/";
-    }
-
-    @Override
-    public Iterable<Path> getRootDirectories() {
-        return Set.of(getPath("/"));
-    }
-
-    @Override
-    public Iterable<FileStore> getFileStores() {
-        return Set.of();
-    }
-
-    @Override
-    public Set<String> supportedFileAttributeViews() {
-        return Set.of("basic");
-    }
-
-    @Override
     public WebDavPath getPath(String first, String... more) {
-        var path = first;
-        for (var part : more) {
-            path += "/" + part;
-        }
+        return (WebDavPath) super.getPath(first, more);
+    }
+
+    @Override
+    protected Path createPath(String path) {
         return new WebDavPath(this, path);
-    }
-
-    @Override
-    public PathMatcher getPathMatcher(String syntaxAndPattern) {
-        var sep = syntaxAndPattern.indexOf(':');
-        if (sep <= 0) {
-            throw new IllegalArgumentException(
-                    "Invalid syntax and pattern: " + syntaxAndPattern);
-        }
-        var syntax = syntaxAndPattern.substring(0, sep);
-        var pattern = syntaxAndPattern.substring(sep + 1);
-        if (!"glob".equalsIgnoreCase(syntax)) {
-            throw new UnsupportedOperationException(
-                    "Unsupported path matcher syntax: " + syntax);
-        }
-        var regex = Pattern.compile(
-                pattern
-                        .replace(".", "\\.")
-                        .replace("*", ".*")
-                        .replace("?", "."));
-        return p -> regex.matcher(p.toString()).matches();
-    }
-
-    @Override
-    public UserPrincipalLookupService getUserPrincipalLookupService() {
-        throw new UnsupportedOperationException(
-                "WebDAV file systems do not support user principal lookup.");
-    }
-
-    @Override
-    public WatchService newWatchService() {
-        throw new UnsupportedOperationException(
-                "WebDAV file systems do not support watching.");
     }
 }
