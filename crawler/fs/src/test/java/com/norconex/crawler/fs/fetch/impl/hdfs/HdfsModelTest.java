@@ -21,6 +21,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.channels.NonWritableChannelException;
@@ -387,5 +390,73 @@ class HdfsModelTest {
                 fs.getPath("/root"), p -> false)) {
             assertThat(stream.iterator().hasNext()).isFalse();
         }
+
+        try (var stream = provider.newDirectoryStream(
+                fs.getPath("/root"), null)) {
+            assertThat(stream.iterator().hasNext()).isTrue();
+        }
+    }
+
+    @Test
+    void testProviderPrivateHelperErrorBranches() throws Exception {
+        var provider = new HdfsFileSystemProvider();
+        var client = mock(CloseableHttpClient.class);
+
+        var fsNoKerberos = provider.getOrCreateFileSystem(
+                URI.create("webhdfs://host1.example.com:9870/"),
+                "alice", null, host -> client);
+        var fsKerberos = provider.getOrCreateFileSystem(
+                URI.create("webhdfs://host2.example.com:9870/"),
+                "alice", new Subject(), host -> client);
+
+        var providerClass = HdfsFileSystemProvider.class;
+        Method doAs = providerClass.getDeclaredMethod(
+                "doAs", HdfsFileSystem.class,
+                java.util.concurrent.Callable.class);
+        doAs.setAccessible(true);
+
+        // Covers doAs branch: non-Kerberos callable throws checked Exception.
+        var noKerberosEx = assertThrowsFromReflectiveCall(
+                () -> doAs.invoke(provider, fsNoKerberos,
+                        (java.util.concurrent.Callable<Object>) () -> {
+                            throw new Exception("checked");
+                        }));
+        assertThat(noKerberosEx).isInstanceOf(IOException.class);
+
+        // Covers doAs CompletionException branch with IOException cause.
+        var kerberosIoEx = assertThrowsFromReflectiveCall(
+                () -> doAs.invoke(provider, fsKerberos,
+                        (java.util.concurrent.Callable<Object>) () -> {
+                            throw new IOException("io cause");
+                        }));
+        assertThat(kerberosIoEx).isInstanceOf(IOException.class)
+                .hasMessageContaining("io cause");
+
+        // Covers doAs CompletionException branch with non-IO cause.
+        var kerberosOtherEx = assertThrowsFromReflectiveCall(
+                () -> doAs.invoke(provider, fsKerberos,
+                        (java.util.concurrent.Callable<Object>) () -> {
+                            throw new java.util.concurrent.CompletionException(
+                                    new IllegalStateException("boom"));
+                        }));
+        assertThat(kerberosOtherEx).isInstanceOf(IOException.class)
+                .hasMessageContaining("Kerberos-authenticated request failed");
+    }
+
+    private static Throwable assertThrowsFromReflectiveCall(
+            ReflectiveCall reflectiveCall) {
+        try {
+            reflectiveCall.run();
+        } catch (InvocationTargetException e) {
+            return e.getCause();
+        } catch (Exception e) {
+            return e;
+        }
+        throw new AssertionError("Expected reflective call to fail");
+    }
+
+    @FunctionalInterface
+    private interface ReflectiveCall {
+        void run() throws Exception;
     }
 }
