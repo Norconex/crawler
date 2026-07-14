@@ -182,6 +182,10 @@ public class GoogleCloudSearchCommitterConfig
 
     /**
      * Mappings of metadata fields to Google Cloud Search ACL principals.
+     * Cloud Search requires every indexed item to carry an ACL. When no
+     * mapping resolves to a reader for a given document (or none is
+     * configured at all) and no ACL is being inherited, the item defaults
+     * to being readable by the entire Google Workspace domain.
      */
     @JsonXmlCollection(entryName = "mapping")
     private final List<AclMapping> aclMappings = new ArrayList<>();

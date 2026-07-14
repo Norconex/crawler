@@ -144,9 +144,18 @@ class GoogleCloudSearchClientTest {
     }
 
     @Test
-    void buildAclReturnsNullWhenNothingResolved() throws Exception {
+    void buildAclDefaultsToDomainWideReadWhenNothingResolved()
+            throws Exception {
+        // Cloud Search rejects items with no ACL at all ("Missing Acl in
+        // request"), so when no mapping/inheritance resolves to anything,
+        // the item must default to being readable by the entire domain
+        // instead of an omitted (null) ACL.
         var client = newClient(newConfig());
-        assertThat(client.buildAcl(new Properties())).isNull();
+        var acl = client.buildAcl(new Properties());
+        assertThat(acl).isNotNull();
+        assertThat(acl.getReaders()).hasSize(1);
+        assertThat(acl.getReaders().get(0).getGsuitePrincipal()
+                .getGsuiteDomain()).isTrue();
     }
 
     @Test
