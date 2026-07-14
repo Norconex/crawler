@@ -432,10 +432,10 @@ class SmbModelTest {
 
     static void configureSmbFileMock(SmbFile mocked, int count, ACE ace)
             throws java.io.IOException {
-                // Mockito construction index may be 0- or 1-based depending on version.
-                var idx = count <= 0 ? 0 : count - 1;
-                if (idx == 0) {
-                        when(mocked.exists()).thenReturn(true);
+        // Mockito construction index may be 0- or 1-based depending on version.
+        var idx = count <= 0 ? 0 : count - 1;
+        if (idx == 0) {
+            when(mocked.exists()).thenReturn(true);
 
             var childFile = mock(SmbFile.class);
             when(childFile.getName()).thenReturn("a.txt");
@@ -454,16 +454,16 @@ class SmbModelTest {
             });
             return;
         }
-                if (idx == 1) {
+        if (idx == 1) {
             when(mocked.isDirectory()).thenReturn(true);
             return;
         }
-                if (idx == 2) {
+        if (idx == 2) {
             when(mocked.getSecurity()).thenReturn(new ACE[] {
                     ace
             });
             return;
         }
-                // Extra constructions are irrelevant for this scenario.
+        // Extra constructions are irrelevant for this scenario.
     }
 }
