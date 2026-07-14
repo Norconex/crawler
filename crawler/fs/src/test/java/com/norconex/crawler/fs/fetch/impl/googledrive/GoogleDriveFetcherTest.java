@@ -108,6 +108,20 @@ class GoogleDriveFetcherTest {
     }
 
     @Test
+    void testBlankMimeUsesAltMediaPath() throws Exception {
+        var f = new CapturingGoogleDriveFetcher();
+        var ref = GoogleDriveReference.parse(
+                "gdrive://workspace-01/drives/drive123/items/item123");
+        var item = objectMapper.readTree("{}");
+        var doc = new Doc(ref.toReference());
+
+        f.fetchContent(doc, ref, item);
+
+        assertThat(f.lastContentPath)
+                .isEqualTo("/files/item123?alt=media");
+    }
+
+    @Test
     void testUnsupportedGoogleNativeMimeSetsMetadataSignal()
             throws Exception {
         var f = new CapturingGoogleDriveFetcher();
@@ -430,6 +444,35 @@ class GoogleDriveFetcherTest {
         assertThat(f.requestedUris)
                 .contains(
                         "https://www.googleapis.com/drive/v3/files/item123?alt=media");
+    }
+
+    @Test
+    void testHelperRequestsAddScopeSpecificQueryParameters()
+            throws Exception {
+        var f = new HttpQueueGoogleDriveFetcher();
+        f.getConfiguration().setClientEmail("svc@example.com");
+        f.getConfiguration().setPrivateKey(generatePrivateKeyPem());
+        f.enqueueJson(200, """
+                {
+                  "access_token":"token-helper",
+                  "expires_in":3600
+                }
+                """);
+        f.enqueueJson(200, "{\"changes\":[]}");
+        f.enqueueJson(200, "{\"startPageToken\":\"drive-token\"}");
+
+        f.fetchChangesNode(GoogleDriveReference.parse(
+                "gdrive://workspace-01/users/user123"),
+                "page-1");
+        f.fetchStartPageToken(GoogleDriveReference.parse(
+                "gdrive://workspace-01/drives/drive123"));
+
+        assertThat(f.requestedUris)
+                .anySatisfy(url -> assertThat(url)
+                        .contains("restrictToMyDrive=true"));
+        assertThat(f.requestedUris)
+                .anySatisfy(url -> assertThat(url)
+                        .contains("driveId=drive123"));
     }
 
     @Test

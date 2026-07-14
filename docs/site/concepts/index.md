@@ -39,7 +39,7 @@ three-stage pipeline. The crawl type (Web vs. File System) only affects the
 All configuration lives in a single file (XML, YAML, or JSON).
 
 - [Reference](/docs/reference/) — all built-in extension points with examples
-- The [Visual Configurator](https://crawlerconfig.norconex.com) provides a visual way to build and validate configs.
+- The [Visual Configurator](https://configurator.norconex.com.com) provides a visual way to build and validate configs.
 
 ## File System Fetcher Start References
 

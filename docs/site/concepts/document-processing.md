@@ -110,5 +110,5 @@ or enriching metadata only for documents from a specific domain.
 ## Configuration
 
 All Importer options are described in the [Reference](/docs/reference/) section.
-The [Visual Configurator](https://crawlerconfig.norconex.com) lets you explore
+The [Visual Configurator](https://configurator.norconex.com.com) lets you explore
 and configure handlers visually with inline documentation and live examples.

@@ -64,225 +64,225 @@ import com.norconex.importer.doc.DocMetaConstants;
 @Timeout(30)
 class M365GraphFetcherTest {
 
-        private static final ObjectMapper JSON = new ObjectMapper();
+    private static final ObjectMapper JSON = new ObjectMapper();
 
-        @Test
-        void testAcceptRequest() {
-                var f = new M365GraphFetcher();
-                assertThat(f.acceptRequest(new FileFetchRequest(new Doc(
-                                "m365sp://tenant/sites/site123/drives/drive123/items/item123"),
-                                DOCUMENT))).isTrue();
-                assertThat(f.acceptRequest(new FileFetchRequest(new Doc(
-                                "m365od://tenant/users/user123/drives/drive123/items/item123"),
-                                DOCUMENT))).isTrue();
-                assertThat(f.acceptRequest(new FileFetchRequest(
-                                new Doc("s3://bucket/key"), DOCUMENT)))
-                                                .isFalse();
-        }
+    @Test
+    void testAcceptRequest() {
+        var f = new M365GraphFetcher();
+        assertThat(f.acceptRequest(new FileFetchRequest(new Doc(
+                "m365sp://tenant/sites/site123/drives/drive123/items/item123"),
+                DOCUMENT))).isTrue();
+        assertThat(f.acceptRequest(new FileFetchRequest(new Doc(
+                "m365od://tenant/users/user123/drives/drive123/items/item123"),
+                DOCUMENT))).isTrue();
+        assertThat(f.acceptRequest(new FileFetchRequest(
+                new Doc("s3://bucket/key"), DOCUMENT)))
+                        .isFalse();
+    }
 
-        @Test
-        void testWriteRead() {
-                assertThatNoException().isThrownBy(
-                                () -> BeanMapper.DEFAULT.assertWriteRead(
-                                                FsTestUtil.randomize(
-                                                                M365GraphFetcherConfig.class)));
-        }
+    @Test
+    void testWriteRead() {
+        assertThatNoException().isThrownBy(
+                () -> BeanMapper.DEFAULT.assertWriteRead(
+                        FsTestUtil.randomize(
+                                M365GraphFetcherConfig.class)));
+    }
 
-        @Test
-        void testSharePointReferenceParseAndFormat() {
-                var ref = M365GraphReference.parse(
-                                "m365sp://tenant/sites/site123/drives/drive123/items/item123");
-                assertThat(ref.kind()).isEqualTo(M365GraphReference.Kind.ITEM);
-                assertThat(ref.mode())
-                                .isEqualTo(M365GraphReference.Mode.SHAREPOINT);
-                assertThat(ref.tenantId()).isEqualTo("tenant");
-                assertThat(ref.siteId()).isEqualTo("site123");
-                assertThat(ref.driveId()).isEqualTo("drive123");
-                assertThat(ref.itemId()).isEqualTo("item123");
-                assertThat(ref.itemApiPath())
-                                .isEqualTo("/sites/site123/drives/drive123/items/item123");
-                assertThat(ref.toReference())
-                                .isEqualTo(
-                                                "m365sp://tenant/sites/site123/drives/drive123/items/item123");
-        }
+    @Test
+    void testSharePointReferenceParseAndFormat() {
+        var ref = M365GraphReference.parse(
+                "m365sp://tenant/sites/site123/drives/drive123/items/item123");
+        assertThat(ref.kind()).isEqualTo(M365GraphReference.Kind.ITEM);
+        assertThat(ref.mode())
+                .isEqualTo(M365GraphReference.Mode.SHAREPOINT);
+        assertThat(ref.tenantId()).isEqualTo("tenant");
+        assertThat(ref.siteId()).isEqualTo("site123");
+        assertThat(ref.driveId()).isEqualTo("drive123");
+        assertThat(ref.itemId()).isEqualTo("item123");
+        assertThat(ref.itemApiPath())
+                .isEqualTo("/sites/site123/drives/drive123/items/item123");
+        assertThat(ref.toReference())
+                .isEqualTo(
+                        "m365sp://tenant/sites/site123/drives/drive123/items/item123");
+    }
 
-        @Test
-        void testOneDriveReferenceParseAndFormat() {
-                var ref = M365GraphReference.parse(
-                                "m365od://tenant/users/user123/drives/drive123/items/item123");
-                assertThat(ref.kind()).isEqualTo(M365GraphReference.Kind.ITEM);
-                assertThat(ref.mode())
-                                .isEqualTo(M365GraphReference.Mode.ONEDRIVE);
-                assertThat(ref.tenantId()).isEqualTo("tenant");
-                assertThat(ref.userId()).isEqualTo("user123");
-                assertThat(ref.driveId()).isEqualTo("drive123");
-                assertThat(ref.itemId()).isEqualTo("item123");
-                assertThat(ref.itemApiPath())
-                                .isEqualTo("/users/user123/drives/drive123/items/item123");
-                assertThat(ref.toReference())
-                                .isEqualTo(
-                                                "m365od://tenant/users/user123/drives/drive123/items/item123");
-        }
+    @Test
+    void testOneDriveReferenceParseAndFormat() {
+        var ref = M365GraphReference.parse(
+                "m365od://tenant/users/user123/drives/drive123/items/item123");
+        assertThat(ref.kind()).isEqualTo(M365GraphReference.Kind.ITEM);
+        assertThat(ref.mode())
+                .isEqualTo(M365GraphReference.Mode.ONEDRIVE);
+        assertThat(ref.tenantId()).isEqualTo("tenant");
+        assertThat(ref.userId()).isEqualTo("user123");
+        assertThat(ref.driveId()).isEqualTo("drive123");
+        assertThat(ref.itemId()).isEqualTo("item123");
+        assertThat(ref.itemApiPath())
+                .isEqualTo("/users/user123/drives/drive123/items/item123");
+        assertThat(ref.toReference())
+                .isEqualTo(
+                        "m365od://tenant/users/user123/drives/drive123/items/item123");
+    }
 
-        @Test
-        void testSharePointSiteEntryReference() {
-                var ref = M365GraphReference
-                                .parse("m365sp://tenant/sites/site123");
-                assertThat(ref.kind()).isEqualTo(M365GraphReference.Kind.SITE);
-                assertThat(ref.isDiscoveryEntry()).isTrue();
-                assertThat(ref.drivesApiPath())
-                                .isEqualTo("/sites/site123/drives");
-                assertThat(ref.toReference())
-                                .isEqualTo("m365sp://tenant/sites/site123");
-        }
+    @Test
+    void testSharePointSiteEntryReference() {
+        var ref = M365GraphReference
+                .parse("m365sp://tenant/sites/site123");
+        assertThat(ref.kind()).isEqualTo(M365GraphReference.Kind.SITE);
+        assertThat(ref.isDiscoveryEntry()).isTrue();
+        assertThat(ref.drivesApiPath())
+                .isEqualTo("/sites/site123/drives");
+        assertThat(ref.toReference())
+                .isEqualTo("m365sp://tenant/sites/site123");
+    }
 
-        @Test
-        void testSharePointSiteUrlEntryReference() {
-                var ref = M365GraphReference.parse(
-                                "m365sp://tenant/siteurl?url=https%3A%2F%2Fcontoso.sharepoint.com%2Fsites%2Fengineering");
-                assertThat(ref.kind())
-                                .isEqualTo(M365GraphReference.Kind.SITE_URL);
-                assertThat(ref.siteUrl())
-                                .isEqualTo("https://contoso.sharepoint.com/sites/engineering");
-                assertThat(ref.resolveSiteApiPath())
-                                .isEqualTo("/sites/contoso.sharepoint.com:/sites/engineering");
-        }
+    @Test
+    void testSharePointSiteUrlEntryReference() {
+        var ref = M365GraphReference.parse(
+                "m365sp://tenant/siteurl?url=https%3A%2F%2Fcontoso.sharepoint.com%2Fsites%2Fengineering");
+        assertThat(ref.kind())
+                .isEqualTo(M365GraphReference.Kind.SITE_URL);
+        assertThat(ref.siteUrl())
+                .isEqualTo("https://contoso.sharepoint.com/sites/engineering");
+        assertThat(ref.resolveSiteApiPath())
+                .isEqualTo("/sites/contoso.sharepoint.com:/sites/engineering");
+    }
 
-        @Test
-        void testOneDriveUserEntryReference() {
-                var ref = M365GraphReference
-                                .parse("m365od://tenant/users/user123");
-                assertThat(ref.kind()).isEqualTo(M365GraphReference.Kind.USER);
-                assertThat(ref.isDiscoveryEntry()).isTrue();
-                assertThat(ref.drivesApiPath())
-                                .isEqualTo("/users/user123/drives");
-                assertThat(ref.toReference())
-                                .isEqualTo("m365od://tenant/users/user123");
-        }
+    @Test
+    void testOneDriveUserEntryReference() {
+        var ref = M365GraphReference
+                .parse("m365od://tenant/users/user123");
+        assertThat(ref.kind()).isEqualTo(M365GraphReference.Kind.USER);
+        assertThat(ref.isDiscoveryEntry()).isTrue();
+        assertThat(ref.drivesApiPath())
+                .isEqualTo("/users/user123/drives");
+        assertThat(ref.toReference())
+                .isEqualTo("m365od://tenant/users/user123");
+    }
 
-        @Test
-        void testDriveReferenceApiAndChild() {
-                var ref = M365GraphReference.parse(
-                                "m365od://tenant/users/user123/drives/drive123");
-                assertThat(ref.kind()).isEqualTo(M365GraphReference.Kind.DRIVE);
-                assertThat(ref.driveRootApiPath())
-                                .isEqualTo("/users/user123/drives/drive123/root");
-                assertThat(ref.child("root").itemApiPath())
-                                .isEqualTo("/users/user123/drives/drive123/items/root");
-        }
+    @Test
+    void testDriveReferenceApiAndChild() {
+        var ref = M365GraphReference.parse(
+                "m365od://tenant/users/user123/drives/drive123");
+        assertThat(ref.kind()).isEqualTo(M365GraphReference.Kind.DRIVE);
+        assertThat(ref.driveRootApiPath())
+                .isEqualTo("/users/user123/drives/drive123/root");
+        assertThat(ref.child("root").itemApiPath())
+                .isEqualTo("/users/user123/drives/drive123/items/root");
+    }
 
-        @Test
-        void testDefaultStatusClassification() {
-                var fetcher = new M365GraphFetcher();
-                assertThat(fetcher.isValidStatus(200)).isTrue();
-                assertThat(fetcher.isValidStatus(404)).isFalse();
-                assertThat(fetcher.isNotFoundStatus(404)).isTrue();
-                assertThat(fetcher.isNativeRetryStatus(429)).isTrue();
-                assertThat(fetcher.getConfiguration().isNativeRetryEnabled())
-                                .isFalse();
-        }
+    @Test
+    void testDefaultStatusClassification() {
+        var fetcher = new M365GraphFetcher();
+        assertThat(fetcher.isValidStatus(200)).isTrue();
+        assertThat(fetcher.isValidStatus(404)).isFalse();
+        assertThat(fetcher.isNotFoundStatus(404)).isTrue();
+        assertThat(fetcher.isNativeRetryStatus(429)).isTrue();
+        assertThat(fetcher.getConfiguration().isNativeRetryEnabled())
+                .isFalse();
+    }
 
-        @Test
-        void testCustomStatusClassification() {
-                var fetcher = new M365GraphFetcher();
-                fetcher.getConfiguration()
-                                .setValidStatusCodes(List.of(200, 206))
-                                .setNotFoundStatusCodes(List.of(404, 410))
-                                .setNativeRetryStatusCodes(List.of(429))
-                                .setNativeRetryEnabled(true);
+    @Test
+    void testCustomStatusClassification() {
+        var fetcher = new M365GraphFetcher();
+        fetcher.getConfiguration()
+                .setValidStatusCodes(List.of(200, 206))
+                .setNotFoundStatusCodes(List.of(404, 410))
+                .setNativeRetryStatusCodes(List.of(429))
+                .setNativeRetryEnabled(true);
 
-                assertThat(fetcher.isValidStatus(206)).isTrue();
-                assertThat(fetcher.isNotFoundStatus(410)).isTrue();
-                assertThat(fetcher.isNativeRetryStatus(503)).isFalse();
-                assertThat(fetcher.getConfiguration().isNativeRetryEnabled())
-                                .isTrue();
-        }
+        assertThat(fetcher.isValidStatus(206)).isTrue();
+        assertThat(fetcher.isNotFoundStatus(410)).isTrue();
+        assertThat(fetcher.isNativeRetryStatus(503)).isFalse();
+        assertThat(fetcher.getConfiguration().isNativeRetryEnabled())
+                .isTrue();
+    }
 
-        @Test
-        void testSourceDeltaEnabledOnIncrementalStartup() {
-                var fetcher = new M365GraphFetcher();
-                fetcher.getConfiguration().setSourceDeltaExpansion(
-                                M365GraphFetcherConfig.SourceDeltaExpansion.SELF_ONLY);
-                fetcher.fetcherStartup(mockSession(true,
-                                CrawlerConfig.ChangeDiscovery.SOURCE_DELTA,
-                                "m365od://tenant/users/user123/drives/drive123"));
+    @Test
+    void testSourceDeltaEnabledOnIncrementalStartup() {
+        var fetcher = new M365GraphFetcher();
+        fetcher.getConfiguration().setSourceDeltaExpansion(
+                M365GraphFetcherConfig.SourceDeltaExpansion.SELF_ONLY);
+        fetcher.fetcherStartup(mockSession(true,
+                CrawlerConfig.ChangeDiscovery.SOURCE_DELTA,
+                "m365od://tenant/users/user123/drives/drive123"));
 
-                assertThat(fetcher.isSourceDeltaEnabled()).isTrue();
-        }
+        assertThat(fetcher.isSourceDeltaEnabled()).isTrue();
+    }
 
-        @Test
-        void testSourceDeltaDisabledWithoutIncrementalSourceDelta() {
-                var fetcher = new M365GraphFetcher();
-                fetcher.fetcherStartup(mockSession(true,
-                                CrawlerConfig.ChangeDiscovery.CRAWLER_SCAN,
-                                "m365od://tenant/users/user123/drives/drive123"));
-                assertThat(fetcher.isSourceDeltaEnabled()).isFalse();
+    @Test
+    void testSourceDeltaDisabledWithoutIncrementalSourceDelta() {
+        var fetcher = new M365GraphFetcher();
+        fetcher.fetcherStartup(mockSession(true,
+                CrawlerConfig.ChangeDiscovery.CRAWLER_SCAN,
+                "m365od://tenant/users/user123/drives/drive123"));
+        assertThat(fetcher.isSourceDeltaEnabled()).isFalse();
 
-                fetcher.fetcherStartup(mockSession(false,
-                                CrawlerConfig.ChangeDiscovery.SOURCE_DELTA,
-                                "m365od://tenant/users/user123/drives/drive123"));
-                assertThat(fetcher.isSourceDeltaEnabled()).isFalse();
-        }
+        fetcher.fetcherStartup(mockSession(false,
+                CrawlerConfig.ChangeDiscovery.SOURCE_DELTA,
+                "m365od://tenant/users/user123/drives/drive123"));
+        assertThat(fetcher.isSourceDeltaEnabled()).isFalse();
+    }
 
-        @Test
-        void testSourceDeltaRejectsSiteBoundaryWithSelfOnlyExpansion() {
-                var fetcher = new M365GraphFetcher();
-                fetcher.getConfiguration().setSourceDeltaExpansion(
-                                M365GraphFetcherConfig.SourceDeltaExpansion.SELF_ONLY);
+    @Test
+    void testSourceDeltaRejectsSiteBoundaryWithSelfOnlyExpansion() {
+        var fetcher = new M365GraphFetcher();
+        fetcher.getConfiguration().setSourceDeltaExpansion(
+                M365GraphFetcherConfig.SourceDeltaExpansion.SELF_ONLY);
 
-                assertThatThrownBy(() -> fetcher.fetcherStartup(mockSession(
-                                true,
-                                CrawlerConfig.ChangeDiscovery.SOURCE_DELTA,
-                                "m365sp://tenant/sites/site123")))
-                                                .isInstanceOf(CrawlerException.class)
-                                                .hasMessageContaining(
-                                                                "sourceDeltaExpansion")
-                                                .hasMessageContaining(
-                                                                "INCLUDE_CHILD_DRIVES");
-        }
+        assertThatThrownBy(() -> fetcher.fetcherStartup(mockSession(
+                true,
+                CrawlerConfig.ChangeDiscovery.SOURCE_DELTA,
+                "m365sp://tenant/sites/site123")))
+                        .isInstanceOf(CrawlerException.class)
+                        .hasMessageContaining(
+                                "sourceDeltaExpansion")
+                        .hasMessageContaining(
+                                "INCLUDE_CHILD_DRIVES");
+    }
 
-        @Test
-        void testSourceDeltaAllowsSiteBoundaryWithChildDriveExpansion() {
-                var fetcher = new M365GraphFetcher();
-                fetcher.getConfiguration().setSourceDeltaExpansion(
-                                M365GraphFetcherConfig.SourceDeltaExpansion.INCLUDE_CHILD_DRIVES);
+    @Test
+    void testSourceDeltaAllowsSiteBoundaryWithChildDriveExpansion() {
+        var fetcher = new M365GraphFetcher();
+        fetcher.getConfiguration().setSourceDeltaExpansion(
+                M365GraphFetcherConfig.SourceDeltaExpansion.INCLUDE_CHILD_DRIVES);
 
-                assertThatNoException().isThrownBy(() -> fetcher.fetcherStartup(
-                                mockSession(true,
-                                                CrawlerConfig.ChangeDiscovery.SOURCE_DELTA,
-                                                "m365sp://tenant/sites/site123")));
-                assertThat(fetcher.isSourceDeltaEnabled()).isTrue();
-        }
+        assertThatNoException().isThrownBy(() -> fetcher.fetcherStartup(
+                mockSession(true,
+                        CrawlerConfig.ChangeDiscovery.SOURCE_DELTA,
+                        "m365sp://tenant/sites/site123")));
+        assertThat(fetcher.isSourceDeltaEnabled()).isTrue();
+    }
 
-        @Test
-        void testSourceDeltaRejectsItemBoundary() {
-                var fetcher = new M365GraphFetcher();
+    @Test
+    void testSourceDeltaRejectsItemBoundary() {
+        var fetcher = new M365GraphFetcher();
 
-                assertThatThrownBy(() -> fetcher.fetcherStartup(mockSession(
-                                true,
-                                CrawlerConfig.ChangeDiscovery.SOURCE_DELTA,
-                                "m365od://tenant/users/user123/drives/drive123/items/item123")))
-                                                .isInstanceOf(CrawlerException.class)
-                                                .hasMessageContaining(
-                                                                "Unsupported M365 SOURCE_DELTA")
-                                                .hasMessageContaining(
-                                                                "drive start reference");
-        }
+        assertThatThrownBy(() -> fetcher.fetcherStartup(mockSession(
+                true,
+                CrawlerConfig.ChangeDiscovery.SOURCE_DELTA,
+                "m365od://tenant/users/user123/drives/drive123/items/item123")))
+                        .isInstanceOf(CrawlerException.class)
+                        .hasMessageContaining(
+                                "Unsupported M365 SOURCE_DELTA")
+                        .hasMessageContaining(
+                                "drive start reference");
+    }
 
-        @Test
-        void testRejectInvalidReference() {
-                assertThatThrownBy(() -> M365GraphReference.parse(
-                                "m365sp://tenant/invalid/path"))
-                                                .isInstanceOf(IllegalArgumentException.class)
-                                                .hasMessageContaining(
-                                                                "Invalid SharePoint reference");
-        }
+    @Test
+    void testRejectInvalidReference() {
+        assertThatThrownBy(() -> M365GraphReference.parse(
+                "m365sp://tenant/invalid/path"))
+                        .isInstanceOf(IllegalArgumentException.class)
+                        .hasMessageContaining(
+                                "Invalid SharePoint reference");
+    }
 
-        @Test
-        void testFetchMetadataPopulatesFields() throws Exception {
-                var fetcher = new M365GraphFetcher();
-                var doc = new Doc("m365sp://tenant/sites/s/drives/d/items/i");
-                JsonNode item = JSON.readTree("""
+    @Test
+    void testFetchMetadataPopulatesFields() throws Exception {
+        var fetcher = new M365GraphFetcher();
+        var doc = new Doc("m365sp://tenant/sites/s/drives/d/items/i");
+        JsonNode item = JSON.readTree("""
                 {
                   "size": 123,
                   "lastModifiedDateTime": "2026-07-12T12:34:56Z",
@@ -294,152 +294,152 @@ class M365GraphFetcherTest {
                 }
                 """);
 
-                fetcher.fetchMetadata(doc, item);
+        fetcher.fetchMetadata(doc, item);
 
-                assertThat(doc.getMetadata().getLong(FsDocMetadata.FILE_SIZE))
-                                .isEqualTo(123L);
-                assertThat(doc.getMetadata()
-                                .getLong(FsDocMetadata.LAST_MODIFIED))
-                                                .isGreaterThan(0L);
-                assertThat(doc.getMetadata().getString("crawler.m365.created"))
-                                .contains("2026-01-01T00:00:00Z");
-                assertThat(doc.getMetadata().getString("crawler.m365.webUrl"))
-                                .contains("https://contoso/share/doc");
-                assertThat(doc.getMetadata()
-                                .getString(DocMetaConstants.CONTENT_TYPE))
-                                                .contains("application/pdf");
-                assertThat(doc.getContentType()).isNotNull();
-                assertThat(
-                                doc.getMetadata().getString(
-                                                "crawler.m365.owner.displayName"))
-                                                                .contains("Ada");
-                assertThat(doc.getMetadata().getString("crawler.m365.owner.id"))
-                                .contains("u1");
-                assertThat(doc.getMetadata()
-                                .getString("crawler.m365.parent.path"))
-                                                .contains("/drives/d/root:/folder");
-        }
+        assertThat(doc.getMetadata().getLong(FsDocMetadata.FILE_SIZE))
+                .isEqualTo(123L);
+        assertThat(doc.getMetadata()
+                .getLong(FsDocMetadata.LAST_MODIFIED))
+                        .isGreaterThan(0L);
+        assertThat(doc.getMetadata().getString("crawler.m365.created"))
+                .contains("2026-01-01T00:00:00Z");
+        assertThat(doc.getMetadata().getString("crawler.m365.webUrl"))
+                .contains("https://contoso/share/doc");
+        assertThat(doc.getMetadata()
+                .getString(DocMetaConstants.CONTENT_TYPE))
+                        .contains("application/pdf");
+        assertThat(doc.getContentType()).isNotNull();
+        assertThat(
+                doc.getMetadata().getString(
+                        "crawler.m365.owner.displayName"))
+                                .contains("Ada");
+        assertThat(doc.getMetadata().getString("crawler.m365.owner.id"))
+                .contains("u1");
+        assertThat(doc.getMetadata()
+                .getString("crawler.m365.parent.path"))
+                        .contains("/drives/d/root:/folder");
+    }
 
-        @Test
-        void testDeltaCursorLifecycleAndStoredChildDriveRefs() {
-                var attrs = mock(CrawlerAttributes.class);
-                when(attrs.getString("m365graph.delta.cursor."
-                                + "m365od://tenant/users/u/drives/d"))
-                                                .thenReturn(Optional.of(
-                                                                "https://graph/delta"));
-                when(attrs.getString("m365graph.delta.childDrives."
-                                + "m365sp://tenant/sites/s"))
-                                                .thenReturn(Optional
-                                                                .of("[\"m365sp://tenant/sites/s/drives/d1\"]"));
+    @Test
+    void testDeltaCursorLifecycleAndStoredChildDriveRefs() {
+        var attrs = mock(CrawlerAttributes.class);
+        when(attrs.getString("m365graph.delta.cursor."
+                + "m365od://tenant/users/u/drives/d"))
+                        .thenReturn(Optional.of(
+                                "https://graph/delta"));
+        when(attrs.getString("m365graph.delta.childDrives."
+                + "m365sp://tenant/sites/s"))
+                        .thenReturn(Optional
+                                .of("[\"m365sp://tenant/sites/s/drives/d1\"]"));
 
-                var fetcher = new M365GraphFetcher();
-                fetcher.fetcherStartup(mockSession(true,
-                                CrawlerConfig.ChangeDiscovery.SOURCE_DELTA,
-                                "m365od://tenant/users/u/drives/d"));
-                setSessionAttributes(fetcher, attrs);
+        var fetcher = new M365GraphFetcher();
+        fetcher.fetcherStartup(mockSession(true,
+                CrawlerConfig.ChangeDiscovery.SOURCE_DELTA,
+                "m365od://tenant/users/u/drives/d"));
+        setSessionAttributes(fetcher, attrs);
 
-                var driveRef =
-                                M365GraphReference.parse(
-                                                "m365od://tenant/users/u/drives/d");
-                var siteRef = M365GraphReference
-                                .parse("m365sp://tenant/sites/s");
+        var driveRef =
+                M365GraphReference.parse(
+                        "m365od://tenant/users/u/drives/d");
+        var siteRef = M365GraphReference
+                .parse("m365sp://tenant/sites/s");
 
-                assertThat(fetcher.getDeltaCursor(driveRef))
-                                .contains("https://graph/delta");
-                fetcher.setDeltaCursor(driveRef, "https://graph/newdelta");
-                verify(attrs).setString(
-                                "m365graph.delta.cursor.m365od://tenant/users/u/drives/d",
-                                "https://graph/newdelta");
-                fetcher.clearDeltaCursor(driveRef);
-                verify(attrs).setString(
-                                "m365graph.delta.cursor.m365od://tenant/users/u/drives/d",
-                                "");
+        assertThat(fetcher.getDeltaCursor(driveRef))
+                .contains("https://graph/delta");
+        fetcher.setDeltaCursor(driveRef, "https://graph/newdelta");
+        verify(attrs).setString(
+                "m365graph.delta.cursor.m365od://tenant/users/u/drives/d",
+                "https://graph/newdelta");
+        fetcher.clearDeltaCursor(driveRef);
+        verify(attrs).setString(
+                "m365graph.delta.cursor.m365od://tenant/users/u/drives/d",
+                "");
 
-                assertThat(fetcher.getStoredChildDriveRefs(siteRef))
-                                .containsExactly(
-                                                "m365sp://tenant/sites/s/drives/d1");
-                fetcher.setStoredChildDriveRefs(siteRef,
-                                java.util.Set.of(
-                                                "m365sp://tenant/sites/s/drives/d2"));
-                verify(attrs).setString(org.mockito.ArgumentMatchers.eq(
-                                "m365graph.delta.childDrives.m365sp://tenant/sites/s"),
-                                org.mockito.ArgumentMatchers.contains("d2"));
-        }
+        assertThat(fetcher.getStoredChildDriveRefs(siteRef))
+                .containsExactly(
+                        "m365sp://tenant/sites/s/drives/d1");
+        fetcher.setStoredChildDriveRefs(siteRef,
+                java.util.Set.of(
+                        "m365sp://tenant/sites/s/drives/d2"));
+        verify(attrs).setString(org.mockito.ArgumentMatchers.eq(
+                "m365graph.delta.childDrives.m365sp://tenant/sites/s"),
+                org.mockito.ArgumentMatchers.contains("d2"));
+    }
 
-        @Test
-        void testGetStoredChildDriveRefsInvalidJsonThrows() {
-                var attrs = mock(CrawlerAttributes.class);
-                when(attrs.getString("m365graph.delta.childDrives."
-                                + "m365sp://tenant/sites/s"))
-                                                .thenReturn(Optional.of(
-                                                                "not-json"));
+    @Test
+    void testGetStoredChildDriveRefsInvalidJsonThrows() {
+        var attrs = mock(CrawlerAttributes.class);
+        when(attrs.getString("m365graph.delta.childDrives."
+                + "m365sp://tenant/sites/s"))
+                        .thenReturn(Optional.of(
+                                "not-json"));
 
-                var fetcher = new M365GraphFetcher();
-                setSessionAttributes(fetcher, attrs);
+        var fetcher = new M365GraphFetcher();
+        setSessionAttributes(fetcher, attrs);
 
-                assertThatThrownBy(() -> fetcher.getStoredChildDriveRefs(
-                                M365GraphReference.parse(
-                                                "m365sp://tenant/sites/s")))
-                                                                .isInstanceOf(IllegalStateException.class)
-                                                                .hasMessageContaining(
-                                                                                "Could not read persisted");
-        }
-
-        @Test
-        void testFetchFileRejectsTenantMismatchEarly() {
-                var fetcher = new M365GraphFetcher();
-                fetcher.getConfiguration().setTenantId("tenant-A");
-
-                var req = new FileFetchRequest(new Doc(
-                                "m365sp://tenant-B/sites/s/drives/d/items/i"),
-                                DOCUMENT);
-
-                assertThatThrownBy(() -> fetcher.fetch(req))
-                                .isInstanceOf(IllegalArgumentException.class)
+        assertThatThrownBy(() -> fetcher.getStoredChildDriveRefs(
+                M365GraphReference.parse(
+                        "m365sp://tenant/sites/s")))
+                                .isInstanceOf(IllegalStateException.class)
                                 .hasMessageContaining(
-                                                "Reference tenant does not match");
-        }
+                                        "Could not read persisted");
+    }
 
-        @Test
-        void testFetchItemNodeStatusHandling() throws Exception {
-                var ref = M365GraphReference.parse(
-                                "m365od://tenant/users/u/drives/d/items/i");
+    @Test
+    void testFetchFileRejectsTenantMismatchEarly() {
+        var fetcher = new M365GraphFetcher();
+        fetcher.getConfiguration().setTenantId("tenant-A");
 
-                var notFoundFetcher =
-                                new StubM365Fetcher(stubResponse(404, "{}"));
-                setToken(notFoundFetcher, "token");
-                assertThat(notFoundFetcher.fetchItemNode(ref)).isNull();
+        var req = new FileFetchRequest(new Doc(
+                "m365sp://tenant-B/sites/s/drives/d/items/i"),
+                DOCUMENT);
 
-                var badStatusFetcher =
-                                new StubM365Fetcher(stubResponse(500, "{}"));
-                setToken(badStatusFetcher, "token");
-                assertThatThrownBy(() -> badStatusFetcher.fetchItemNode(ref))
-                                .isInstanceOf(M365GraphFetcher.GraphHttpStatusException.class);
+        assertThatThrownBy(() -> fetcher.fetch(req))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining(
+                        "Reference tenant does not match");
+    }
 
-                var okFetcher =
-                                new StubM365Fetcher(stubResponse(200,
-                                                "{\"id\":\"i\"}"));
-                setToken(okFetcher, "token");
-                assertThat(okFetcher.fetchItemNode(ref).path("id").asText())
-                                .isEqualTo("i");
-        }
+    @Test
+    void testFetchItemNodeStatusHandling() throws Exception {
+        var ref = M365GraphReference.parse(
+                "m365od://tenant/users/u/drives/d/items/i");
 
-        @Test
-        void testFetchFileNonItemReturnsFolderResponse() throws Exception {
-                var fetcher = new M365GraphFetcher();
-                var req = new FileFetchRequest(
-                                new Doc("m365sp://tenant/sites/site123"),
-                                DOCUMENT);
+        var notFoundFetcher =
+                new StubM365Fetcher(stubResponse(404, "{}"));
+        setToken(notFoundFetcher, "token");
+        assertThat(notFoundFetcher.fetchItemNode(ref)).isNull();
 
-                var resp = (GenericFileFetchResponse) fetcher.fetch(req);
-                assertThat(resp.isFolder()).isTrue();
-                assertThat(resp.isFile()).isFalse();
-        }
+        var badStatusFetcher =
+                new StubM365Fetcher(stubResponse(500, "{}"));
+        setToken(badStatusFetcher, "token");
+        assertThatThrownBy(() -> badStatusFetcher.fetchItemNode(ref))
+                .isInstanceOf(M365GraphFetcher.GraphHttpStatusException.class);
 
-        @Test
-        void testFetchChildPaths() throws Exception {
-                var fetcher = new StubFetchGraphFetcher();
-                fetcher.setChildrenJson("""
+        var okFetcher =
+                new StubM365Fetcher(stubResponse(200,
+                        "{\"id\":\"i\"}"));
+        setToken(okFetcher, "token");
+        assertThat(okFetcher.fetchItemNode(ref).path("id").asText())
+                .isEqualTo("i");
+    }
+
+    @Test
+    void testFetchFileNonItemReturnsFolderResponse() throws Exception {
+        var fetcher = new M365GraphFetcher();
+        var req = new FileFetchRequest(
+                new Doc("m365sp://tenant/sites/site123"),
+                DOCUMENT);
+
+        var resp = (GenericFileFetchResponse) fetcher.fetch(req);
+        assertThat(resp.isFolder()).isTrue();
+        assertThat(resp.isFile()).isFalse();
+    }
+
+    @Test
+    void testFetchChildPaths() throws Exception {
+        var fetcher = new StubFetchGraphFetcher();
+        fetcher.setChildrenJson("""
                 {
                   "value": [
                     { "id": "file1", "file": { "mimeType": "text/plain" } },
@@ -448,28 +448,28 @@ class M365GraphFetcherTest {
                 }
                 """);
 
-                var response = (FolderPathsFetchResponse) fetcher.fetch(
-                                new FolderPathsFetchRequest(new Doc(
-                                                "m365od://tenant/users/user123/drives/drive123/items/root")));
+        var response = (FolderPathsFetchResponse) fetcher.fetch(
+                new FolderPathsFetchRequest(new Doc(
+                        "m365od://tenant/users/user123/drives/drive123/items/root")));
 
-                assertThat(response.getProcessingOutcome().isGoodState())
-                                .isTrue();
-                assertThat(response.getChildPaths())
-                                .extracting(p -> p.getUri() + ":"
-                                                + p.isFile() + ":"
-                                                + p.isFolder())
-                                .containsExactlyInAnyOrder(
-                                                "m365od://tenant/users/user123/drives/drive123/items/file1:true:false",
-                                                "m365od://tenant/users/user123/drives/drive123/items/folder1:false:true");
-        }
+        assertThat(response.getProcessingOutcome().isGoodState())
+                .isTrue();
+        assertThat(response.getChildPaths())
+                .extracting(p -> p.getUri() + ":"
+                        + p.isFile() + ":"
+                        + p.isFolder())
+                .containsExactlyInAnyOrder(
+                        "m365od://tenant/users/user123/drives/drive123/items/file1:true:false",
+                        "m365od://tenant/users/user123/drives/drive123/items/folder1:false:true");
+    }
 
-        @Test
-        void testFetchSharePointSiteUrlEntryDrives() throws Exception {
-                var fetcher = new StubFetchGraphFetcher();
-                fetcher.setResolvedSiteJson("""
+    @Test
+    void testFetchSharePointSiteUrlEntryDrives() throws Exception {
+        var fetcher = new StubFetchGraphFetcher();
+        fetcher.setResolvedSiteJson("""
                 { "id": "siteResolved" }
                 """);
-                fetcher.setDrivesJson("""
+        fetcher.setDrivesJson("""
                 {
                   "value": [
                     { "id": "driveZ" }
@@ -477,24 +477,24 @@ class M365GraphFetcherTest {
                 }
                 """);
 
-                var response = (FolderPathsFetchResponse) fetcher.fetch(
-                                new FolderPathsFetchRequest(new Doc(
-                                                "m365sp://tenant/siteurl?url=https%3A%2F%2Fcontoso.sharepoint.com%2Fsites%2Fengineering")));
+        var response = (FolderPathsFetchResponse) fetcher.fetch(
+                new FolderPathsFetchRequest(new Doc(
+                        "m365sp://tenant/siteurl?url=https%3A%2F%2Fcontoso.sharepoint.com%2Fsites%2Fengineering")));
 
-                assertThat(response.getProcessingOutcome().isGoodState())
-                                .isTrue();
-                assertThat(response.getChildPaths())
-                                .extracting(FsPath::getUri)
-                                .containsExactlyInAnyOrder(
-                                                "m365sp://tenant/sites/siteResolved/drives/driveZ");
-        }
+        assertThat(response.getProcessingOutcome().isGoodState())
+                .isTrue();
+        assertThat(response.getChildPaths())
+                .extracting(FsPath::getUri)
+                .containsExactlyInAnyOrder(
+                        "m365sp://tenant/sites/siteResolved/drives/driveZ");
+    }
 
-        @Test
-        void testDriveDeltaPaginationAndCursorPersistence() throws Exception {
-                var fetcher = new StubFetchGraphFetcher();
-                fetcher.setSourceDeltaEnabledForTest(true);
-                fetcher.setDeltaJson(
-                                "/users/user123/drives/drive123/root/delta", """
+    @Test
+    void testDriveDeltaPaginationAndCursorPersistence() throws Exception {
+        var fetcher = new StubFetchGraphFetcher();
+        fetcher.setSourceDeltaEnabledForTest(true);
+        fetcher.setDeltaJson(
+                "/users/user123/drives/drive123/root/delta", """
                 {
                   "value": [
                     { "id": "fileA", "file": { "mimeType": "text/plain" } }
@@ -502,7 +502,7 @@ class M365GraphFetcherTest {
                   "@odata.nextLink": "https://graph.microsoft.com/v1.0/page2"
                 }
                 """);
-                fetcher.setDeltaJson("https://graph.microsoft.com/v1.0/page2", """
+        fetcher.setDeltaJson("https://graph.microsoft.com/v1.0/page2", """
                 {
                   "value": [
                     { "id": "folderA", "folder": { "childCount": 1 } },
@@ -512,45 +512,45 @@ class M365GraphFetcherTest {
                 }
                 """);
 
-                var driveRef = M365GraphReference.parse(
-                                "m365od://tenant/users/user123/drives/drive123");
-                var response = (FolderPathsFetchResponse) fetcher.fetch(
-                                new FolderPathsFetchRequest(new Doc(
-                                                driveRef.toReference())));
+        var driveRef = M365GraphReference.parse(
+                "m365od://tenant/users/user123/drives/drive123");
+        var response = (FolderPathsFetchResponse) fetcher.fetch(
+                new FolderPathsFetchRequest(new Doc(
+                        driveRef.toReference())));
 
-                assertThat(response.getProcessingOutcome().isGoodState())
-                                .isTrue();
-                assertThat(response.getChildPaths())
-                                .extracting(
-                                                p -> p.getUri() + ":"
-                                                                + p.isFile()
-                                                                + ":"
-                                                                + p.isFolder())
-                                .containsExactlyInAnyOrder(
-                                                "m365od://tenant/users/user123/drives/drive123/items/fileA:true:false",
-                                                "m365od://tenant/users/user123/drives/drive123/items/folderA:false:true",
-                                                "m365od://tenant/users/user123/drives/drive123/items/deletedA:true:false");
-                assertThat(fetcher.getStoredDeltaCursor(driveRef))
-                                .isEqualTo("https://graph.microsoft.com/v1.0/deltaToken-1");
-        }
+        assertThat(response.getProcessingOutcome().isGoodState())
+                .isTrue();
+        assertThat(response.getChildPaths())
+                .extracting(
+                        p -> p.getUri() + ":"
+                                + p.isFile()
+                                + ":"
+                                + p.isFolder())
+                .containsExactlyInAnyOrder(
+                        "m365od://tenant/users/user123/drives/drive123/items/fileA:true:false",
+                        "m365od://tenant/users/user123/drives/drive123/items/folderA:false:true",
+                        "m365od://tenant/users/user123/drives/drive123/items/deletedA:true:false");
+        assertThat(fetcher.getStoredDeltaCursor(driveRef))
+                .isEqualTo("https://graph.microsoft.com/v1.0/deltaToken-1");
+    }
 
-        @Test
-        void testDriveDeltaInvalidStoredCursorFallsBackToFreshDelta()
-                        throws Exception {
-                var fetcher = new StubFetchGraphFetcher();
-                fetcher.setSourceDeltaEnabledForTest(true);
-                var driveRef = M365GraphReference.parse(
-                                "m365od://tenant/users/user123/drives/drive123");
-                fetcher.setStoredDeltaCursor(
-                                driveRef,
-                                "https://graph.microsoft.com/v1.0/stale-token");
-                fetcher.setDeltaException(
-                                "https://graph.microsoft.com/v1.0/stale-token",
-                                new M365GraphFetcher.GraphHttpStatusException(
-                                                410,
-                                                "stale delta token"));
-                fetcher.setDeltaJson(
-                                "/users/user123/drives/drive123/root/delta", """
+    @Test
+    void testDriveDeltaInvalidStoredCursorFallsBackToFreshDelta()
+            throws Exception {
+        var fetcher = new StubFetchGraphFetcher();
+        fetcher.setSourceDeltaEnabledForTest(true);
+        var driveRef = M365GraphReference.parse(
+                "m365od://tenant/users/user123/drives/drive123");
+        fetcher.setStoredDeltaCursor(
+                driveRef,
+                "https://graph.microsoft.com/v1.0/stale-token");
+        fetcher.setDeltaException(
+                "https://graph.microsoft.com/v1.0/stale-token",
+                new M365GraphFetcher.GraphHttpStatusException(
+                        410,
+                        "stale delta token"));
+        fetcher.setDeltaJson(
+                "/users/user123/drives/drive123/root/delta", """
                 {
                   "value": [
                     { "id": "fileB", "file": { "mimeType": "text/plain" } }
@@ -559,330 +559,330 @@ class M365GraphFetcherTest {
                 }
                 """);
 
-                var response = (FolderPathsFetchResponse) fetcher.fetch(
-                                new FolderPathsFetchRequest(new Doc(
-                                                driveRef.toReference())));
+        var response = (FolderPathsFetchResponse) fetcher.fetch(
+                new FolderPathsFetchRequest(new Doc(
+                        driveRef.toReference())));
 
-                assertThat(response.getProcessingOutcome().isGoodState())
-                                .isTrue();
-                assertThat(response.getChildPaths())
-                                .extracting(FsPath::getUri)
-                                .containsExactlyInAnyOrder(
-                                                "m365od://tenant/users/user123/drives/drive123/items/fileB");
-                assertThat(fetcher.getStoredDeltaCursor(driveRef))
-                                .isEqualTo("https://graph.microsoft.com/v1.0/deltaToken-2");
-        }
+        assertThat(response.getProcessingOutcome().isGoodState())
+                .isTrue();
+        assertThat(response.getChildPaths())
+                .extracting(FsPath::getUri)
+                .containsExactlyInAnyOrder(
+                        "m365od://tenant/users/user123/drives/drive123/items/fileB");
+        assertThat(fetcher.getStoredDeltaCursor(driveRef))
+                .isEqualTo("https://graph.microsoft.com/v1.0/deltaToken-2");
+    }
 
-        @Test
-        void testFetchFileUsesClientCredentialsTokenAndCachesIt()
-                        throws Exception {
-                var fetcher = new HttpQueueM365Fetcher();
-                fetcher.getConfiguration()
-                                .setTenantId("tenant")
-                                .setClientId("client")
-                                .setClientSecret("secret");
-                fetcher.enqueueJson(200, """
+    @Test
+    void testFetchFileUsesClientCredentialsTokenAndCachesIt()
+            throws Exception {
+        var fetcher = new HttpQueueM365Fetcher();
+        fetcher.getConfiguration()
+                .setTenantId("tenant")
+                .setClientId("client")
+                .setClientSecret("secret");
+        fetcher.enqueueJson(200, """
                 {
                   "access_token":"token-1",
                   "expires_in":3600
                 }
                 """);
-                fetcher.enqueueJson(200, """
+        fetcher.enqueueJson(200, """
                 {
                   "id":"item123",
                   "file":{"mimeType":"text/plain"}
                 }
                 """);
-                fetcher.enqueueJson(200, """
+        fetcher.enqueueJson(200, """
                 {
                   "id":"item456",
                   "file":{"mimeType":"text/plain"}
                 }
                 """);
 
-                var resp1 = (GenericFileFetchResponse) fetcher.fetch(
-                                new FileFetchRequest(new Doc(
-                                                "m365od://tenant/users/u/drives/d/items/item123"),
-                                                METADATA));
-                var resp2 = (GenericFileFetchResponse) fetcher.fetch(
-                                new FileFetchRequest(new Doc(
-                                                "m365od://tenant/users/u/drives/d/items/item456"),
-                                                METADATA));
+        var resp1 = (GenericFileFetchResponse) fetcher.fetch(
+                new FileFetchRequest(new Doc(
+                        "m365od://tenant/users/u/drives/d/items/item123"),
+                        METADATA));
+        var resp2 = (GenericFileFetchResponse) fetcher.fetch(
+                new FileFetchRequest(new Doc(
+                        "m365od://tenant/users/u/drives/d/items/item456"),
+                        METADATA));
 
-                assertThat(resp1.getProcessingOutcome())
-                                .isEqualTo(ProcessingOutcome.NEW);
-                assertThat(resp2.getProcessingOutcome())
-                                .isEqualTo(ProcessingOutcome.NEW);
-                assertThat(fetcher.requestedUris)
-                                .filteredOn(u -> u
-                                                .contains("/oauth2/v2.0/token"))
-                                .hasSize(1);
-                assertThat(fetcher.authHeaders)
-                                .filteredOn(h -> h.startsWith("Bearer "))
-                                .contains("Bearer token-1");
-        }
+        assertThat(resp1.getProcessingOutcome())
+                .isEqualTo(ProcessingOutcome.NEW);
+        assertThat(resp2.getProcessingOutcome())
+                .isEqualTo(ProcessingOutcome.NEW);
+        assertThat(fetcher.requestedUris)
+                .filteredOn(u -> u
+                        .contains("/oauth2/v2.0/token"))
+                .hasSize(1);
+        assertThat(fetcher.authHeaders)
+                .filteredOn(h -> h.startsWith("Bearer "))
+                .contains("Bearer token-1");
+    }
 
-        @Test
-        void testFetchFileFailsWhenTokenEndpointIsNon2xx() {
-                var fetcher = new HttpQueueM365Fetcher();
-                fetcher.getConfiguration()
-                                .setTenantId("tenant")
-                                .setClientId("client")
-                                .setClientSecret("secret");
-                fetcher.enqueueJson(401, "{\"error\":\"unauthorized\"}");
+    @Test
+    void testFetchFileFailsWhenTokenEndpointIsNon2xx() {
+        var fetcher = new HttpQueueM365Fetcher();
+        fetcher.getConfiguration()
+                .setTenantId("tenant")
+                .setClientId("client")
+                .setClientSecret("secret");
+        fetcher.enqueueJson(401, "{\"error\":\"unauthorized\"}");
 
-                assertThatThrownBy(() -> fetcher.fetch(new FileFetchRequest(
-                                new Doc(
-                                                "m365od://tenant/users/u/drives/d/items/item123"),
-                                METADATA)))
-                                                .isInstanceOf(
-                                                                com.norconex.crawler.core.fetch.FetchException.class)
-                                                .hasMessageContaining(
-                                                                "Could not fetch Microsoft 365 reference");
-        }
+        assertThatThrownBy(() -> fetcher.fetch(new FileFetchRequest(
+                new Doc(
+                        "m365od://tenant/users/u/drives/d/items/item123"),
+                METADATA)))
+                        .isInstanceOf(
+                                com.norconex.crawler.core.fetch.FetchException.class)
+                        .hasMessageContaining(
+                                "Could not fetch Microsoft 365 reference");
+    }
 
-        @Test
-        void testFetchFileFailsWhenTokenPayloadMissingAccessToken() {
-                var fetcher = new HttpQueueM365Fetcher();
-                fetcher.getConfiguration()
-                                .setTenantId("tenant")
-                                .setClientId("client")
-                                .setClientSecret("secret");
-                fetcher.enqueueJson(200, "{\"expires_in\":3600}");
+    @Test
+    void testFetchFileFailsWhenTokenPayloadMissingAccessToken() {
+        var fetcher = new HttpQueueM365Fetcher();
+        fetcher.getConfiguration()
+                .setTenantId("tenant")
+                .setClientId("client")
+                .setClientSecret("secret");
+        fetcher.enqueueJson(200, "{\"expires_in\":3600}");
 
-                assertThatThrownBy(() -> fetcher.fetch(new FileFetchRequest(
-                                new Doc(
-                                                "m365od://tenant/users/u/drives/d/items/item123"),
-                                METADATA)))
-                                                .isInstanceOf(
-                                                                com.norconex.crawler.core.fetch.FetchException.class)
-                                                .hasMessageContaining(
-                                                                "Could not fetch Microsoft 365 reference");
-        }
+        assertThatThrownBy(() -> fetcher.fetch(new FileFetchRequest(
+                new Doc(
+                        "m365od://tenant/users/u/drives/d/items/item123"),
+                METADATA)))
+                        .isInstanceOf(
+                                com.norconex.crawler.core.fetch.FetchException.class)
+                        .hasMessageContaining(
+                                "Could not fetch Microsoft 365 reference");
+    }
 
-        @Test
-        void testNativeRetryRetriesThenSucceeds() throws Exception {
-                var fetcher = new HttpQueueM365Fetcher();
-                fetcher.getConfiguration()
-                                .setTenantId("tenant")
-                                .setClientId("client")
-                                .setClientSecret("secret")
-                                .setNativeRetryEnabled(true)
-                                .setNativeRetryMaxRetries(1)
-                                .setNativeRetryBaseDelay(Duration.ZERO);
-                fetcher.enqueueJson(200, """
+    @Test
+    void testNativeRetryRetriesThenSucceeds() throws Exception {
+        var fetcher = new HttpQueueM365Fetcher();
+        fetcher.getConfiguration()
+                .setTenantId("tenant")
+                .setClientId("client")
+                .setClientSecret("secret")
+                .setNativeRetryEnabled(true)
+                .setNativeRetryMaxRetries(1)
+                .setNativeRetryBaseDelay(Duration.ZERO);
+        fetcher.enqueueJson(200, """
                 {
                   "access_token":"token-r",
                   "expires_in":3600
                 }
                 """);
-                fetcher.enqueueJsonWithHeaders(429, "{}",
-                                Map.of("Retry-After", List.of("0")));
-                fetcher.enqueueJson(200, """
+        fetcher.enqueueJsonWithHeaders(429, "{}",
+                Map.of("Retry-After", List.of("0")));
+        fetcher.enqueueJson(200, """
                 {
                   "id":"item-retried",
                   "file":{"mimeType":"text/plain"}
                 }
                 """);
 
-                var response = (GenericFileFetchResponse) fetcher.fetch(
-                                new FileFetchRequest(
-                                                new Doc("m365od://tenant/users/u/drives/d/items/item-retried"),
-                                                METADATA));
+        var response = (GenericFileFetchResponse) fetcher.fetch(
+                new FileFetchRequest(
+                        new Doc("m365od://tenant/users/u/drives/d/items/item-retried"),
+                        METADATA));
 
-                assertThat(response.getProcessingOutcome())
-                                .isEqualTo(ProcessingOutcome.NEW);
-                assertThat(fetcher.requestedUris)
-                                .filteredOn(u -> u.endsWith(
-                                                "/items/item-retried"))
-                                .hasSize(2);
-        }
+        assertThat(response.getProcessingOutcome())
+                .isEqualTo(ProcessingOutcome.NEW);
+        assertThat(fetcher.requestedUris)
+                .filteredOn(u -> u.endsWith(
+                        "/items/item-retried"))
+                .hasSize(2);
+    }
 
-        @Test
-        void testNativeRetryExhaustedReturnsBadStatus() throws Exception {
-                var fetcher = new HttpQueueM365Fetcher();
-                fetcher.getConfiguration()
-                                .setTenantId("tenant")
-                                .setClientId("client")
-                                .setClientSecret("secret")
-                                .setNativeRetryEnabled(true)
-                                .setNativeRetryMaxRetries(1)
-                                .setNativeRetryBaseDelay(Duration.ZERO);
-                fetcher.enqueueJson(200, """
+    @Test
+    void testNativeRetryExhaustedReturnsBadStatus() throws Exception {
+        var fetcher = new HttpQueueM365Fetcher();
+        fetcher.getConfiguration()
+                .setTenantId("tenant")
+                .setClientId("client")
+                .setClientSecret("secret")
+                .setNativeRetryEnabled(true)
+                .setNativeRetryMaxRetries(1)
+                .setNativeRetryBaseDelay(Duration.ZERO);
+        fetcher.enqueueJson(200, """
                 {
                   "access_token":"token-r",
                   "expires_in":3600
                 }
                 """);
-                fetcher.enqueueJson(429, "{}");
-                fetcher.enqueueJson(429, "{}");
+        fetcher.enqueueJson(429, "{}");
+        fetcher.enqueueJson(429, "{}");
 
-                var response = (GenericFileFetchResponse) fetcher.fetch(
-                                new FileFetchRequest(
-                                                new Doc("m365od://tenant/users/u/drives/d/items/item429"),
-                                                METADATA));
+        var response = (GenericFileFetchResponse) fetcher.fetch(
+                new FileFetchRequest(
+                        new Doc("m365od://tenant/users/u/drives/d/items/item429"),
+                        METADATA));
 
-                assertThat(response.getProcessingOutcome())
-                                .isEqualTo(ProcessingOutcome.BAD_STATUS);
-        }
+        assertThat(response.getProcessingOutcome())
+                .isEqualTo(ProcessingOutcome.BAD_STATUS);
+    }
 
-        @Test
-        void testFetchFileReturnsNotFoundWhenItemMissing() throws Exception {
-                var fetcher = new StubFileGraphFetcher();
-                fetcher.setItemJson(null);
+    @Test
+    void testFetchFileReturnsNotFoundWhenItemMissing() throws Exception {
+        var fetcher = new StubFileGraphFetcher();
+        fetcher.setItemJson(null);
 
-                var response = (GenericFileFetchResponse) fetcher.fetch(
-                                new FileFetchRequest(
-                                                new Doc("m365od://tenant/users/u/drives/d/items/missing"),
-                                                METADATA));
+        var response = (GenericFileFetchResponse) fetcher.fetch(
+                new FileFetchRequest(
+                        new Doc("m365od://tenant/users/u/drives/d/items/missing"),
+                        METADATA));
 
-                assertThat(response.getProcessingOutcome())
-                                .isEqualTo(ProcessingOutcome.NOT_FOUND);
-                assertThat(fetcher.getContentFetchCount()).isEqualTo(0);
-        }
+        assertThat(response.getProcessingOutcome())
+                .isEqualTo(ProcessingOutcome.NOT_FOUND);
+        assertThat(fetcher.getContentFetchCount()).isEqualTo(0);
+    }
 
-        @Test
-        void testFetchFileDocumentDirectiveDownloadsContentOnlyForFiles()
-                        throws Exception {
-                var fileFetcher = new StubFileGraphFetcher();
-                fileFetcher.setItemJson("""
+    @Test
+    void testFetchFileDocumentDirectiveDownloadsContentOnlyForFiles()
+            throws Exception {
+        var fileFetcher = new StubFileGraphFetcher();
+        fileFetcher.setItemJson("""
                 {
                   "id":"item-file",
                   "file":{"mimeType":"text/plain"}
                 }
                 """);
 
-                var fileDoc =
-                                new Doc("m365od://tenant/users/u/drives/d/items/item-file");
-                var fileResponse = (GenericFileFetchResponse) fileFetcher.fetch(
-                                new FileFetchRequest(fileDoc, DOCUMENT));
+        var fileDoc =
+                new Doc("m365od://tenant/users/u/drives/d/items/item-file");
+        var fileResponse = (GenericFileFetchResponse) fileFetcher.fetch(
+                new FileFetchRequest(fileDoc, DOCUMENT));
 
-                assertThat(fileResponse.getProcessingOutcome())
-                                .isEqualTo(ProcessingOutcome.NEW);
-                assertThat(fileResponse.isFile()).isTrue();
-                assertThat(fileFetcher.getContentFetchCount()).isEqualTo(1);
+        assertThat(fileResponse.getProcessingOutcome())
+                .isEqualTo(ProcessingOutcome.NEW);
+        assertThat(fileResponse.isFile()).isTrue();
+        assertThat(fileFetcher.getContentFetchCount()).isEqualTo(1);
 
-                var folderFetcher = new StubFileGraphFetcher();
-                folderFetcher.setItemJson("""
+        var folderFetcher = new StubFileGraphFetcher();
+        folderFetcher.setItemJson("""
                 {
                   "id":"item-folder",
                   "folder":{"childCount":1}
                 }
                 """);
 
-                var folderResponse =
-                                (GenericFileFetchResponse) folderFetcher.fetch(
-                                                new FileFetchRequest(
-                                                                new Doc("m365od://tenant/users/u/drives/d/items/item-folder"),
-                                                                DOCUMENT));
+        var folderResponse =
+                (GenericFileFetchResponse) folderFetcher.fetch(
+                        new FileFetchRequest(
+                                new Doc("m365od://tenant/users/u/drives/d/items/item-folder"),
+                                DOCUMENT));
 
-                assertThat(folderResponse.getProcessingOutcome())
-                                .isEqualTo(ProcessingOutcome.NEW);
-                assertThat(folderResponse.isFolder()).isTrue();
-                assertThat(folderFetcher.getContentFetchCount()).isEqualTo(0);
-        }
+        assertThat(folderResponse.getProcessingOutcome())
+                .isEqualTo(ProcessingOutcome.NEW);
+        assertThat(folderResponse.isFolder()).isTrue();
+        assertThat(folderFetcher.getContentFetchCount()).isEqualTo(0);
+    }
 
-        @Test
-        void testFetchChildPathsHandlesNotFoundBadStatusAndIo()
-                        throws Exception {
-                var notFoundFetcher = new StubFetchGraphFetcher();
-                var notFound = (FolderPathsFetchResponse) notFoundFetcher.fetch(
-                                new FolderPathsFetchRequest(new Doc(
-                                                "m365od://tenant/users/user123/drives/drive123/items/root")));
-                assertThat(notFound.getProcessingOutcome())
-                                .isEqualTo(ProcessingOutcome.NOT_FOUND);
+    @Test
+    void testFetchChildPathsHandlesNotFoundBadStatusAndIo()
+            throws Exception {
+        var notFoundFetcher = new StubFetchGraphFetcher();
+        var notFound = (FolderPathsFetchResponse) notFoundFetcher.fetch(
+                new FolderPathsFetchRequest(new Doc(
+                        "m365od://tenant/users/user123/drives/drive123/items/root")));
+        assertThat(notFound.getProcessingOutcome())
+                .isEqualTo(ProcessingOutcome.NOT_FOUND);
 
-                var badStatusFetcher = new StubFetchGraphFetcher() {
-                        @Override
-                        JsonNode fetchChildrenNode(M365GraphReference ref)
-                                        throws IOException {
-                                throw new M365GraphFetcher.GraphHttpStatusException(
-                                                500,
-                                                "bad");
-                        }
-                };
-                var badStatus = (FolderPathsFetchResponse) badStatusFetcher
-                                .fetch(
-                                                new FolderPathsFetchRequest(
-                                                                new Doc(
-                                                                                "m365od://tenant/users/user123/drives/drive123/items/root")));
-                assertThat(badStatus.getProcessingOutcome())
-                                .isEqualTo(ProcessingOutcome.BAD_STATUS);
-                assertThat(badStatus.getChildPaths()).isEmpty();
+        var badStatusFetcher = new StubFetchGraphFetcher() {
+            @Override
+            JsonNode fetchChildrenNode(M365GraphReference ref)
+                    throws IOException {
+                throw new M365GraphFetcher.GraphHttpStatusException(
+                        500,
+                        "bad");
+            }
+        };
+        var badStatus = (FolderPathsFetchResponse) badStatusFetcher
+                .fetch(
+                        new FolderPathsFetchRequest(
+                                new Doc(
+                                        "m365od://tenant/users/user123/drives/drive123/items/root")));
+        assertThat(badStatus.getProcessingOutcome())
+                .isEqualTo(ProcessingOutcome.BAD_STATUS);
+        assertThat(badStatus.getChildPaths()).isEmpty();
 
-                var ioFetcher = new StubFetchGraphFetcher() {
-                        @Override
-                        JsonNode fetchChildrenNode(M365GraphReference ref)
-                                        throws IOException {
-                                throw new IOException("boom");
-                        }
-                };
-                assertThatThrownBy(() -> ioFetcher.fetch(
-                                new FolderPathsFetchRequest(new Doc(
-                                                "m365od://tenant/users/user123/drives/drive123/items/root"))))
-                                                                .isInstanceOf(
-                                                                                com.norconex.crawler.core.fetch.FetchException.class)
-                                                                .hasMessageContaining(
-                                                                                "Could not fetch Microsoft 365 child references");
-        }
+        var ioFetcher = new StubFetchGraphFetcher() {
+            @Override
+            JsonNode fetchChildrenNode(M365GraphReference ref)
+                    throws IOException {
+                throw new IOException("boom");
+            }
+        };
+        assertThatThrownBy(() -> ioFetcher.fetch(
+                new FolderPathsFetchRequest(new Doc(
+                        "m365od://tenant/users/user123/drives/drive123/items/root"))))
+                                .isInstanceOf(
+                                        com.norconex.crawler.core.fetch.FetchException.class)
+                                .hasMessageContaining(
+                                        "Could not fetch Microsoft 365 child references");
+    }
 
-        @Test
-        void testFetchSiteUrlEntryFailsWhenResolvedSiteIdMissing()
-                        throws Exception {
-                var fetcher = new StubFetchGraphFetcher();
-                fetcher.setResolvedSiteJson("{}");
+    @Test
+    void testFetchSiteUrlEntryFailsWhenResolvedSiteIdMissing()
+            throws Exception {
+        var fetcher = new StubFetchGraphFetcher();
+        fetcher.setResolvedSiteJson("{}");
 
-                assertThatThrownBy(() -> fetcher.fetch(
-                                new FolderPathsFetchRequest(new Doc(
-                                                "m365sp://tenant/siteurl?url=https%3A%2F%2Fcontoso.sharepoint.com%2Fsites%2Fengineering"))))
-                                                                .isInstanceOf(
-                                                                                com.norconex.crawler.core.fetch.FetchException.class)
-                                                                .hasMessageContaining(
-                                                                                "Could not fetch Microsoft 365 child references")
-                                                                .hasRootCauseMessage(
-                                                                                "Resolved site payload did not contain id.");
-        }
+        assertThatThrownBy(() -> fetcher.fetch(
+                new FolderPathsFetchRequest(new Doc(
+                        "m365sp://tenant/siteurl?url=https%3A%2F%2Fcontoso.sharepoint.com%2Fsites%2Fengineering"))))
+                                .isInstanceOf(
+                                        com.norconex.crawler.core.fetch.FetchException.class)
+                                .hasMessageContaining(
+                                        "Could not fetch Microsoft 365 child references")
+                                .hasRootCauseMessage(
+                                        "Resolved site payload did not contain id.");
+    }
 
-        @Test
-        void testDiscoveryEntryDeltaRequiresIncludeChildDrives()
-                        throws Exception {
-                var fetcher = new StubFetchGraphFetcher();
-                fetcher.setSourceDeltaEnabledForTest(true);
-                fetcher.getConfiguration().setSourceDeltaExpansion(
-                                M365GraphFetcherConfig.SourceDeltaExpansion.SELF_ONLY);
+    @Test
+    void testDiscoveryEntryDeltaRequiresIncludeChildDrives()
+            throws Exception {
+        var fetcher = new StubFetchGraphFetcher();
+        fetcher.setSourceDeltaEnabledForTest(true);
+        fetcher.getConfiguration().setSourceDeltaExpansion(
+                M365GraphFetcherConfig.SourceDeltaExpansion.SELF_ONLY);
 
-                assertThatThrownBy(() -> fetcher.fetch(
-                                new FolderPathsFetchRequest(new Doc(
-                                                "m365sp://tenant/sites/site123"))))
-                                                                .isInstanceOf(
-                                                                                com.norconex.crawler.core.fetch.FetchException.class)
-                                                                .hasRootCauseMessage(
-                                                                                "M365 SOURCE_DELTA discovery entry requires sourceDeltaExpansion=INCLUDE_CHILD_DRIVES: m365sp://tenant/sites/site123");
-        }
+        assertThatThrownBy(() -> fetcher.fetch(
+                new FolderPathsFetchRequest(new Doc(
+                        "m365sp://tenant/sites/site123"))))
+                                .isInstanceOf(
+                                        com.norconex.crawler.core.fetch.FetchException.class)
+                                .hasRootCauseMessage(
+                                        "M365 SOURCE_DELTA discovery entry requires sourceDeltaExpansion=INCLUDE_CHILD_DRIVES: m365sp://tenant/sites/site123");
+    }
 
-        @Test
-        void testDiscoveryEntryMergeStoredChildDrivesKeepsLiveOnes()
-                        throws Exception {
-                StubFetchGraphFetcher fetcher = new StubFetchGraphFetcher() {
-                        @Override
-                        Set<String> getStoredChildDriveRefs(
-                                        M365GraphReference parentRef) {
-                                return java.util.Set.of(
-                                                "m365sp://tenant/sites/site123/drives/drive-live",
-                                                "m365sp://tenant/sites/site123/drives/drive-stale",
-                                                "not-a-valid-m365-ref");
-                        }
+    @Test
+    void testDiscoveryEntryMergeStoredChildDrivesKeepsLiveOnes()
+            throws Exception {
+        StubFetchGraphFetcher fetcher = new StubFetchGraphFetcher() {
+            @Override
+            Set<String> getStoredChildDriveRefs(
+                    M365GraphReference parentRef) {
+                return java.util.Set.of(
+                        "m365sp://tenant/sites/site123/drives/drive-live",
+                        "m365sp://tenant/sites/site123/drives/drive-stale",
+                        "not-a-valid-m365-ref");
+            }
 
-                        @Override
-                        boolean hasLiveDeltaCursor(
-                                        M365GraphReference driveRef) {
-                                return "drive-live".equals(driveRef.driveId());
-                        }
-                };
-                fetcher.setSourceDeltaEnabledForTest(true);
-                fetcher.getConfiguration().setSourceDeltaExpansion(
-                                M365GraphFetcherConfig.SourceDeltaExpansion.INCLUDE_CHILD_DRIVES);
-                fetcher.setDrivesJson("""
+            @Override
+            boolean hasLiveDeltaCursor(
+                    M365GraphReference driveRef) {
+                return "drive-live".equals(driveRef.driveId());
+            }
+        };
+        fetcher.setSourceDeltaEnabledForTest(true);
+        fetcher.getConfiguration().setSourceDeltaExpansion(
+                M365GraphFetcherConfig.SourceDeltaExpansion.INCLUDE_CHILD_DRIVES);
+        fetcher.setDrivesJson("""
                 {
                   "value": [
                     { "id": "drive-current" }
@@ -890,267 +890,267 @@ class M365GraphFetcherTest {
                 }
                 """);
 
-                var response = (FolderPathsFetchResponse) fetcher.fetch(
-                                new FolderPathsFetchRequest(new Doc(
-                                                "m365sp://tenant/sites/site123")));
+        var response = (FolderPathsFetchResponse) fetcher.fetch(
+                new FolderPathsFetchRequest(new Doc(
+                        "m365sp://tenant/sites/site123")));
 
-                assertThat(response.getProcessingOutcome())
-                                .isEqualTo(ProcessingOutcome.NEW);
-                assertThat(response.getChildPaths())
-                                .extracting(FsPath::getUri)
-                                .containsExactlyInAnyOrder(
-                                                "m365sp://tenant/sites/site123/drives/drive-current",
-                                                "m365sp://tenant/sites/site123/drives/drive-live");
+        assertThat(response.getProcessingOutcome())
+                .isEqualTo(ProcessingOutcome.NEW);
+        assertThat(response.getChildPaths())
+                .extracting(FsPath::getUri)
+                .containsExactlyInAnyOrder(
+                        "m365sp://tenant/sites/site123/drives/drive-current",
+                        "m365sp://tenant/sites/site123/drives/drive-live");
+    }
+
+    private static CrawlerSession mockSession(
+            boolean incremental,
+            CrawlerConfig.ChangeDiscovery changeDiscovery,
+            String... startReferences) {
+        var config = new CrawlerConfig()
+                .setChangeDiscovery(changeDiscovery)
+                .setStartReferences(List.of(startReferences));
+        var context = mock(CrawlerContext.class);
+        when(context.getCrawlConfig()).thenReturn(config);
+
+        var sessionAttributes = mock(CrawlerAttributes.class);
+        var session = mock(CrawlerSession.class);
+        when(session.getCrawlContext()).thenReturn(context);
+        when(session.getSessionAttributes())
+                .thenReturn(sessionAttributes);
+        when(session.isIncremental()).thenReturn(incremental);
+        return session;
+    }
+
+    private static void setSessionAttributes(
+            M365GraphFetcher fetcher,
+            CrawlerAttributes attrs) {
+        try {
+            var f = M365GraphFetcher.class
+                    .getDeclaredField("sessionAttributes");
+            f.setAccessible(true);
+            f.set(fetcher, attrs);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    private static void setToken(M365GraphFetcher fetcher, String token)
+            throws Exception {
+        Field tokenField =
+                M365GraphFetcher.class.getDeclaredField(
+                        "accessToken");
+        tokenField.setAccessible(true);
+        tokenField.set(fetcher, token);
+
+        Field expiryField = M365GraphFetcher.class
+                .getDeclaredField("accessTokenExpiry");
+        expiryField.setAccessible(true);
+        expiryField.set(fetcher, Instant.now().plusSeconds(3600));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static HttpResponse<byte[]> stubResponse(int status,
+            String body) {
+        var response = mock(HttpResponse.class);
+        when(response.statusCode()).thenReturn(status);
+        when(response.body()).thenReturn(
+                body.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        when(response.headers())
+                .thenReturn(HttpHeaders.of(Map.of(),
+                        (a, b) -> true));
+        return (HttpResponse<byte[]>) response;
+    }
+
+    private static final class StubM365Fetcher extends M365GraphFetcher {
+        private final HttpResponse<byte[]> response;
+
+        private StubM365Fetcher(HttpResponse<byte[]> response) {
+            this.response = response;
         }
 
-        private static CrawlerSession mockSession(
-                        boolean incremental,
-                        CrawlerConfig.ChangeDiscovery changeDiscovery,
-                        String... startReferences) {
-                var config = new CrawlerConfig()
-                                .setChangeDiscovery(changeDiscovery)
-                                .setStartReferences(List.of(startReferences));
-                var context = mock(CrawlerContext.class);
-                when(context.getCrawlConfig()).thenReturn(config);
+        @Override
+        HttpResponse<byte[]> sendRequest(HttpRequest request)
+                throws IOException {
+            return response;
+        }
+    }
 
-                var sessionAttributes = mock(CrawlerAttributes.class);
-                var session = mock(CrawlerSession.class);
-                when(session.getCrawlContext()).thenReturn(context);
-                when(session.getSessionAttributes())
-                                .thenReturn(sessionAttributes);
-                when(session.isIncremental()).thenReturn(incremental);
-                return session;
+    private static final class StubFileGraphFetcher
+            extends M365GraphFetcher {
+        private JsonNode item;
+        private int contentFetchCount;
+
+        private void setItemJson(String json) throws Exception {
+            item = json == null ? null : JSON.readTree(json);
         }
 
-        private static void setSessionAttributes(
-                        M365GraphFetcher fetcher,
-                        CrawlerAttributes attrs) {
-                try {
-                        var f = M365GraphFetcher.class
-                                        .getDeclaredField("sessionAttributes");
-                        f.setAccessible(true);
-                        f.set(fetcher, attrs);
-                } catch (ReflectiveOperationException e) {
-                        throw new AssertionError(e);
-                }
+        private int getContentFetchCount() {
+            return contentFetchCount;
         }
 
-        private static void setToken(M365GraphFetcher fetcher, String token)
-                        throws Exception {
-                Field tokenField =
-                                M365GraphFetcher.class.getDeclaredField(
-                                                "accessToken");
-                tokenField.setAccessible(true);
-                tokenField.set(fetcher, token);
-
-                Field expiryField = M365GraphFetcher.class
-                                .getDeclaredField("accessTokenExpiry");
-                expiryField.setAccessible(true);
-                expiryField.set(fetcher, Instant.now().plusSeconds(3600));
+        @Override
+        JsonNode fetchItemNode(M365GraphReference ref) {
+            return item;
         }
 
-        @SuppressWarnings("unchecked")
-        private static HttpResponse<byte[]> stubResponse(int status,
-                        String body) {
-                var response = mock(HttpResponse.class);
-                when(response.statusCode()).thenReturn(status);
-                when(response.body()).thenReturn(
-                                body.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-                when(response.headers())
-                                .thenReturn(HttpHeaders.of(Map.of(),
-                                                (a, b) -> true));
-                return (HttpResponse<byte[]>) response;
+        @Override
+        byte[] fetchContentBytes(M365GraphReference ref) {
+            contentFetchCount++;
+            return "stub-content"
+                    .getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        }
+    }
+
+    private static final class HttpQueueM365Fetcher
+            extends M365GraphFetcher {
+        private final ArrayDeque<HttpResponse<byte[]>> responses =
+                new ArrayDeque<>();
+        private final List<String> requestedUris = new ArrayList<>();
+        private final List<String> authHeaders = new ArrayList<>();
+
+        private void enqueueJson(int statusCode, String body) {
+            enqueueJsonWithHeaders(statusCode, body, Map.of());
         }
 
-        private static final class StubM365Fetcher extends M365GraphFetcher {
-                private final HttpResponse<byte[]> response;
-
-                private StubM365Fetcher(HttpResponse<byte[]> response) {
-                        this.response = response;
-                }
-
-                @Override
-                HttpResponse<byte[]> sendRequest(HttpRequest request)
-                                throws IOException {
-                        return response;
-                }
+        private void enqueueJsonWithHeaders(int statusCode, String body,
+                Map<String, List<String>> headers) {
+            responses.add(stubResponse(statusCode, body, headers));
         }
 
-        private static final class StubFileGraphFetcher
-                        extends M365GraphFetcher {
-                private JsonNode item;
-                private int contentFetchCount;
+        @Override
+        HttpResponse<byte[]> sendRequest(HttpRequest request)
+                throws IOException {
+            requestedUris.add(request.uri().toString());
+            authHeaders.add(request.headers()
+                    .firstValue("Authorization")
+                    .orElse(""));
+            var next = responses.pollFirst();
+            if (next == null) {
+                throw new IOException(
+                        "No mocked response queued.");
+            }
+            return next;
+        }
+    }
 
-                private void setItemJson(String json) throws Exception {
-                        item = json == null ? null : JSON.readTree(json);
-                }
+    @SuppressWarnings("unchecked")
+    private static HttpResponse<byte[]> stubResponse(int status,
+            String body,
+            Map<String, List<String>> headers) {
+        var response = mock(HttpResponse.class);
+        when(response.statusCode()).thenReturn(status);
+        when(response.body()).thenReturn(
+                body.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        when(response.headers())
+                .thenReturn(HttpHeaders.of(headers,
+                        (a, b) -> true));
+        when(response.request()).thenReturn(HttpRequest.newBuilder()
+                .uri(URI.create("https://graph.microsoft.com/mock"))
+                .build());
+        return (HttpResponse<byte[]>) response;
+    }
 
-                private int getContentFetchCount() {
-                        return contentFetchCount;
-                }
+    private static class StubFetchGraphFetcher
+            extends M365GraphFetcher {
+        private JsonNode children;
+        private JsonNode drives;
+        private JsonNode resolvedSite;
+        private final Map<String, JsonNode> deltaPages =
+                new HashMap<>();
+        private final Map<String, IOException> deltaErrors =
+                new HashMap<>();
+        private final Map<String, String> deltaCursors =
+                new HashMap<>();
+        private boolean sourceDeltaEnabledForTest;
 
-                @Override
-                JsonNode fetchItemNode(M365GraphReference ref) {
-                        return item;
-                }
-
-                @Override
-                byte[] fetchContentBytes(M365GraphReference ref) {
-                        contentFetchCount++;
-                        return "stub-content"
-                                        .getBytes(java.nio.charset.StandardCharsets.UTF_8);
-                }
+        private StubFetchGraphFetcher() {
+            getConfiguration()
+                    .setTenantId("tenant")
+                    .setClientId("client-id")
+                    .setClientSecret("secret");
         }
 
-        private static final class HttpQueueM365Fetcher
-                        extends M365GraphFetcher {
-                private final ArrayDeque<HttpResponse<byte[]>> responses =
-                                new ArrayDeque<>();
-                private final List<String> requestedUris = new ArrayList<>();
-                private final List<String> authHeaders = new ArrayList<>();
-
-                private void enqueueJson(int statusCode, String body) {
-                        enqueueJsonWithHeaders(statusCode, body, Map.of());
-                }
-
-                private void enqueueJsonWithHeaders(int statusCode, String body,
-                                Map<String, List<String>> headers) {
-                        responses.add(stubResponse(statusCode, body, headers));
-                }
-
-                @Override
-                HttpResponse<byte[]> sendRequest(HttpRequest request)
-                                throws IOException {
-                        requestedUris.add(request.uri().toString());
-                        authHeaders.add(request.headers()
-                                        .firstValue("Authorization")
-                                        .orElse(""));
-                        var next = responses.pollFirst();
-                        if (next == null) {
-                                throw new IOException(
-                                                "No mocked response queued.");
-                        }
-                        return next;
-                }
+        private void setChildrenJson(String json) throws Exception {
+            children = JSON.readTree(json);
         }
 
-        @SuppressWarnings("unchecked")
-        private static HttpResponse<byte[]> stubResponse(int status,
-                        String body,
-                        Map<String, List<String>> headers) {
-                var response = mock(HttpResponse.class);
-                when(response.statusCode()).thenReturn(status);
-                when(response.body()).thenReturn(
-                                body.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-                when(response.headers())
-                                .thenReturn(HttpHeaders.of(headers,
-                                                (a, b) -> true));
-                when(response.request()).thenReturn(HttpRequest.newBuilder()
-                                .uri(URI.create("https://graph.microsoft.com/mock"))
-                                .build());
-                return (HttpResponse<byte[]>) response;
+        void setDrivesJson(String json) throws Exception {
+            drives = JSON.readTree(json);
         }
 
-        private static class StubFetchGraphFetcher
-                        extends M365GraphFetcher {
-                private JsonNode children;
-                private JsonNode drives;
-                private JsonNode resolvedSite;
-                private final Map<String, JsonNode> deltaPages =
-                                new HashMap<>();
-                private final Map<String, IOException> deltaErrors =
-                                new HashMap<>();
-                private final Map<String, String> deltaCursors =
-                                new HashMap<>();
-                private boolean sourceDeltaEnabledForTest;
-
-                private StubFetchGraphFetcher() {
-                        getConfiguration()
-                                        .setTenantId("tenant")
-                                        .setClientId("client-id")
-                                        .setClientSecret("secret");
-                }
-
-                private void setChildrenJson(String json) throws Exception {
-                        children = JSON.readTree(json);
-                }
-
-                void setDrivesJson(String json) throws Exception {
-                        drives = JSON.readTree(json);
-                }
-
-                void setResolvedSiteJson(String json) throws Exception {
-                        resolvedSite = JSON.readTree(json);
-                }
-
-                private void setDeltaJson(String pathOrUrl, String json)
-                                throws Exception {
-                        deltaPages.put(pathOrUrl, JSON.readTree(json));
-                }
-
-                private void setDeltaException(String pathOrUrl,
-                                IOException e) {
-                        deltaErrors.put(pathOrUrl, e);
-                }
-
-                void setSourceDeltaEnabledForTest(boolean enabled) {
-                        sourceDeltaEnabledForTest = enabled;
-                }
-
-                private String getStoredDeltaCursor(M365GraphReference ref) {
-                        return deltaCursors.get(ref.toReference());
-                }
-
-                private void setStoredDeltaCursor(M365GraphReference ref,
-                                String cursor) {
-                        deltaCursors.put(ref.toReference(), cursor);
-                }
-
-                @Override
-                JsonNode fetchChildrenNode(M365GraphReference ref)
-                                throws IOException {
-                        return children;
-                }
-
-                @Override
-                JsonNode fetchDrivesNode(M365GraphReference ref)
-                                throws IOException {
-                        return drives;
-                }
-
-                @Override
-                JsonNode resolveSiteNode(M365GraphReference ref)
-                                throws IOException {
-                        return resolvedSite;
-                }
-
-                @Override
-                JsonNode fetchDeltaNode(String pathOrUrl) throws IOException {
-                        if (deltaErrors.containsKey(pathOrUrl)) {
-                                throw deltaErrors.get(pathOrUrl);
-                        }
-                        return deltaPages.get(pathOrUrl);
-                }
-
-                @Override
-                boolean isSourceDeltaEnabled() {
-                        return sourceDeltaEnabledForTest;
-                }
-
-                @Override
-                Optional<String> getDeltaCursor(M365GraphReference ref) {
-                        return Optional.ofNullable(
-                                        deltaCursors.get(ref.toReference()));
-                }
-
-                @Override
-                void setDeltaCursor(M365GraphReference ref, String cursor) {
-                        deltaCursors.put(ref.toReference(), cursor);
-                }
-
-                @Override
-                void clearDeltaCursor(M365GraphReference ref) {
-                        deltaCursors.remove(ref.toReference());
-                }
+        void setResolvedSiteJson(String json) throws Exception {
+            resolvedSite = JSON.readTree(json);
         }
+
+        private void setDeltaJson(String pathOrUrl, String json)
+                throws Exception {
+            deltaPages.put(pathOrUrl, JSON.readTree(json));
+        }
+
+        private void setDeltaException(String pathOrUrl,
+                IOException e) {
+            deltaErrors.put(pathOrUrl, e);
+        }
+
+        void setSourceDeltaEnabledForTest(boolean enabled) {
+            sourceDeltaEnabledForTest = enabled;
+        }
+
+        private String getStoredDeltaCursor(M365GraphReference ref) {
+            return deltaCursors.get(ref.toReference());
+        }
+
+        private void setStoredDeltaCursor(M365GraphReference ref,
+                String cursor) {
+            deltaCursors.put(ref.toReference(), cursor);
+        }
+
+        @Override
+        JsonNode fetchChildrenNode(M365GraphReference ref)
+                throws IOException {
+            return children;
+        }
+
+        @Override
+        JsonNode fetchDrivesNode(M365GraphReference ref)
+                throws IOException {
+            return drives;
+        }
+
+        @Override
+        JsonNode resolveSiteNode(M365GraphReference ref)
+                throws IOException {
+            return resolvedSite;
+        }
+
+        @Override
+        JsonNode fetchDeltaNode(String pathOrUrl) throws IOException {
+            if (deltaErrors.containsKey(pathOrUrl)) {
+                throw deltaErrors.get(pathOrUrl);
+            }
+            return deltaPages.get(pathOrUrl);
+        }
+
+        @Override
+        boolean isSourceDeltaEnabled() {
+            return sourceDeltaEnabledForTest;
+        }
+
+        @Override
+        Optional<String> getDeltaCursor(M365GraphReference ref) {
+            return Optional.ofNullable(
+                    deltaCursors.get(ref.toReference()));
+        }
+
+        @Override
+        void setDeltaCursor(M365GraphReference ref, String cursor) {
+            deltaCursors.put(ref.toReference(), cursor);
+        }
+
+        @Override
+        void clearDeltaCursor(M365GraphReference ref) {
+            deltaCursors.remove(ref.toReference());
+        }
+    }
 }

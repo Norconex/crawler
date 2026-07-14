@@ -120,7 +120,7 @@ public class AdlsGen2Fetcher extends AbstractNioFetcher<AdlsGen2FetcherConfig> {
                             + "reference account: " + account);
         }
 
-        var builder = new DataLakeFileSystemClientBuilder()
+        var builder = newClientBuilder()
                 .endpoint(resolveEndpoint(location))
                 .fileSystemName(location.fileSystem());
 
@@ -132,6 +132,10 @@ public class AdlsGen2Fetcher extends AbstractNioFetcher<AdlsGen2FetcherConfig> {
                     EncryptionUtil.decryptPassword(creds)));
         }
         return builder.buildClient();
+    }
+
+    DataLakeFileSystemClientBuilder newClientBuilder() {
+        return new DataLakeFileSystemClientBuilder();
     }
 
     private String resolveEndpoint(AdlsGen2Location location) {

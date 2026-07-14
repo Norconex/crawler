@@ -222,7 +222,8 @@ class GoogleCloudSearchClient {
 
         var indexRequest = new IndexItemRequest()
                 .setConnectorName(config.getConnectorName())
-                .setItem(item);
+                .setItem(item)
+                .setMode(config.getRequestMode().name());
 
         cloudSearch.indexing()
                 .datasources()
@@ -243,6 +244,7 @@ class GoogleCloudSearchClient {
                 .datasources()
                 .items()
                 .delete(itemName)
+                .setMode(config.getRequestMode().name())
                 .queue(batch, failures);
     }
 

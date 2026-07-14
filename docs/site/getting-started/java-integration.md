@@ -132,4 +132,4 @@ crawler.stop();
 ## Next steps
 
 - [Concepts: Extending the Crawler](../concepts/extending) — custom components and SPI
-- [Configuration Reference ↗](https://crawlerconfig.norconex.com/docs) — full config options
+- [Configuration Reference ↗](https://configurator.norconex.com.com/docs) — full config options

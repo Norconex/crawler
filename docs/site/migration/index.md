@@ -12,7 +12,7 @@ and Java API have changed substantially.
 
 ## The fastest migration path
 
-The [Visual Configurator](https://crawlerconfig.norconex.com) is the
+The [Visual Configurator](https://configurator.norconex.com.com) is the
 recommended way to migrate:
 
 1. Open the Editor
