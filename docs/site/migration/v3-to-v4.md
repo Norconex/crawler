@@ -71,7 +71,7 @@ shared settings via `crawlerDefaults`, either:
 - Duplicate the shared settings into each file, or
 - Extract them into a shared config fragment and include it from each file.
 
-Use the [Visual Configurator](https://crawlerconfig.norconex.com) to convert
+Use the [Visual Configurator](https://configurator.norconex.com.com) to convert
 each crawler block individually.
 
 Key field renames:
@@ -158,7 +158,7 @@ The v3 `Collector`/`Crawler` split is replaced by a single class per crawl type:
 The Import module class names are largely the same.
 The main change is how transformers are configured: v3 XML attributes become YAML fields.
 
-Use the [Visual Configurator](https://crawlerconfig.norconex.com) to verify each class name —
+Use the [Visual Configurator](https://configurator.norconex.com.com) to verify each class name —
 it shows both the current v4 name and any renamed v3 equivalents.
 
 ## Unsupported v3 features

@@ -30,9 +30,12 @@ import java.nio.file.AccessDeniedException;
 import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.attribute.FileTime;
 import java.time.OffsetDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -149,6 +152,7 @@ class AzureBlobModelTest {
 
     @Test
     void testProviderLifecycleAndLookup() {
+        assertThat(provider.getScheme()).isEqualTo("azblob");
         assertThat(provider.openFileSystems()).hasSize(1);
         assertThat(provider.getFileSystem(
                 URI.create("azblob://acct/container/root.txt")))
@@ -182,8 +186,14 @@ class AzureBlobModelTest {
 
         assertThatCode(() -> provider.checkAccess(root))
                 .doesNotThrowAnyException();
+        assertThatCode(() -> provider.checkAccess(root,
+                java.nio.file.AccessMode.READ))
+                        .doesNotThrowAnyException();
         assertThatThrownBy(() -> provider.checkAccess(root,
                 java.nio.file.AccessMode.WRITE))
+                        .isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> provider.checkAccess(root,
+                java.nio.file.AccessMode.EXECUTE))
                         .isInstanceOf(AccessDeniedException.class);
 
         assertThatThrownBy(() -> provider.getFileStore(root))
@@ -235,8 +245,12 @@ class AzureBlobModelTest {
         try (var channel = provider.newByteChannel(path, Set.of())) {
             var dst = ByteBuffer.allocate(8);
             assertThat(channel.read(dst)).isEqualTo(3);
+            assertThat(channel.read(ByteBuffer.allocate(1))).isEqualTo(-1);
             assertThat(channel.position()).isEqualTo(3L);
+            channel.position(1);
+            assertThat(channel.position()).isEqualTo(1L);
             assertThat(channel.size()).isEqualTo(3L);
+            assertThat(channel.isOpen()).isTrue();
             assertThatThrownBy(
                     () -> channel.write(ByteBuffer
                             .wrap("x".getBytes())))
@@ -251,6 +265,16 @@ class AzureBlobModelTest {
         assertThat(attrs.isRegularFile()).isTrue();
         assertThat(attrs.isDirectory()).isFalse();
         assertThat(attrs.size()).isEqualTo(3L);
+
+        var view = provider.getFileAttributeView(path,
+                BasicFileAttributeView.class);
+        assertThat(view).isNotNull();
+        assertThat(view.name()).isEqualTo("basic");
+        assertThat(view.readAttributes().size()).isEqualTo(3L);
+        assertThatThrownBy(() -> view.setTimes(null, null, null))
+                .isInstanceOf(UnsupportedOperationException.class);
+        assertThat(provider.getFileAttributeView(path,
+                FileAttributeView.class)).isNull();
     }
 
     @Test
@@ -302,5 +326,144 @@ class AzureBlobModelTest {
         assertThat(provider.readAttributes(fs.getPath("/folder"),
                 BasicFileAttributes.class).isDirectory())
                         .isTrue();
+
+        var listNotFound = mock(BlobStorageException.class);
+        when(listNotFound.getStatusCode()).thenReturn(404);
+        when(containerClient.listBlobsByHierarchy(eq("/"),
+                any(ListBlobsOptions.class), isNull()))
+                        .thenThrow(listNotFound);
+        assertThatThrownBy(() -> provider.newDirectoryStream(
+                fs.getPath("/"), p -> true))
+                        .isInstanceOf(NoSuchFileException.class);
+
+        var listOther = mock(BlobStorageException.class);
+        when(listOther.getStatusCode()).thenReturn(500);
+        when(containerClient.listBlobsByHierarchy(eq("/"),
+                any(ListBlobsOptions.class), isNull()))
+                        .thenThrow(listOther);
+        assertThatThrownBy(() -> provider.newDirectoryStream(
+                fs.getPath("/"), p -> true))
+                        .isInstanceOf(java.io.IOException.class)
+                        .hasMessageContaining("Could not list Azure blobs");
+    }
+
+    @Test
+    void testDirectoryListingBranchCasesAndReadAttributesErrorPaths()
+            throws Exception {
+        var dirPath = fs.getPath("/dir");
+        var listing = mock(PagedIterable.class);
+
+        var blankPrefix = mock(BlobItem.class);
+        when(blankPrefix.isPrefix()).thenReturn(true);
+        when(blankPrefix.getName()).thenReturn("/");
+
+        var selfFile = mock(BlobItem.class);
+        when(selfFile.isPrefix()).thenReturn(false);
+        when(selfFile.getName()).thenReturn("dir/");
+
+        var nullPropFile = mock(BlobItem.class);
+        when(nullPropFile.isPrefix()).thenReturn(false);
+        when(nullPropFile.getName()).thenReturn("dir/a.txt");
+        when(nullPropFile.getProperties()).thenReturn(null);
+
+        var nullLenFile = mock(BlobItem.class);
+        var nullLenProps = mock(BlobItemProperties.class);
+        when(nullLenFile.isPrefix()).thenReturn(false);
+        when(nullLenFile.getName()).thenReturn("dir/b.txt");
+        when(nullLenFile.getProperties()).thenReturn(nullLenProps);
+        when(nullLenProps.getContentLength()).thenReturn(null);
+        when(nullLenProps.getLastModified()).thenReturn(null);
+
+        when(listing.iterator()).thenReturn(
+                List.of(blankPrefix, selfFile, nullPropFile, nullLenFile)
+                        .iterator());
+        when(containerClient.listBlobsByHierarchy(eq("/"),
+                any(ListBlobsOptions.class), isNull()))
+                        .thenReturn(listing);
+
+        try (var stream = provider.newDirectoryStream(dirPath, p -> false)) {
+            assertThat(stream.iterator().hasNext()).isFalse();
+        }
+
+        assertThat(provider.readAttributes(fs.getPath("/dir/a.txt"),
+                BasicFileAttributes.class).size()).isZero();
+        assertThat(provider.readAttributes(fs.getPath("/dir/b.txt"),
+                BasicFileAttributes.class).lastModifiedTime())
+                        .isEqualTo(FileTime.fromMillis(0));
+
+        assertThatThrownBy(() -> provider.readAttributes(
+                fs.getPath("/x.txt"),
+                java.nio.file.attribute.PosixFileAttributes.class))
+                        .isInstanceOf(UnsupportedOperationException.class);
+
+        var err500Blob = mock(BlobClient.class);
+        var err500 = mock(BlobStorageException.class);
+        when(err500.getStatusCode()).thenReturn(500);
+        when(containerClient.getBlobClient("err500.txt"))
+                .thenReturn(err500Blob);
+        when(err500Blob.getProperties()).thenThrow(err500);
+        assertThatThrownBy(() -> provider.readAttributes(
+                fs.getPath("/err500.txt"), BasicFileAttributes.class))
+                        .isInstanceOf(java.io.IOException.class)
+                        .hasMessageContaining(
+                                "Could not read Azure blob attributes");
+
+        var nfBlob = mock(BlobClient.class);
+        var nf = mock(BlobStorageException.class);
+        when(nf.getStatusCode()).thenReturn(404);
+        when(containerClient.getBlobClient("vdir/ghost.txt"))
+                .thenReturn(nfBlob);
+        when(nfBlob.getProperties()).thenThrow(nf);
+        var vdirPaged = mockPagedOf(mock(BlobItem.class));
+        when(containerClient.listBlobsByHierarchy(eq("/"),
+                any(ListBlobsOptions.class), isNull()))
+                        .thenReturn(vdirPaged);
+        assertThat(provider.readAttributes(
+                fs.getPath("/vdir/ghost.txt"), BasicFileAttributes.class)
+                .isDirectory()).isTrue();
+
+        var missingBlob = mock(BlobClient.class);
+        when(containerClient.getBlobClient("missing/ghost.txt"))
+                .thenReturn(missingBlob);
+        when(missingBlob.getProperties()).thenThrow(nf);
+        var missingPaged = mockPagedOf();
+        when(containerClient.listBlobsByHierarchy(eq("/"),
+                any(ListBlobsOptions.class), isNull()))
+                        .thenReturn(missingPaged);
+        assertThatThrownBy(() -> provider.readAttributes(
+                fs.getPath("/missing/ghost.txt"), BasicFileAttributes.class))
+                        .isInstanceOf(NoSuchFileException.class);
+
+        var failListBlob = mock(BlobClient.class);
+        var listErr = mock(BlobStorageException.class);
+        when(listErr.getStatusCode()).thenReturn(500);
+        when(containerClient.getBlobClient("broken/ghost.txt"))
+                .thenReturn(failListBlob);
+        when(failListBlob.getProperties()).thenThrow(nf);
+        when(containerClient.listBlobsByHierarchy(eq("/"),
+                any(ListBlobsOptions.class), isNull()))
+                        .thenThrow(listErr);
+        assertThatThrownBy(() -> provider.readAttributes(
+                fs.getPath("/broken/ghost.txt"), BasicFileAttributes.class))
+                        .isInstanceOf(java.io.IOException.class)
+                        .hasMessageContaining(
+                                "Could not check Azure virtual directory");
+
+        var ioBlobClient = mock(BlobClient.class);
+        when(containerClient.getBlobClient("iofail.txt"))
+                .thenReturn(ioBlobClient);
+        when(ioBlobClient.openInputStream()).thenThrow(err500);
+        assertThatThrownBy(
+                () -> provider.newInputStream(fs.getPath("/iofail.txt")))
+                        .isInstanceOf(java.io.IOException.class)
+                        .hasMessageContaining("Could not read Azure blob");
+    }
+
+    @SafeVarargs
+    private static PagedIterable<BlobItem> mockPagedOf(BlobItem... items) {
+        @SuppressWarnings("unchecked")
+        var paged = mock(PagedIterable.class);
+        when(paged.iterator()).thenReturn(Arrays.asList(items).iterator());
+        return paged;
     }
 }

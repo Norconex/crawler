@@ -67,7 +67,7 @@ Multiple committers can run in parallel for the same crawl session.
 All configurable options are described in the [Reference](/docs/reference/)
 section.
 
-The [Visual Configurator](https://crawlerconfig.norconex.com) makes it
+The [Visual Configurator](https://configurator.norconex.com.com) makes it
 easy to configure every pipeline stage.
 
 All stages are configurable in a YAML, JSON, or XML config file.

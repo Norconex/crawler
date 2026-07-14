@@ -187,6 +187,59 @@ class AdlsGen2ModelTest {
     }
 
     @Test
+    void testFileSystemAndPathEdgeCases() {
+        var provider = new AdlsGen2FileSystemProvider();
+        var client = mock(DataLakeFileSystemClient.class);
+        var fs = provider.getOrCreateFileSystem(
+                AdlsGen2Location.from(URI.create(
+                        "abfss://myfs@acct.dfs.core.windows.net/root")),
+                loc -> client);
+        var otherFs = provider.getOrCreateFileSystem(
+                AdlsGen2Location.from(URI.create(
+                        "abfss://otherfs@acct.dfs.core.windows.net/root")),
+                loc -> client);
+
+        var root = fs.getPath("/");
+        var leadingParent = fs.getPath("../a");
+        var normalized = fs.getPath("/a/./b/../c");
+        var child = fs.getPath("/a/b/c.txt");
+        var cousin = fs.getPath("/a/x/c.txt");
+
+        assertThat(root.getFileName()).isNull();
+        assertThat(root.getParent()).isNull();
+        assertThat(root.resolveSibling(child)).isEqualTo(child);
+        assertThat(root.startsWith(child)).isFalse();
+        assertThat(root.endsWith(child)).isFalse();
+        assertThat(child.startsWith(otherFs.getPath("/a"))).isFalse();
+        assertThat(child.endsWith(otherFs.getPath("/c.txt"))).isFalse();
+        assertThat(child.startsWith(fs.getPath("/x"))).isFalse();
+        assertThat(child.endsWith(fs.getPath("/x.txt"))).isFalse();
+        assertThat(leadingParent).hasToString("/a");
+        assertThat(normalized).hasToString("/a/c");
+        assertThat(fs.getPath("/a", "b", "c.txt"))
+                .isEqualTo(child);
+        assertThat(child.resolve("/q/r.txt")).hasToString("/q/r.txt");
+        assertThat(child.resolve("q/r.txt")).hasToString("/q/r.txt");
+        assertThat(child.resolveSibling("/x/y/z.txt"))
+                .hasToString("/x/y/z.txt");
+        assertThat(child.relativize(cousin)).hasToString("/../../x/c.txt");
+        assertThat(child.hashCode())
+                .isEqualTo(fs.getPath("/a/b/c.txt").hashCode());
+        assertThat(child.equals("not-a-path")).isFalse();
+        assertThat(child).isNotEqualTo(cousin);
+        assertThatThrownBy(() -> child.relativize(otherFs.getPath("/a/b")))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> root.register(null, null))
+                .isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(fs::getUserPrincipalLookupService)
+                .isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(fs::newWatchService)
+                .isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(() -> fs.getPathMatcher("glob"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void testDirectoryListingCachesChildAttributes() throws Exception {
         var provider = new AdlsGen2FileSystemProvider();
         provider.setAclDisabled(true);
@@ -263,14 +316,18 @@ class AdlsGen2ModelTest {
             assertThat(channel.read(dst)).isEqualTo(3);
             assertThat(channel.position()).isEqualTo(3L);
             assertThat(channel.size()).isEqualTo(3L);
+            assertThat(channel.isOpen()).isTrue();
             assertThat(channel.position(1).position()).isEqualTo(1L);
             assertThat(channel.read(ByteBuffer.allocate(8))).isEqualTo(2);
+            assertThat(channel.read(ByteBuffer.allocate(8))).isEqualTo(-1);
             assertThatThrownBy(() -> channel.write(ByteBuffer.wrap(
                     "x".getBytes(UTF_8))))
                             .isInstanceOf(
                                     NonWritableChannelException.class);
             assertThatThrownBy(() -> channel.truncate(1))
                     .isInstanceOf(NonWritableChannelException.class);
+            channel.close();
+            assertThat(channel.isOpen()).isFalse();
         }
 
         var attrs = provider.readAttributes(path, BasicFileAttributes.class);
@@ -317,6 +374,81 @@ class AdlsGen2ModelTest {
         assertThatThrownBy(() -> provider.readAttributes(missingPath,
                 BasicFileAttributes.class))
                         .isInstanceOf(NoSuchFileException.class);
+    }
+
+    @Test
+    void testProviderDirectoryAndIoExceptionBranches() throws Exception {
+        var provider = new AdlsGen2FileSystemProvider();
+        var location = AdlsGen2Location.from(URI.create(
+                "abfss://myfs@acct.dfs.core.windows.net/root"));
+        var client = mock(DataLakeFileSystemClient.class);
+        var fileClient = mock(DataLakeFileClient.class);
+        var dirClient = mock(DataLakeDirectoryClient.class);
+        var badStatus = mock(DataLakeStorageException.class);
+        var dirProps = mock(PathProperties.class);
+        var fs = provider.getOrCreateFileSystem(location, loc -> client);
+        var dirPath = fs.getPath("/folder");
+        var filePath = fs.getPath("/broken.txt");
+        var now = OffsetDateTime.now();
+
+        when(client.getFileClient("folder")).thenReturn(fileClient);
+        when(client.getDirectoryClient("folder")).thenReturn(dirClient);
+        when(fileClient.exists()).thenReturn(false);
+        when(dirClient.exists()).thenReturn(true);
+        when(dirClient.getProperties()).thenReturn(dirProps);
+        when(dirProps.getLastModified()).thenReturn(now);
+        when(dirProps.getAccessControlList()).thenReturn(null);
+
+        var dirAttrs =
+                provider.readAttributes(dirPath, BasicFileAttributes.class);
+        assertThat(dirAttrs.isDirectory()).isTrue();
+        assertThat(dirAttrs.lastModifiedTime())
+                .isEqualTo(FileTime.from(now.toInstant()));
+
+        when(client.getFileClient("broken.txt")).thenReturn(fileClient);
+        when(fileClient.openInputStream()).thenThrow(badStatus);
+        when(badStatus.getStatusCode()).thenReturn(500);
+        assertThatThrownBy(() -> provider.newInputStream(filePath))
+                .isInstanceOf(java.io.IOException.class)
+                .hasMessageContaining("Could not read ADLS Gen2 file");
+
+        @SuppressWarnings("unchecked")
+        var iterable = mock(PagedIterable.class);
+        when(iterable.iterator()).thenReturn(
+                java.util.Arrays.<PathItem>asList(
+                        null,
+                        new PathItem("etag", null, 0L,
+                                null, false, "", null, null),
+                        new PathItem("etag2", null, 5L,
+                                null, false, "root/ok.txt", null, null))
+                        .iterator());
+        when(client.listPaths(any(ListPathsOptions.class), isNull()))
+                .thenReturn(iterable);
+
+        var filtered = new ArrayList<Path>();
+        try (var stream = provider.newDirectoryStream(fs.getPath("/root"),
+                p -> false)) {
+            for (Path child : stream) {
+                filtered.add(child);
+            }
+        }
+        assertThat(filtered).isEmpty();
+
+        when(client.listPaths(any(ListPathsOptions.class), isNull()))
+                .thenThrow(badStatus);
+        assertThatThrownBy(
+                () -> provider.newDirectoryStream(fs.getPath("/root"),
+                        p -> true))
+                                .isInstanceOf(java.io.IOException.class)
+                                .hasMessageContaining(
+                                        "Could not list ADLS Gen2 paths under");
+
+        when(fileClient.exists()).thenThrow(badStatus);
+        assertThatThrownBy(() -> provider.readAttributes(filePath,
+                BasicFileAttributes.class))
+                        .isInstanceOf(java.io.IOException.class)
+                        .hasMessageContaining(
+                                "Could not read ADLS Gen2 path attributes");
     }
 
     @Test
