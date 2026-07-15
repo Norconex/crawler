@@ -993,7 +993,8 @@
               <configuration>
                 <scripts>
                   <script><![CDATA[
-                    evaluate(new File(project.parent.basedir,
+                    def rootDir = project.parent?.basedir ?: project.basedir
+                    evaluate(new File(rootDir,
                         "assembly/licenses/copy-licenses.groovy"))
                   ]]></script>
                 </scripts>
