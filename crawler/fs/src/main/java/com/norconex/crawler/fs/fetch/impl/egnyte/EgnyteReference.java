@@ -14,10 +14,7 @@
  */
 package com.norconex.crawler.fs.fetch.impl.egnyte;
 
-import java.net.URI;
-import java.util.Locale;
-
-import org.apache.commons.lang3.StringUtils;
+import com.norconex.crawler.fs.fetch.impl.FolderItemReferenceParser;
 
 record EgnyteReference(
         Kind kind,
@@ -31,38 +28,18 @@ record EgnyteReference(
     }
 
     static EgnyteReference parse(String reference) {
-        var uri = URI.create(reference);
-        var scheme = StringUtils.lowerCase(uri.getScheme(), Locale.ROOT);
-        if (!"egnyte".equals(scheme)) {
-            throw new IllegalArgumentException(
-                    "Unsupported Egnyte scheme in reference: " + reference);
-        }
-
-        var domain = uri.getHost();
-        if (StringUtils.isBlank(domain)) {
-            throw new IllegalArgumentException(
-                    "Reference Egnyte domain must be supplied in URI host: "
-                            + reference);
-        }
-
-        var path = StringUtils.stripStart(
-                StringUtils.defaultString(uri.getPath()), "/");
-        var parts = StringUtils.isBlank(path)
-                ? new String[0]
-                : path.split("/");
-
-        if (parts.length == 2 && "folders".equals(parts[0])) {
-            return new EgnyteReference(Kind.FOLDER, domain, parts[1], null);
-        }
-
-        if (parts.length == 4
-                && "folders".equals(parts[0])
-                && "items".equals(parts[2])) {
-            return new EgnyteReference(Kind.ITEM, domain, parts[1], parts[3]);
-        }
-
-        throw new IllegalArgumentException(
-                "Invalid Egnyte reference: " + reference);
+        var parsed = FolderItemReferenceParser.parse(
+                reference,
+                "egnyte",
+                "Egnyte",
+                "Egnyte domain");
+        return new EgnyteReference(
+                parsed.kind() == FolderItemReferenceParser.Kind.FOLDER
+                        ? Kind.FOLDER
+                        : Kind.ITEM,
+                parsed.host(),
+                parsed.folderId(),
+                parsed.itemId());
     }
 
     String toReference() {

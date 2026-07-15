@@ -15,19 +15,18 @@
 package com.norconex.crawler.fs.fetch.impl.egnyte;
 
 import static com.norconex.crawler.core.doc.CrawlerDocMetaConstants.PREFIX;
+import static com.norconex.crawler.fs.fetch.impl.FetcherSupport.decodeUtf8ErrorBody;
+import static com.norconex.crawler.fs.fetch.impl.FetcherSupport.firstNonBlank;
+import static com.norconex.crawler.fs.fetch.impl.FetcherSupport.setIsoTimestamp;
+import static com.norconex.crawler.fs.fetch.impl.FetcherSupport.urlEncode;
 import static com.norconex.crawler.fs.fetch.impl.FileFetchUtil.referenceStartsWith;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
@@ -388,16 +387,7 @@ public class EgnyteFetcher extends AbstractFetcher<EgnyteFetcherConfig> {
             com.norconex.commons.lang.map.Properties meta,
             String field,
             String value) {
-        if (StringUtils.isBlank(value)) {
-            return;
-        }
-        try {
-            meta.set(field,
-                    ZonedDateTime.parse(value, DateTimeFormatter.ISO_DATE_TIME)
-                            .toInstant().toEpochMilli());
-        } catch (DateTimeParseException e) {
-            meta.set(META_PREFIX + "invalidDate." + field, value);
-        }
+        setIsoTimestamp(meta, META_PREFIX, field, value);
     }
 
     EgnyteItem fetchEgnyteItemNode(EgnyteReference ref) throws IOException {
@@ -471,7 +461,7 @@ public class EgnyteFetcher extends AbstractFetcher<EgnyteFetcherConfig> {
             return null;
         }
         throw new EgnyteHttpStatusException(status,
-                decodeErrorBody(response.body()));
+                decodeUtf8ErrorBody(response.body()));
     }
 
     JsonNode fetchJson(EgnyteReference ref, String path) throws IOException {
@@ -517,17 +507,6 @@ public class EgnyteFetcher extends AbstractFetcher<EgnyteFetcherConfig> {
     private String resolveApiBaseUrl(String domain) {
         return StringUtils.defaultString(configuration.getApiBaseUrl())
                 .replace("{domain}", domain);
-    }
-
-    private String decodeErrorBody(byte[] body) {
-        return StringUtils.abbreviate(
-                new String(body == null ? new byte[0] : body,
-                        StandardCharsets.UTF_8),
-                512);
-    }
-
-    private static String urlEncode(String value) {
-        return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
     boolean isSourceDeltaEnabled() {
@@ -580,16 +559,6 @@ public class EgnyteFetcher extends AbstractFetcher<EgnyteFetcherConfig> {
                 .processingOutcome(ProcessingOutcome.NOT_FOUND)
                 .childPaths(Set.of())
                 .build();
-    }
-
-    private static String firstNonBlank(String... values) {
-        for (String value : values) {
-            var trimmed = StringUtils.trimToNull(value);
-            if (trimmed != null) {
-                return trimmed;
-            }
-        }
-        return null;
     }
 
     private static String deltaCursorKey(EgnyteReference ref) {

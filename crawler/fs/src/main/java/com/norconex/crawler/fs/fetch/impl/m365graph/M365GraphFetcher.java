@@ -15,16 +15,15 @@
 package com.norconex.crawler.fs.fetch.impl.m365graph;
 
 import static com.norconex.crawler.core.doc.CrawlerDocMetaConstants.PREFIX;
+import static com.norconex.crawler.fs.fetch.impl.FetcherSupport.urlEncode;
 import static com.norconex.crawler.fs.fetch.impl.FileFetchUtil.referenceStartsWith;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZonedDateTime;
@@ -736,12 +735,6 @@ public class M365GraphFetcher extends AbstractFetcher<M365GraphFetcherConfig> {
 
     private static String normalizeBaseUrl(String url) {
         return StringUtils.removeEnd(StringUtils.defaultString(url), "/");
-    }
-
-    private static String urlEncode(String value) {
-        return URLEncoder.encode(
-                StringUtils.defaultString(value),
-                StandardCharsets.UTF_8);
     }
 
     boolean isSourceDeltaEnabled() {

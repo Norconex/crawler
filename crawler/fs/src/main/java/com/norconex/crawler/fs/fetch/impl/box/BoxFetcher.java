@@ -15,19 +15,17 @@
 package com.norconex.crawler.fs.fetch.impl.box;
 
 import static com.norconex.crawler.core.doc.CrawlerDocMetaConstants.PREFIX;
+import static com.norconex.crawler.fs.fetch.impl.FetcherSupport.decodeUtf8ErrorBody;
+import static com.norconex.crawler.fs.fetch.impl.FetcherSupport.setIsoTimestamp;
+import static com.norconex.crawler.fs.fetch.impl.FetcherSupport.urlEncode;
 import static com.norconex.crawler.fs.fetch.impl.FileFetchUtil.referenceStartsWith;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -243,16 +241,7 @@ public class BoxFetcher extends AbstractFetcher<BoxFetcherConfig> {
             com.norconex.commons.lang.map.Properties meta,
             String field,
             String value) {
-        if (StringUtils.isBlank(value)) {
-            return;
-        }
-        try {
-            meta.set(field,
-                    ZonedDateTime.parse(value, DateTimeFormatter.ISO_DATE_TIME)
-                            .toInstant().toEpochMilli());
-        } catch (DateTimeParseException e) {
-            meta.set(META_PREFIX + "invalidDate." + field, value);
-        }
+        setIsoTimestamp(meta, META_PREFIX, field, value);
     }
 
     BoxItem fetchBoxItemNode(BoxReference ref) throws IOException {
@@ -307,7 +296,7 @@ public class BoxFetcher extends AbstractFetcher<BoxFetcherConfig> {
             return null;
         }
         throw new BoxHttpStatusException(status,
-                decodeErrorBody(response.body()));
+                decodeUtf8ErrorBody(response.body()));
     }
 
     JsonNode fetchJson(String path) throws IOException {
@@ -347,17 +336,6 @@ public class BoxFetcher extends AbstractFetcher<BoxFetcherConfig> {
         return URI.create(StringUtils.removeEnd(configuration.getApiBaseUrl(),
                 "/")
                 + (pathOrUrl.startsWith("/") ? pathOrUrl : "/" + pathOrUrl));
-    }
-
-    private String decodeErrorBody(byte[] body) {
-        return StringUtils.abbreviate(
-                new String(body == null ? new byte[0] : body,
-                        StandardCharsets.UTF_8),
-                512);
-    }
-
-    private static String urlEncode(String value) {
-        return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
     static final class BoxHttpStatusException extends IOException {
