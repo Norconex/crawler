@@ -243,8 +243,9 @@ final class AzureBlobFileSystemProvider extends ReadOnlyFileSystemProvider {
             var options = new ListBlobsOptions()
                     .setPrefix(path.blobPrefix())
                     .setMaxResultsPerPage(1);
-            for (BlobItem ignored : fs.client().listBlobsByHierarchy("/",
-                    options, null)) {
+            var blobs = fs.client().listBlobsByHierarchy("/", options, null)
+                    .iterator();
+            if (blobs.hasNext()) {
                 return new AzureBlobFileAttributes(true, 0, null);
             }
         } catch (BlobStorageException e) {
