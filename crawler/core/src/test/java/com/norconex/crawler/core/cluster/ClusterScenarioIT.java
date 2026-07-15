@@ -163,8 +163,7 @@ class ClusterScenarioIT {
                                                 .getCount(
                                                         CrawlerEvent.DOCUMENT_IMPORTED);
                                         return imported > 0
-                                                && imported
-                                                        < (numOfRefs / 2);
+                                                && imported < (numOfRefs / 2);
                                     },
                                     CLUSTER_JOIN_WAIT,
                                     Duration.ofMillis(

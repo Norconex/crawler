@@ -189,7 +189,7 @@ public abstract class AbstractExternalTest {
                 "field3 StdErrBefore",
                 meta.getString("field3"));
         var field4 = meta.getString("field4");
-var maxAttemptsField4 = 100;
+        var maxAttemptsField4 = 100;
         while (field4 == null && --maxAttemptsField4 >= 0) {
             try {
                 Thread.sleep(50);
