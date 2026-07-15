@@ -992,7 +992,10 @@
               <phase>prepare-package</phase> 
               <configuration>
                 <scripts>
-                  <script>${maven.multiModuleProjectDirectory}/assembly/licenses/copy-licenses.groovy</script>
+                  <script><![CDATA[
+                    evaluate(new File(project.parent.basedir,
+                        "assembly/licenses/copy-licenses.groovy"))
+                  ]]></script>
                 </scripts>
               </configuration>
             </execution>
