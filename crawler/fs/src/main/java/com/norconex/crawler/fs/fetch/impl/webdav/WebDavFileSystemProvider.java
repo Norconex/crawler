@@ -20,16 +20,9 @@ import java.io.InputStreamReader;
 import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.ByteBuffer;
-import java.nio.channels.NonWritableChannelException;
-import java.nio.channels.SeekableByteChannel;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.AccessDeniedException;
-import java.nio.file.AccessMode;
-import java.nio.file.CopyOption;
 import java.nio.file.DirectoryStream;
 import java.nio.file.DirectoryStream.Filter;
-import java.nio.file.FileStore;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystemAlreadyExistsException;
 import java.nio.file.FileSystemNotFoundException;
@@ -37,10 +30,7 @@ import java.nio.file.LinkOption;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
-import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.nio.file.attribute.FileAttribute;
-import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.attribute.FileTime;
 import java.nio.file.spi.FileSystemProvider;
 import java.time.ZonedDateTime;
@@ -68,6 +58,7 @@ import org.apache.hc.core5.http.HttpStatus;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 
 import com.norconex.commons.lang.xml.Xml;
+import com.norconex.crawler.fs.fetch.impl.ReadOnlyFileSystemProvider;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -87,7 +78,7 @@ import lombok.extern.slf4j.Slf4j;
  * </p>
  */
 @Slf4j
-final class WebDavFileSystemProvider extends FileSystemProvider {
+final class WebDavFileSystemProvider extends ReadOnlyFileSystemProvider {
 
     // Env keys populated by WebDavFetcher.
     static final String ENV_CLIENT_SUPPLIER = "clientSupplier";
@@ -101,6 +92,11 @@ final class WebDavFileSystemProvider extends FileSystemProvider {
     @Override
     public String getScheme() {
         return "webdav";
+    }
+
+    @Override
+    protected String fileSystemLabel() {
+        return "WebDAV";
     }
 
     @Override
@@ -231,17 +227,6 @@ final class WebDavFileSystemProvider extends FileSystemProvider {
     }
 
     @Override
-    public SeekableByteChannel newByteChannel(
-            Path path, Set<? extends OpenOption> options,
-            FileAttribute<?>... attrs) throws IOException {
-        byte[] content;
-        try (var is = newInputStream(path)) {
-            content = is.readAllBytes();
-        }
-        return new InMemorySeekableByteChannel(content);
-    }
-
-    @Override
     public DirectoryStream<Path> newDirectoryStream(
             Path dir, Filter<? super Path> filter) throws IOException {
         var wdPath = (WebDavPath) dir;
@@ -308,103 +293,6 @@ final class WebDavFileSystemProvider extends FileSystemProvider {
         }
         fs.attrsCache().put(wdPath.path(), attrs);
         return (A) attrs;
-    }
-
-    @Override
-    public Map<String, Object> readAttributes(
-            Path path, String attributes, LinkOption... options) {
-        throw new UnsupportedOperationException(
-                "Attribute-name based reads are not supported;"
-                        + " use readAttributes(Path, Class).");
-    }
-
-    @Override
-    public <V extends FileAttributeView> V getFileAttributeView(
-            Path path, Class<V> type, LinkOption... options) {
-        if (type == BasicFileAttributeView.class) {
-            return type.cast(new BasicFileAttributeView() {
-                @Override
-                public String name() {
-                    return "basic";
-                }
-
-                @Override
-                public BasicFileAttributes readAttributes()
-                        throws IOException {
-                    return WebDavFileSystemProvider.this.readAttributes(
-                            path, BasicFileAttributes.class);
-                }
-
-                @Override
-                public void setTimes(
-                        FileTime lastModifiedTime, FileTime lastAccessTime,
-                        FileTime createTime) {
-                    throw new UnsupportedOperationException(
-                            "WebDAV file systems are read-only.");
-                }
-            });
-        }
-        return null;
-    }
-
-    @Override
-    public void checkAccess(Path path, AccessMode... modes)
-            throws IOException {
-        // Existence check; throws NoSuchFileException if missing.
-        readAttributes(path, BasicFileAttributes.class);
-        for (var mode : modes) {
-            if (mode == AccessMode.WRITE || mode == AccessMode.EXECUTE) {
-                throw new AccessDeniedException(path.toString());
-            }
-        }
-    }
-
-    @Override
-    public boolean isSameFile(Path path, Path path2) {
-        return path.equals(path2);
-    }
-
-    @Override
-    public boolean isHidden(Path path) {
-        return false;
-    }
-
-    @Override
-    public FileStore getFileStore(Path path) {
-        throw new UnsupportedOperationException(
-                "WebDAV file systems do not expose file stores.");
-    }
-
-    @Override
-    public void createDirectory(Path dir, FileAttribute<?>... attrs) {
-        throw new UnsupportedOperationException(
-                "WebDAV file systems are read-only.");
-    }
-
-    @Override
-    public void delete(Path path) {
-        throw new UnsupportedOperationException(
-                "WebDAV file systems are read-only.");
-    }
-
-    @Override
-    public void copy(Path source, Path target, CopyOption... options) {
-        throw new UnsupportedOperationException(
-                "WebDAV file systems are read-only.");
-    }
-
-    @Override
-    public void move(Path source, Path target, CopyOption... options) {
-        throw new UnsupportedOperationException(
-                "WebDAV file systems are read-only.");
-    }
-
-    @Override
-    public void setAttribute(
-            Path path, String attribute, Object value,
-            LinkOption... options) {
-        throw new UnsupportedOperationException(
-                "WebDAV file systems are read-only.");
     }
 
     // --- WebDAV protocol -------------------------------------------------
@@ -583,64 +471,4 @@ final class WebDavFileSystemProvider extends FileSystemProvider {
         return path;
     }
 
-    /** A read-only {@link SeekableByteChannel} over an in-memory buffer. */
-    private static final class InMemorySeekableByteChannel
-            implements SeekableByteChannel {
-
-        private final ByteBuffer buffer;
-        private boolean open = true;
-
-        InMemorySeekableByteChannel(byte[] content) {
-            buffer = ByteBuffer.wrap(content);
-        }
-
-        @Override
-        public int read(ByteBuffer dst) {
-            if (!buffer.hasRemaining()) {
-                return -1;
-            }
-            var n = Math.min(dst.remaining(), buffer.remaining());
-            var slice = buffer.slice();
-            slice.limit(n);
-            dst.put(slice);
-            buffer.position(buffer.position() + n);
-            return n;
-        }
-
-        @Override
-        public int write(ByteBuffer src) {
-            throw new NonWritableChannelException();
-        }
-
-        @Override
-        public long position() {
-            return buffer.position();
-        }
-
-        @Override
-        public SeekableByteChannel position(long newPosition) {
-            buffer.position((int) newPosition);
-            return this;
-        }
-
-        @Override
-        public long size() {
-            return buffer.limit();
-        }
-
-        @Override
-        public SeekableByteChannel truncate(long size) {
-            throw new NonWritableChannelException();
-        }
-
-        @Override
-        public boolean isOpen() {
-            return open;
-        }
-
-        @Override
-        public void close() {
-            open = false;
-        }
-    }
 }
