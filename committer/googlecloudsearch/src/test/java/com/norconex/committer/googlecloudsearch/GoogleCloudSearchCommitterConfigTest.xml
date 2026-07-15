@@ -27,10 +27,14 @@
 	<keepSourceIdField>true</keepSourceIdField>
 	<titleField>titleField</titleField>
 	<objectTypeField>objectTypeField</objectTypeField>
+	<objectTypeDefaultValue>webpage</objectTypeDefaultValue>
 	<updateTimeField>updateTimeField</updateTimeField>
+	<createTimeField>createTimeField</createTimeField>
 	<containerNameField>containerNameField</containerNameField>
 	<contentLanguageField>contentLanguageField</contentLanguageField>
+	<contentLanguageDefaultValue>en-US</contentLanguageDefaultValue>
 	<sourceRepositoryUrlField>sourceRepositoryUrlField</sourceRepositoryUrlField>
+	<typedStructuredData>true</typedStructuredData>
 
 	<aclMappings>
 		<mapping>
