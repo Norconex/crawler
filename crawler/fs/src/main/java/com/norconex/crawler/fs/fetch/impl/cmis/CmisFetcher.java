@@ -14,6 +14,7 @@
  */
 package com.norconex.crawler.fs.fetch.impl.cmis;
 
+import static com.norconex.crawler.fs.fetch.impl.FetcherSupport.firstNonBlank;
 import static com.norconex.crawler.fs.fetch.impl.FileFetchUtil.referenceStartsWith;
 
 import java.io.IOException;
@@ -215,16 +216,6 @@ public class CmisFetcher extends AbstractNioFetcher<CmisFetcherConfig> {
             }
         }
         return aclByPermission;
-    }
-
-    private static String firstNonBlank(String... values) {
-        for (String value : values) {
-            var trimmed = StringUtils.trimToNull(value);
-            if (trimmed != null) {
-                return trimmed;
-            }
-        }
-        return null;
     }
 
     private static class Context {

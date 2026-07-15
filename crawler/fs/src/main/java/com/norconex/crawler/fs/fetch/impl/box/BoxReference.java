@@ -14,10 +14,7 @@
  */
 package com.norconex.crawler.fs.fetch.impl.box;
 
-import java.net.URI;
-import java.util.Locale;
-
-import org.apache.commons.lang3.StringUtils;
+import com.norconex.crawler.fs.fetch.impl.FolderItemReferenceParser;
 
 record BoxReference(
         Kind kind,
@@ -31,42 +28,18 @@ record BoxReference(
     }
 
     static BoxReference parse(String reference) {
-        var uri = URI.create(reference);
-        var scheme = StringUtils.lowerCase(uri.getScheme(), Locale.ROOT);
-        if (!"box".equals(scheme)) {
-            throw new IllegalArgumentException(
-                    "Unsupported Box scheme in reference: " + reference);
-        }
-
-        var enterpriseId = uri.getHost();
-        if (StringUtils.isBlank(enterpriseId)) {
-            throw new IllegalArgumentException(
-                    "Reference enterpriseId must be supplied in URI host: "
-                            + reference);
-        }
-
-        var path = StringUtils.stripStart(
-                StringUtils.defaultString(uri.getPath()), "/");
-        var parts = StringUtils.isBlank(path)
-                ? new String[0]
-                : path.split("/");
-
-        if (parts.length == 2 && "folders".equals(parts[0])) {
-            return new BoxReference(Kind.FOLDER, enterpriseId, parts[1], null);
-        }
-
-        if (parts.length == 4
-                && "folders".equals(parts[0])
-                && "items".equals(parts[2])) {
-            return new BoxReference(
-                    Kind.ITEM,
-                    enterpriseId,
-                    parts[1],
-                    parts[3]);
-        }
-
-        throw new IllegalArgumentException(
-                "Invalid Box reference: " + reference);
+        var parsed = FolderItemReferenceParser.parse(
+                reference,
+                "box",
+                "Box",
+                "enterpriseId");
+        return new BoxReference(
+                parsed.kind() == FolderItemReferenceParser.Kind.FOLDER
+                        ? Kind.FOLDER
+                        : Kind.ITEM,
+                parsed.host(),
+                parsed.folderId(),
+                parsed.itemId());
     }
 
     String toReference() {

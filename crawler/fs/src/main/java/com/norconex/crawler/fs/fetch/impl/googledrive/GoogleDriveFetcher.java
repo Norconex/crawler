@@ -15,12 +15,12 @@
 package com.norconex.crawler.fs.fetch.impl.googledrive;
 
 import static com.norconex.crawler.core.doc.CrawlerDocMetaConstants.PREFIX;
+import static com.norconex.crawler.fs.fetch.impl.FetcherSupport.urlEncode;
 import static com.norconex.crawler.fs.fetch.impl.FileFetchUtil.referenceStartsWith;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -730,12 +730,6 @@ public class GoogleDriveFetcher
 
     private static String base64Url(byte[] bytes) {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-    }
-
-    private static String urlEncode(String value) {
-        return URLEncoder.encode(
-                StringUtils.defaultString(value),
-                StandardCharsets.UTF_8);
     }
 
     private static void ensureStatus(HttpResponse<byte[]> response,
