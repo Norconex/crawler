@@ -39,12 +39,13 @@ public class GoogleCloudSearchCommitterConfig
     private static final long serialVersionUID = 1L;
 
     /** Default Google Cloud Search committer application name. */
-    public static final String DEFAULT_APPLICATION_NAME =
-            "Norconex Google Cloud Search Committer";
+    public static final String DEFAULT_APPLICATION_NAME = "Norconex Google Cloud Search Committer";
     /** Default document title metadata field. */
     public static final String DEFAULT_TITLE_FIELD = "title";
     /** Default document object type metadata field. */
     public static final String DEFAULT_OBJECT_TYPE_FIELD = "objectType";
+    /** Default object type value when no metadata value is provided. */
+    public static final String DEFAULT_OBJECT_TYPE = "document";
     /** Default update time metadata field. */
     public static final String DEFAULT_UPDATE_TIME_FIELD = "Last-Modified";
 
@@ -158,10 +159,21 @@ public class GoogleCloudSearchCommitterConfig
     private String objectTypeField = DEFAULT_OBJECT_TYPE_FIELD;
 
     /**
+     * Default value for the Google Cloud Search item object type when
+     * {@link #objectTypeField} is missing or blank.
+     */
+    private String objectTypeDefaultValue = DEFAULT_OBJECT_TYPE;
+
+    /**
      * Metadata field mapped to the Google Cloud Search item update time.
      * Default is {@value #DEFAULT_UPDATE_TIME_FIELD}.
      */
     private String updateTimeField = DEFAULT_UPDATE_TIME_FIELD;
+
+    /**
+     * Metadata field mapped to the Google Cloud Search item create time.
+     */
+    private String createTimeField;
 
     /**
      * Metadata field mapped to the Google Cloud Search item container name.
@@ -175,10 +187,22 @@ public class GoogleCloudSearchCommitterConfig
     private String contentLanguageField;
 
     /**
+     * Default value for the Google Cloud Search item content language when
+     * {@link #contentLanguageField} is missing or blank.
+     */
+    private String contentLanguageDefaultValue;
+
+    /**
      * Metadata field mapped to the Google Cloud Search item source
      * repository URL. Defaults to the document reference.
      */
     private String sourceRepositoryUrlField;
+
+    /**
+     * Whether to infer typed structured-data values (date, timestamp,
+     * integer, double, enum) instead of always sending text values.
+     */
+    private boolean typedStructuredData;
 
     /**
      * Mappings of metadata fields to Google Cloud Search ACL principals.
@@ -233,8 +257,9 @@ public class GoogleCloudSearchCommitterConfig
 
         /** Metadata field holding the parent item reference. */
         private String fromField;
-        /** ACL inheritance type. Default is {@link AclInheritanceType#NOT_APPLICABLE}. */
-        private AclInheritanceType aclInheritanceType =
-                AclInheritanceType.NOT_APPLICABLE;
+        /**
+         * ACL inheritance type. Default is {@link AclInheritanceType#NOT_APPLICABLE}.
+         */
+        private AclInheritanceType aclInheritanceType = AclInheritanceType.NOT_APPLICABLE;
     }
 }

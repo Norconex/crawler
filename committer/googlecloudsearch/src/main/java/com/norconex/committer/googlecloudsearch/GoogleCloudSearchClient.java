@@ -23,6 +23,7 @@ import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -59,6 +60,11 @@ import com.google.api.services.cloudsearch.v1.model.ItemAcl;
 import com.google.api.services.cloudsearch.v1.model.ItemContent;
 import com.google.api.services.cloudsearch.v1.model.ItemMetadata;
 import com.google.api.services.cloudsearch.v1.model.ItemStructuredData;
+import com.google.api.services.cloudsearch.v1.model.Date;
+import com.google.api.services.cloudsearch.v1.model.DateValues;
+import com.google.api.services.cloudsearch.v1.model.DoubleValues;
+import com.google.api.services.cloudsearch.v1.model.EnumValues;
+import com.google.api.services.cloudsearch.v1.model.IntegerValues;
 import com.google.api.services.cloudsearch.v1.model.Media;
 import com.google.api.services.cloudsearch.v1.model.NamedProperty;
 import com.google.api.services.cloudsearch.v1.model.Operation;
@@ -66,6 +72,7 @@ import com.google.api.services.cloudsearch.v1.model.Principal;
 import com.google.api.services.cloudsearch.v1.model.StartUploadItemRequest;
 import com.google.api.services.cloudsearch.v1.model.StructuredDataObject;
 import com.google.api.services.cloudsearch.v1.model.TextValues;
+import com.google.api.services.cloudsearch.v1.model.TimestampValues;
 import com.google.api.services.cloudsearch.v1.model.UploadItemRef;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.GoogleCredentials;
@@ -97,13 +104,10 @@ class GoogleCloudSearchClient {
     /** Metadata field holding the resolved content type, if any. */
     static final String FIELD_CONTENT_TYPE = "document.contentType";
 
-    private static final String DEFAULT_OBJECT_TYPE = "document";
     private static final String DEFAULT_TEXT_CONTENT_TYPE = "text/plain";
-    private static final String DEFAULT_BINARY_CONTENT_TYPE =
-            "application/octet-stream";
+    private static final String DEFAULT_BINARY_CONTENT_TYPE = "application/octet-stream";
     private static final int INLINE_CONTENT_MAX_BYTES = 102400;
-    private static final String INDEXING_SCOPE =
-            "https://www.googleapis.com/auth/cloud_search.indexing";
+    private static final String INDEXING_SCOPE = "https://www.googleapis.com/auth/cloud_search.indexing";
     private static final String CONTENT_ITEM_TYPE = "CONTENT_ITEM";
 
     private final GoogleCloudSearchCommitterConfig config;
@@ -135,7 +139,7 @@ class GoogleCloudSearchClient {
             var builder = new CloudSearch.Builder(
                     GoogleNetHttpTransport.newTrustedTransport(),
                     GsonFactory.getDefaultInstance(), initializer)
-                            .setApplicationName(config.getApplicationName());
+                    .setApplicationName(config.getApplicationName());
             if (StringUtils.isNotBlank(config.getApiEndpoint())) {
                 builder.setRootUrl(
                         ensureTrailingSlash(config.getApiEndpoint()));
@@ -260,23 +264,23 @@ class GoogleCloudSearchClient {
 
         var objectType = metadata.getString(config.getObjectTypeField());
         itemMetadata.setObjectType(
-                StringUtils.defaultIfBlank(objectType, DEFAULT_OBJECT_TYPE));
+                StringUtils.defaultIfBlank(
+                        objectType, config.getObjectTypeDefaultValue()));
         itemMetadata.setMimeType(contentType);
 
-        var containerName =
-                metadataValue(metadata, config.getContainerNameField());
+        var containerName = metadataValue(metadata, config.getContainerNameField());
         if (StringUtils.isNotBlank(containerName)) {
             itemMetadata.setContainerName(containerName);
         }
 
-        var contentLanguage =
-                metadataValue(metadata, config.getContentLanguageField());
+        var contentLanguage = metadataValue(metadata, config.getContentLanguageField());
+        contentLanguage = StringUtils.defaultIfBlank(
+                contentLanguage, config.getContentLanguageDefaultValue());
         if (StringUtils.isNotBlank(contentLanguage)) {
             itemMetadata.setContentLanguage(contentLanguage);
         }
 
-        var updateTime =
-                metadataValue(metadata, config.getUpdateTimeField());
+        var updateTime = metadataValue(metadata, config.getUpdateTimeField());
         if (StringUtils.isNotBlank(updateTime)) {
             var parsedTime = toRfc3339(updateTime);
             if (parsedTime != null) {
@@ -284,11 +288,20 @@ class GoogleCloudSearchClient {
             }
         }
 
-        var sourceRepositoryUrl =
-                StringUtils.isNotBlank(config.getSourceRepositoryUrlField())
-                        ? metadataValue(
-                                metadata, config.getSourceRepositoryUrlField())
-                        : request.getReference();
+        var createTime = metadataValue(metadata, config.getCreateTimeField());
+        if (StringUtils.isNotBlank(createTime)) {
+            var parsedTime = toRfc3339(createTime);
+            if (parsedTime != null) {
+                itemMetadata.setCreateTime(parsedTime);
+            }
+        }
+
+        var sourceRepositoryUrl = StringUtils.isNotBlank(config.getSourceRepositoryUrlField())
+                ? metadataValue(
+                        metadata, config.getSourceRepositoryUrlField())
+                : null;
+        sourceRepositoryUrl = StringUtils.defaultIfBlank(
+                sourceRepositoryUrl, request.getReference());
         if (StringUtils.isNotBlank(sourceRepositoryUrl)) {
             itemMetadata.setSourceRepositoryUrl(sourceRepositoryUrl);
         }
@@ -305,19 +318,146 @@ class GoogleCloudSearchClient {
                     || entry.getValue().isEmpty()) {
                 continue;
             }
-            properties.add(
-                    new NamedProperty()
-                            .setName(entry.getKey())
-                            .setTextValues(
-                                    new TextValues().setValues(
-                                            new ArrayList<>(
-                                                    entry.getValue()))));
+            properties.add(toNamedProperty(entry.getKey(), entry.getValue()));
         }
         if (properties.isEmpty()) {
             return null;
         }
         return new ItemStructuredData().setObject(
                 new StructuredDataObject().setProperties(properties));
+    }
+
+    private NamedProperty toNamedProperty(String name, List<String> values) {
+        var property = new NamedProperty().setName(name);
+        if (!config.isTypedStructuredData()) {
+            property.setTextValues(
+                    new TextValues().setValues(new ArrayList<>(values)));
+            return property;
+        }
+
+        var dates = parseAllDates(values);
+        if (dates != null) {
+            property.setDateValues(new DateValues().setValues(dates));
+            return property;
+        }
+
+        if (allMatch(values, this::isRfc3339Timestamp)) {
+            property.setTimestampValues(
+                    new TimestampValues().setValues(new ArrayList<>(values)));
+            return property;
+        }
+
+        if (allMatch(values, this::isLong)) {
+            property.setIntegerValues(
+                    new IntegerValues().setValues(toLongs(values)));
+            return property;
+        }
+
+        if (allMatch(values, this::isDouble)) {
+            property.setDoubleValues(
+                    new DoubleValues().setValues(toDoubles(values)));
+            return property;
+        }
+
+        if (allMatch(values, this::isEnumLike)) {
+            property.setEnumValues(
+                    new EnumValues().setValues(new ArrayList<>(values)));
+            return property;
+        }
+
+        property.setTextValues(
+                new TextValues().setValues(new ArrayList<>(values)));
+        return property;
+    }
+
+    private boolean allMatch(
+            List<String> values,
+            java.util.function.Predicate<String> predicate) {
+        for (String value : values) {
+            if (StringUtils.isBlank(value) || !predicate.test(value)) {
+                return false;
+            }
+        }
+        return !values.isEmpty();
+    }
+
+    private List<Long> toLongs(List<String> values) {
+        List<Long> longs = new ArrayList<>(values.size());
+        for (String value : values) {
+            longs.add(Long.valueOf(value));
+        }
+        return longs;
+    }
+
+    private List<Double> toDoubles(List<String> values) {
+        List<Double> doubles = new ArrayList<>(values.size());
+        for (String value : values) {
+            doubles.add(Double.valueOf(value));
+        }
+        return doubles;
+    }
+
+    private List<Date> parseAllDates(List<String> values) {
+        List<Date> dates = new ArrayList<>(values.size());
+        for (String value : values) {
+            var date = toDateValue(value);
+            if (date == null) {
+                return null;
+            }
+            dates.add(date);
+        }
+        return dates;
+    }
+
+    private Date toDateValue(String value) {
+        try {
+            var date = LocalDate.parse(value);
+            return new Date()
+                    .setYear(date.getYear())
+                    .setMonth(date.getMonthValue())
+                    .setDay(date.getDayOfMonth());
+        } catch (DateTimeParseException e) {
+            return null;
+        }
+    }
+
+    private boolean isLong(String value) {
+        try {
+            Long.parseLong(value);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    private boolean isDouble(String value) {
+        try {
+            Double.parseDouble(value);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    private boolean isEnumLike(String value) {
+        return !"true".equalsIgnoreCase(value)
+                && !"false".equalsIgnoreCase(value)
+                && value.matches("[A-Za-z0-9_\\-]+")
+                && value.length() <= 256;
+    }
+
+    private boolean isRfc3339Timestamp(String value) {
+        try {
+            Instant.parse(value);
+            return true;
+        } catch (DateTimeParseException e) {
+            try {
+                OffsetDateTime.parse(value);
+                return true;
+            } catch (DateTimeParseException ex) {
+                return false;
+            }
+        }
     }
 
     private Set<String> buildStructuredDataExclusions() {
@@ -347,8 +487,7 @@ class GoogleCloudSearchClient {
                 continue;
             }
             for (String value : values) {
-                var principal =
-                        toPrincipal(mapping.getPrincipalType(), value);
+                var principal = toPrincipal(mapping.getPrincipalType(), value);
                 if (principal == null) {
                     continue;
                 }
@@ -363,8 +502,7 @@ class GoogleCloudSearchClient {
         }
 
         AclInheritanceMapping aclInheritance = config.getAclInheritance();
-        var parentValue =
-                metadataValue(metadata, aclInheritance.getFromField());
+        var parentValue = metadataValue(metadata, aclInheritance.getFromField());
         var hasInheritance = StringUtils.isNotBlank(parentValue);
 
         var acl = new ItemAcl();
