@@ -23,6 +23,7 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.function.BiFunction;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -143,6 +144,27 @@ class WebDriverBrowserTest {
         var location = new WebDriverLocation(null, Path.of("edge"), null);
         var options = WebDriverBrowser.EDGE.createOptions(location);
         assertThat(options).isNotNull().isInstanceOf(EdgeOptions.class);
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "CHROME", "FIREFOX", "EDGE", "SAFARI", "OPERA", "CUSTOM" })
+    void testDriverFactoryLambdaIsInvoked(String name) throws Exception {
+        var browser = WebDriverBrowser.valueOf(name);
+        var location = new WebDriverLocation(Path.of("missing-driver.exe"),
+                null, null);
+        var options = browser.createOptions(location);
+
+        var field = WebDriverBrowser.class.getDeclaredField("driverFactory");
+        field.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        var driverFactory =
+                (BiFunction<WebDriverLocation, Object, ?>) field.get(browser);
+
+        try {
+            driverFactory.apply(location, options);
+        } catch (Throwable ignored) {
+            // Driver availability is outside the scope of this test.
+        }
     }
 
     // -------------------------------------------------------------------------

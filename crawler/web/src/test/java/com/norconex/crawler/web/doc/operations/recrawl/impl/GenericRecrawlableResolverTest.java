@@ -23,9 +23,9 @@ import java.util.List;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.api.Timeout;
 
 import com.norconex.commons.lang.bean.BeanMapper;
 import com.norconex.commons.lang.bean.BeanMapper.Format;
@@ -33,8 +33,8 @@ import com.norconex.commons.lang.file.ContentType;
 import com.norconex.commons.lang.text.TextMatcher;
 import com.norconex.crawler.web.doc.operations.recrawl.impl.GenericRecrawlableResolverConfig.MinFrequency;
 import com.norconex.crawler.web.doc.operations.recrawl.impl.GenericRecrawlableResolverConfig.MinFrequency.ApplyTo;
-import com.norconex.crawler.web.ledger.WebCrawlerEntry;
 import com.norconex.crawler.web.doc.operations.recrawl.impl.GenericRecrawlableResolverConfig.SitemapSupport;
+import com.norconex.crawler.web.ledger.WebCrawlerEntry;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -42,55 +42,55 @@ import lombok.extern.slf4j.Slf4j;
 @Timeout(30)
 class GenericRecrawlableResolverTest {
 
-    @Test
-    void testWriteRead() {
-        var r = new GenericRecrawlableResolver();
-        r.getConfiguration().setSitemapSupport(SitemapSupport.LAST);
+        @Test
+        void testWriteRead() {
+                var r = new GenericRecrawlableResolver();
+                r.getConfiguration().setSitemapSupport(SitemapSupport.LAST);
 
-        var f1 = new MinFrequency(
-                ApplyTo.REFERENCE, "monthly",
-                TextMatcher.regex(".*\\.pdf").ignoreCase());
-        var f2 = new MinFrequency(
-                ApplyTo.CONTENT_TYPE, "1234",
-                TextMatcher.regex(".*"));
+                var f1 = new MinFrequency(
+                                ApplyTo.REFERENCE, "monthly",
+                                TextMatcher.regex(".*\\.pdf").ignoreCase());
+                var f2 = new MinFrequency(
+                                ApplyTo.CONTENT_TYPE, "1234",
+                                TextMatcher.regex(".*"));
 
-        r.getConfiguration().setMinFrequencies(List.of(f1, f2));
+                r.getConfiguration().setMinFrequencies(List.of(f1, f2));
 
-        LOG.debug("Writing/Reading this: {}", r);
-        assertThatNoException().isThrownBy(
-                () -> BeanMapper.DEFAULT.assertWriteRead(r));
-    }
+                LOG.debug("Writing/Reading this: {}", r);
+                assertThatNoException().isThrownBy(
+                                () -> BeanMapper.DEFAULT.assertWriteRead(r));
+        }
 
-    // Test for: https://github.com/Norconex/collector-http/issues/597
-    @Test
-    void testCustomFrequency() {
-        var r = new GenericRecrawlableResolver();
-        r.getConfiguration().setSitemapSupport(SitemapSupport.NEVER);
+        // Test for: https://github.com/Norconex/collector-http/issues/597
+        @Test
+        void testCustomFrequency() {
+                var r = new GenericRecrawlableResolver();
+                r.getConfiguration().setSitemapSupport(SitemapSupport.NEVER);
 
-        var prevCrawlDate = ZonedDateTime.now().minusDays(10);
+                var prevCrawlDate = ZonedDateTime.now().minusDays(10);
 
-        var prevCrawl = new WebCrawlerEntry();
-        prevCrawl.setReference("http://example.com");
-        prevCrawl.setProcessedAt(prevCrawlDate);
+                var prevCrawl = new WebCrawlerEntry();
+                prevCrawl.setReference("http://example.com");
+                prevCrawl.setProcessedAt(prevCrawlDate);
 
-        var f = new MinFrequency(
-                ApplyTo.REFERENCE, "120 days",
-                TextMatcher.regex(".*"));
+                var f = new MinFrequency(
+                                ApplyTo.REFERENCE, "120 days",
+                                TextMatcher.regex(".*"));
 
-        r.getConfiguration().setMinFrequencies(List.of(f));
-        Assertions.assertFalse(r.isRecrawlable(prevCrawl));
+                r.getConfiguration().setMinFrequencies(List.of(f));
+                Assertions.assertFalse(r.isRecrawlable(prevCrawl));
 
-        // Delay has passed
-        f = new MinFrequency(
-                ApplyTo.REFERENCE, "5 days",
-                TextMatcher.regex(".*"));
-        r.getConfiguration().setMinFrequencies(List.of(f));
-        Assertions.assertTrue(r.isRecrawlable(prevCrawl));
-    }
+                // Delay has passed
+                f = new MinFrequency(
+                                ApplyTo.REFERENCE, "5 days",
+                                TextMatcher.regex(".*"));
+                r.getConfiguration().setMinFrequencies(List.of(f));
+                Assertions.assertTrue(r.isRecrawlable(prevCrawl));
+        }
 
-    @Test
-    void testCustomFrequencyFromXML() {
-        var xml = """
+        @Test
+        void testCustomFrequencyFromXML() {
+                var xml = """
                 <recrawlableResolver>
                   <class>GenericRecrawlableResolver</class>
                   <minFrequencies>
@@ -106,20 +106,20 @@ class GenericRecrawlableResolverTest {
                   <sitemapSupport>never</sitemapSupport>
                 </recrawlableResolver>""";
 
-        var r = new GenericRecrawlableResolver();
-        BeanMapper.DEFAULT.read(r, new StringReader(xml), Format.XML);
-        var prevCrawlDate = ZonedDateTime.now().minusDays(10);
-        var prevCrawl = new WebCrawlerEntry();
-        prevCrawl.setReference("http://example.com");
-        prevCrawl.setProcessedAt(prevCrawlDate);
+                var r = new GenericRecrawlableResolver();
+                BeanMapper.DEFAULT.read(r, new StringReader(xml), Format.XML);
+                var prevCrawlDate = ZonedDateTime.now().minusDays(10);
+                var prevCrawl = new WebCrawlerEntry();
+                prevCrawl.setReference("http://example.com");
+                prevCrawl.setProcessedAt(prevCrawlDate);
 
-        Assertions.assertFalse(r.isRecrawlable(prevCrawl));
-    }
+                Assertions.assertFalse(r.isRecrawlable(prevCrawl));
+        }
 
-    @ParameterizedTest
-    @CsvSource(
-        nullValues = "NULL",
-        textBlock = """
+        @ParameterizedTest
+        @CsvSource(
+                nullValues = "NULL",
+                textBlock = """
                 first, NULL,    NULL, reference,   hourly,  true,
                 first, hourly,  NULL, reference,   hourly,  true,
                 first, hourly,  NULL, reference,   always,  true,
@@ -141,218 +141,248 @@ class GenericRecrawlableResolverTest {
                 first, monthly, 2,    contentType, monthly, true,
                 first, monthly, 2,    contentType, monthly, true,
                 """
-    )
-    void testIsRecrawlable(
-            String sitemapSupport,
-            String sitemapChangeFreq,
-            Integer sitemapLastModDays,
-            String minFreqApplyTo,
-            String minFreqValue,
-            boolean expected) {
-        WebCrawlerEntry prevRec;
-        var url = "http://test.com/yes.html";
-        var resolver = new GenericRecrawlableResolver();
-        prevRec = new WebCrawlerEntry(url);
-        prevRec.setContentType(ContentType.HTML);
-        prevRec.setProcessedAt(ZonedDateTime.now().minusDays(3));
-        prevRec.setSitemapChangeFreq(sitemapChangeFreq);
-        if (sitemapLastModDays != null) {
-            prevRec.setSitemapLastMod(
-                    ZonedDateTime.now().minusDays(
-                            sitemapLastModDays));
+        )
+        void testIsRecrawlable(
+                        String sitemapSupport,
+                        String sitemapChangeFreq,
+                        Integer sitemapLastModDays,
+                        String minFreqApplyTo,
+                        String minFreqValue,
+                        boolean expected) {
+                WebCrawlerEntry prevRec;
+                var url = "http://test.com/yes.html";
+                var resolver = new GenericRecrawlableResolver();
+                prevRec = new WebCrawlerEntry(url);
+                prevRec.setContentType(ContentType.HTML);
+                prevRec.setProcessedAt(ZonedDateTime.now().minusDays(3));
+                prevRec.setSitemapChangeFreq(sitemapChangeFreq);
+                if (sitemapLastModDays != null) {
+                        prevRec.setSitemapLastMod(
+                                        ZonedDateTime.now().minusDays(
+                                                        sitemapLastModDays));
+                }
+
+                resolver.getConfiguration().setSitemapSupport(
+                                SitemapSupport.getSitemapSupport(
+                                                sitemapSupport));
+
+                var matcher = "reference".equals(minFreqApplyTo)
+                                ? TextMatcher.basic(url)
+                                : TextMatcher.basic("text/html");
+                resolver.getConfiguration().setMinFrequencies(List.of(
+                                new MinFrequency("reference"
+                                                .equals(minFreqApplyTo)
+                                                                ? ApplyTo.REFERENCE
+                                                                : ApplyTo.CONTENT_TYPE,
+                                                minFreqValue, matcher)));
+
+                assertThat(resolver.isRecrawlable(prevRec)).isEqualTo(expected);
         }
 
-        resolver.getConfiguration().setSitemapSupport(
-                SitemapSupport.getSitemapSupport(
-                        sitemapSupport));
+        @Test
+        void testNullAndEmpties() {
+                assertThat(SitemapSupport.getSitemapSupport(null)).isNull();
+                assertThat(SitemapSupport.getSitemapSupport("iDontExist"))
+                                .isNull();
 
-        var matcher = "reference".equals(minFreqApplyTo)
-                ? TextMatcher.basic(url)
-                : TextMatcher.basic("text/html");
-        resolver.getConfiguration().setMinFrequencies(List.of(
-                new MinFrequency("reference"
-                        .equals(minFreqApplyTo)
-                                ? ApplyTo.REFERENCE
-                                : ApplyTo.CONTENT_TYPE,
-                        minFreqValue, matcher)));
+                // no last crawl date
+                assertThat(
+                                new GenericRecrawlableResolver().isRecrawlable(
+                                                new WebCrawlerEntry(
+                                                                "http://blah.com")))
+                                                                                .isTrue();
+        }
 
-        assertThat(resolver.isRecrawlable(prevRec)).isEqualTo(expected);
-    }
+        @Test
+        void testSitemapLastModNotAfterLastCrawled_notRecrawlable() {
+                var resolver = new GenericRecrawlableResolver();
+                resolver.getConfiguration()
+                                .setSitemapSupport(SitemapSupport.FIRST);
 
-    @Test
-    void testNullAndEmpties() {
-        assertThat(SitemapSupport.getSitemapSupport(null)).isNull();
-        assertThat(SitemapSupport.getSitemapSupport("iDontExist"))
-                .isNull();
+                var prevCrawl = new WebCrawlerEntry("http://example.com");
+                // last crawled 1 day ago
+                prevCrawl.setProcessedAt(ZonedDateTime.now().minusDays(1));
+                // sitemap says last modified 2 days ago (before last crawl)
+                prevCrawl.setSitemapLastMod(ZonedDateTime.now().minusDays(2));
 
-        // no last crawl date
-        assertThat(
-                new GenericRecrawlableResolver().isRecrawlable(
-                        new WebCrawlerEntry(
-                                "http://blah.com")))
-                                        .isTrue();
-    }
+                assertThat(resolver.isRecrawlable(prevCrawl)).isFalse();
+        }
 
-    @Test
-    void testSitemapLastModNotAfterLastCrawled_notRecrawlable() {
-        var resolver = new GenericRecrawlableResolver();
-        resolver.getConfiguration().setSitemapSupport(SitemapSupport.FIRST);
+        @Test
+        void testRawMillisDelay_notYetRecrawlable() {
+                var resolver = new GenericRecrawlableResolver();
+                resolver.getConfiguration()
+                                .setSitemapSupport(SitemapSupport.NEVER);
 
-        var prevCrawl = new WebCrawlerEntry("http://example.com");
-        // last crawled 1 day ago
-        prevCrawl.setProcessedAt(ZonedDateTime.now().minusDays(1));
-        // sitemap says last modified 2 days ago (before last crawl)
-        prevCrawl.setSitemapLastMod(ZonedDateTime.now().minusDays(2));
+                var prevCrawl = new WebCrawlerEntry("http://example.com");
+                prevCrawl.setProcessedAt(ZonedDateTime.now().minusSeconds(1));
 
-        assertThat(resolver.isRecrawlable(prevCrawl)).isFalse();
-    }
+                // 60_000 ms = 60 seconds, but only 1 second has passed
+                var f = new MinFrequency(
+                                ApplyTo.REFERENCE, "60000",
+                                TextMatcher.regex(".*"));
+                resolver.getConfiguration().setMinFrequencies(List.of(f));
 
-    @Test
-    void testRawMillisDelay_notYetRecrawlable() {
-        var resolver = new GenericRecrawlableResolver();
-        resolver.getConfiguration().setSitemapSupport(SitemapSupport.NEVER);
+                assertThat(resolver.isRecrawlable(prevCrawl)).isFalse();
+        }
 
-        var prevCrawl = new WebCrawlerEntry("http://example.com");
-        prevCrawl.setProcessedAt(ZonedDateTime.now().minusSeconds(1));
+        @Test
+        void testRawMillisDelay_recrawlable() {
+                var resolver = new GenericRecrawlableResolver();
+                resolver.getConfiguration()
+                                .setSitemapSupport(SitemapSupport.NEVER);
 
-        // 60_000 ms = 60 seconds, but only 1 second has passed
-        var f = new MinFrequency(
-                ApplyTo.REFERENCE, "60000", TextMatcher.regex(".*"));
-        resolver.getConfiguration().setMinFrequencies(List.of(f));
+                var prevCrawl = new WebCrawlerEntry("http://example.com");
+                prevCrawl.setProcessedAt(ZonedDateTime.now().minusSeconds(10));
 
-        assertThat(resolver.isRecrawlable(prevCrawl)).isFalse();
-    }
+                // 1 ms delay — already elapsed
+                var f = new MinFrequency(
+                                ApplyTo.REFERENCE, "1",
+                                TextMatcher.regex(".*"));
+                resolver.getConfiguration().setMinFrequencies(List.of(f));
 
-    @Test
-    void testRawMillisDelay_recrawlable() {
-        var resolver = new GenericRecrawlableResolver();
-        resolver.getConfiguration().setSitemapSupport(SitemapSupport.NEVER);
+                assertThat(resolver.isRecrawlable(prevCrawl)).isTrue();
+        }
 
-        var prevCrawl = new WebCrawlerEntry("http://example.com");
-        prevCrawl.setProcessedAt(ZonedDateTime.now().minusSeconds(10));
+        @Test
+        void testNoMatchingFrequencyWithNoSitemapAndLastSupport_returnsTrue() {
+                var resolver = new GenericRecrawlableResolver();
+                resolver.getConfiguration()
+                                .setSitemapSupport(SitemapSupport.LAST);
 
-        // 1 ms delay — already elapsed
-        var f = new MinFrequency(
-                ApplyTo.REFERENCE, "1", TextMatcher.regex(".*"));
-        resolver.getConfiguration().setMinFrequencies(List.of(f));
+                var prevCrawl = new WebCrawlerEntry("http://example.com/nofq");
+                prevCrawl.setProcessedAt(ZonedDateTime.now().minusDays(1));
+                // No sitemap directives, matcher won't match this URL
+                var f = new MinFrequency(
+                                ApplyTo.REFERENCE, "monthly",
+                                TextMatcher.basic("http://example.com/other"));
+                resolver.getConfiguration().setMinFrequencies(List.of(f));
 
-        assertThat(resolver.isRecrawlable(prevCrawl)).isTrue();
-    }
+                assertThat(resolver.isRecrawlable(prevCrawl)).isTrue();
+        }
 
-    @Test
-    void testNoMatchingFrequencyWithNoSitemapAndLastSupport_returnsTrue() {
-        var resolver = new GenericRecrawlableResolver();
-        resolver.getConfiguration().setSitemapSupport(SitemapSupport.LAST);
+        @Test
+        void testLastSupportWithSitemapInstructionsAndNoMinMatchUsesSitemap() {
+                var resolver = new GenericRecrawlableResolver();
+                resolver.getConfiguration()
+                                .setSitemapSupport(SitemapSupport.LAST);
 
-        var prevCrawl = new WebCrawlerEntry("http://example.com/nofq");
-        prevCrawl.setProcessedAt(ZonedDateTime.now().minusDays(1));
-        // No sitemap directives, matcher won't match this URL
-        var f = new MinFrequency(
-                ApplyTo.REFERENCE, "monthly",
-                TextMatcher.basic("http://example.com/other"));
-        resolver.getConfiguration().setMinFrequencies(List.of(f));
+                var prevCrawl = new WebCrawlerEntry("http://example.com/nofq");
+                prevCrawl.setProcessedAt(ZonedDateTime.now().minusDays(1));
+                prevCrawl.setSitemapChangeFreq("never");
 
-        assertThat(resolver.isRecrawlable(prevCrawl)).isTrue();
-    }
+                var f = new MinFrequency(
+                                ApplyTo.REFERENCE, "monthly",
+                                TextMatcher.basic("http://example.com/other"));
+                resolver.getConfiguration().setMinFrequencies(List.of(f));
 
-    @Test
-    void testSitemapSupportNull_defaultsToFirst() {
-        var resolver = new GenericRecrawlableResolver();
-        // Leave sitemapSupport unset (null) — should behave like FIRST
-        resolver.getConfiguration().setSitemapSupport(null);
+                assertThat(resolver.isRecrawlable(prevCrawl)).isFalse();
+        }
 
-        var prevCrawl = new WebCrawlerEntry("http://example.com");
-        prevCrawl.setProcessedAt(ZonedDateTime.now().minusDays(3));
-        // Sitemap says NEVER — with default (FIRST) this takes precedence
-        prevCrawl.setSitemapChangeFreq("never");
+        @Test
+        void testSitemapSupportNull_defaultsToFirst() {
+                var resolver = new GenericRecrawlableResolver();
+                // Leave sitemapSupport unset (null) — should behave like FIRST
+                resolver.getConfiguration().setSitemapSupport(null);
 
-        assertThat(resolver.isRecrawlable(prevCrawl)).isFalse();
-    }
+                var prevCrawl = new WebCrawlerEntry("http://example.com");
+                prevCrawl.setProcessedAt(ZonedDateTime.now().minusDays(3));
+                // Sitemap says NEVER — with default (FIRST) this takes precedence
+                prevCrawl.setSitemapChangeFreq("never");
 
-    @Test
-    void testSitemapChangeFreqAlways_alwaysRecrawlable() {
-        var resolver = new GenericRecrawlableResolver();
-        resolver.getConfiguration().setSitemapSupport(SitemapSupport.FIRST);
+                assertThat(resolver.isRecrawlable(prevCrawl)).isFalse();
+        }
 
-        var prevCrawl = new WebCrawlerEntry("http://example.com");
-        prevCrawl.setProcessedAt(ZonedDateTime.now().minusSeconds(1));
-        prevCrawl.setSitemapChangeFreq("always");
+        @Test
+        void testSitemapChangeFreqAlways_alwaysRecrawlable() {
+                var resolver = new GenericRecrawlableResolver();
+                resolver.getConfiguration()
+                                .setSitemapSupport(SitemapSupport.FIRST);
 
-        assertThat(resolver.isRecrawlable(prevCrawl)).isTrue();
-    }
+                var prevCrawl = new WebCrawlerEntry("http://example.com");
+                prevCrawl.setProcessedAt(ZonedDateTime.now().minusSeconds(1));
+                prevCrawl.setSitemapChangeFreq("always");
 
-    @Test
-    void testSitemapChangeFreqNever_neverRecrawlable() {
-        var resolver = new GenericRecrawlableResolver();
-        resolver.getConfiguration().setSitemapSupport(SitemapSupport.FIRST);
+                assertThat(resolver.isRecrawlable(prevCrawl)).isTrue();
+        }
 
-        var prevCrawl = new WebCrawlerEntry("http://example.com");
-        prevCrawl.setProcessedAt(ZonedDateTime.now().minusYears(10));
-        prevCrawl.setSitemapChangeFreq("never");
+        @Test
+        void testSitemapChangeFreqNever_neverRecrawlable() {
+                var resolver = new GenericRecrawlableResolver();
+                resolver.getConfiguration()
+                                .setSitemapSupport(SitemapSupport.FIRST);
 
-        assertThat(resolver.isRecrawlable(prevCrawl)).isFalse();
-    }
+                var prevCrawl = new WebCrawlerEntry("http://example.com");
+                prevCrawl.setProcessedAt(ZonedDateTime.now().minusYears(10));
+                prevCrawl.setSitemapChangeFreq("never");
 
-    @Test
-    void testSitemapChangeFreqHourly_notYetRecrawlable() {
-        var resolver = new GenericRecrawlableResolver();
-        resolver.getConfiguration().setSitemapSupport(SitemapSupport.FIRST);
+                assertThat(resolver.isRecrawlable(prevCrawl)).isFalse();
+        }
 
-        var prevCrawl = new WebCrawlerEntry("http://example.com");
-        prevCrawl.setProcessedAt(ZonedDateTime.now().minusMinutes(30));
-        prevCrawl.setSitemapChangeFreq("hourly");
+        @Test
+        void testSitemapChangeFreqHourly_notYetRecrawlable() {
+                var resolver = new GenericRecrawlableResolver();
+                resolver.getConfiguration()
+                                .setSitemapSupport(SitemapSupport.FIRST);
 
-        // 30 min < 1 hour → not recrawlable yet
-        assertThat(resolver.isRecrawlable(prevCrawl)).isFalse();
-    }
+                var prevCrawl = new WebCrawlerEntry("http://example.com");
+                prevCrawl.setProcessedAt(ZonedDateTime.now().minusMinutes(30));
+                prevCrawl.setSitemapChangeFreq("hourly");
 
-    @Test
-    void testSitemapChangeFreqUnknown_treatedAsRecrawlable() {
-        var resolver = new GenericRecrawlableResolver();
-        resolver.getConfiguration().setSitemapSupport(SitemapSupport.FIRST);
+                // 30 min < 1 hour → not recrawlable yet
+                assertThat(resolver.isRecrawlable(prevCrawl)).isFalse();
+        }
 
-        var prevCrawl = new WebCrawlerEntry("http://example.com");
-        prevCrawl.setProcessedAt(ZonedDateTime.now().minusDays(1));
-        prevCrawl.setSitemapChangeFreq("not-a-valid-frequency");
+        @Test
+        void testSitemapChangeFreqUnknown_treatedAsRecrawlable() {
+                var resolver = new GenericRecrawlableResolver();
+                resolver.getConfiguration()
+                                .setSitemapSupport(SitemapSupport.FIRST);
 
-        // Unknown frequency → SitemapChangeFrequency.of returns null → returns true
-        assertThat(resolver.isRecrawlable(prevCrawl)).isTrue();
-    }
+                var prevCrawl = new WebCrawlerEntry("http://example.com");
+                prevCrawl.setProcessedAt(ZonedDateTime.now().minusDays(1));
+                prevCrawl.setSitemapChangeFreq("not-a-valid-frequency");
 
-    @Test
-    void testApplyToContentType_matches() {
-        var resolver = new GenericRecrawlableResolver();
-        resolver.getConfiguration().setSitemapSupport(SitemapSupport.NEVER);
+                // Unknown frequency → SitemapChangeFrequency.of returns null → returns true
+                assertThat(resolver.isRecrawlable(prevCrawl)).isTrue();
+        }
 
-        var prevCrawl = new WebCrawlerEntry("http://example.com");
-        prevCrawl.setProcessedAt(ZonedDateTime.now().minusDays(1));
-        prevCrawl.setContentType(
-                com.norconex.commons.lang.file.ContentType.HTML);
+        @Test
+        void testApplyToContentType_matches() {
+                var resolver = new GenericRecrawlableResolver();
+                resolver.getConfiguration()
+                                .setSitemapSupport(SitemapSupport.NEVER);
 
-        var f = new MinFrequency(
-                ApplyTo.CONTENT_TYPE, "monthly",
-                TextMatcher.basic("text/html"));
-        resolver.getConfiguration().setMinFrequencies(List.of(f));
+                var prevCrawl = new WebCrawlerEntry("http://example.com");
+                prevCrawl.setProcessedAt(ZonedDateTime.now().minusDays(1));
+                prevCrawl.setContentType(
+                                com.norconex.commons.lang.file.ContentType.HTML);
 
-        // 1 day < 1 month → not recrawlable
-        assertThat(resolver.isRecrawlable(prevCrawl)).isFalse();
-    }
+                var f = new MinFrequency(
+                                ApplyTo.CONTENT_TYPE, "monthly",
+                                TextMatcher.basic("text/html"));
+                resolver.getConfiguration().setMinFrequencies(List.of(f));
 
-    @Test
-    void testApplyToContentType_nullContentType_noMatch() {
-        var resolver = new GenericRecrawlableResolver();
-        resolver.getConfiguration().setSitemapSupport(SitemapSupport.NEVER);
+                // 1 day < 1 month → not recrawlable
+                assertThat(resolver.isRecrawlable(prevCrawl)).isFalse();
+        }
 
-        var prevCrawl = new WebCrawlerEntry("http://example.com");
-        prevCrawl.setProcessedAt(ZonedDateTime.now().minusDays(1));
-        // No content type set → empty string for matching
+        @Test
+        void testApplyToContentType_nullContentType_noMatch() {
+                var resolver = new GenericRecrawlableResolver();
+                resolver.getConfiguration()
+                                .setSitemapSupport(SitemapSupport.NEVER);
 
-        var f = new MinFrequency(
-                ApplyTo.CONTENT_TYPE, "monthly",
-                TextMatcher.basic("text/html"));
-        resolver.getConfiguration().setMinFrequencies(List.of(f));
+                var prevCrawl = new WebCrawlerEntry("http://example.com");
+                prevCrawl.setProcessedAt(ZonedDateTime.now().minusDays(1));
+                // No content type set → empty string for matching
 
-        // No match → falls through to return true
-        assertThat(resolver.isRecrawlable(prevCrawl)).isTrue();
-    }
+                var f = new MinFrequency(
+                                ApplyTo.CONTENT_TYPE, "monthly",
+                                TextMatcher.basic("text/html"));
+                resolver.getConfiguration().setMinFrequencies(List.of(f));
+
+                // No match → falls through to return true
+                assertThat(resolver.isRecrawlable(prevCrawl)).isTrue();
+        }
 }

@@ -17,14 +17,25 @@ package com.norconex.crawler.web.fetch.impl.httpclient;
 import static com.norconex.crawler.web.fetch.impl.httpclient.HttpClientFetcher.SCHEME_PORT_RESOLVER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import java.lang.reflect.Field;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 
+import org.apache.hc.client5.http.classic.HttpClient;
+import org.apache.hc.client5.http.classic.methods.HttpUriRequestBase;
 import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.protocol.HttpClientContext;
+import org.apache.hc.core5.http.ClassicHttpResponse;
 import org.apache.hc.core5.http.Header;
 import org.apache.hc.core5.http.HttpHost;
+import org.apache.hc.core5.http.io.HttpClientResponseHandler;
+import org.apache.hc.core5.http.io.entity.StringEntity;
+import org.apache.hc.core5.http.message.BasicClassicHttpResponse;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -32,9 +43,11 @@ import com.norconex.commons.lang.bean.BeanMapper;
 import com.norconex.commons.lang.bean.BeanUtil;
 import com.norconex.commons.lang.net.Host;
 import com.norconex.commons.lang.security.Credentials;
+import com.norconex.crawler.core.ledger.ProcessingOutcome;
 import com.norconex.crawler.web.WebTestUtil;
 import com.norconex.crawler.web.fetch.HttpMethod;
 import com.norconex.crawler.web.fetch.WebFetchRequest;
+import com.norconex.crawler.web.fetch.WebFetchResponse;
 import com.norconex.crawler.web.stubs.CrawlDocStubs;
 
 @Timeout(30)
@@ -382,5 +395,109 @@ class HttpClientFetcherTest {
     void testCreateConnectionManagerReturnsNonNull() {
         var fetcher = new HttpClientFetcher();
         assertThat(fetcher.createConnectionManager()).isNotNull();
+    }
+
+    @Test
+    void testFetchReturnsNewForSuccessfulResponse() throws Exception {
+        var fetcher = new HttpClientFetcher();
+        setPrivateField(fetcher, "httpClient",
+                mockHttpClientResponse(200, "OK"));
+
+        var response = fetcher.fetch(new WebFetchRequest(
+                CrawlDocStubs.crawlDocHtml("http://example.com"),
+                HttpMethod.GET));
+
+        assertThat(response.getProcessingOutcome()).isEqualTo(
+                ProcessingOutcome.NEW);
+    }
+
+    @Test
+    void testFetchReturnsUnmodifiedForNotModifiedResponse() throws Exception {
+        var fetcher = new HttpClientFetcher();
+        setPrivateField(fetcher, "httpClient",
+                mockHttpClientResponse(304, "Not Modified"));
+
+        var response = fetcher.fetch(new WebFetchRequest(
+                CrawlDocStubs.crawlDocHtml("http://example.com"),
+                HttpMethod.GET));
+
+        assertThat(response.getProcessingOutcome()).isEqualTo(
+                ProcessingOutcome.UNMODIFIED);
+    }
+
+    @Test
+    void testFetchReturnsNotFoundForConfiguredStatus() throws Exception {
+        var fetcher = new HttpClientFetcher();
+        setPrivateField(fetcher, "httpClient",
+                mockHttpClientResponse(404, "Not Found"));
+
+        var response = fetcher.fetch(new WebFetchRequest(
+                CrawlDocStubs.crawlDocHtml("http://example.com"),
+                HttpMethod.GET));
+
+        assertThat(response.getProcessingOutcome()).isEqualTo(
+                ProcessingOutcome.NOT_FOUND);
+    }
+
+    @Test
+    void testFetchReturnsBadStatusForUnexpectedResponse() throws Exception {
+        var fetcher = new HttpClientFetcher();
+        setPrivateField(fetcher, "httpClient",
+                mockHttpClientResponse(500, "Internal Server Error"));
+
+        var response = fetcher.fetch(new WebFetchRequest(
+                CrawlDocStubs.crawlDocHtml("http://example.com"),
+                HttpMethod.GET));
+
+        assertThat(response.getProcessingOutcome()).isEqualTo(
+                ProcessingOutcome.BAD_STATUS);
+    }
+
+    @Test
+    void testFetchPostWithHstsDisabledReturnsNew() throws Exception {
+        var fetcher = new HttpClientFetcher();
+        fetcher.getConfiguration().setHstsDisabled(true);
+        setPrivateField(fetcher, "httpClient",
+                mockHttpClientResponse(200, "OK"));
+
+        var response = fetcher.fetch(new WebFetchRequest(
+                CrawlDocStubs.crawlDoc("http://example.com"),
+                HttpMethod.POST));
+
+        assertThat(response.getProcessingOutcome()).isEqualTo(
+                ProcessingOutcome.NEW);
+    }
+
+    private static HttpClient mockHttpClientResponse(int statusCode,
+            String reasonPhrase) throws Exception {
+        var httpClient = mock(HttpClient.class);
+        when(httpClient.execute(
+                org.mockito.ArgumentMatchers.<HttpUriRequestBase>any(),
+                org.mockito.ArgumentMatchers.<HttpClientContext>any(),
+                org.mockito.ArgumentMatchers
+                        .<HttpClientResponseHandler<WebFetchResponse>>any()))
+                                .thenAnswer(invocation -> {
+                                    @SuppressWarnings("unchecked")
+                                    HttpClientResponseHandler<
+                                            WebFetchResponse> handler =
+                                                    invocation.getArgument(2);
+                                    ClassicHttpResponse response =
+                                            new BasicClassicHttpResponse(
+                                                    statusCode, reasonPhrase);
+                                    response.setEntity(new StringEntity(
+                                            "<html>test</html>",
+                                            StandardCharsets.UTF_8));
+                                    response.addHeader("Content-Type",
+                                            "text/html; charset=UTF-8");
+                                    return handler.handleResponse(response);
+                                });
+        return httpClient;
+    }
+
+    private static void setPrivateField(Object target, String fieldName,
+            Object value) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(target, value);
     }
 }
