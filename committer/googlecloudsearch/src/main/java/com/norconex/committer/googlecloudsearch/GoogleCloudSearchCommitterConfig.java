@@ -39,7 +39,8 @@ public class GoogleCloudSearchCommitterConfig
     private static final long serialVersionUID = 1L;
 
     /** Default Google Cloud Search committer application name. */
-    public static final String DEFAULT_APPLICATION_NAME = "Norconex Google Cloud Search Committer";
+    public static final String DEFAULT_APPLICATION_NAME =
+            "Norconex Google Cloud Search Committer";
     /** Default document title metadata field. */
     public static final String DEFAULT_TITLE_FIELD = "title";
     /** Default document object type metadata field. */
@@ -260,6 +261,7 @@ public class GoogleCloudSearchCommitterConfig
         /**
          * ACL inheritance type. Default is {@link AclInheritanceType#NOT_APPLICABLE}.
          */
-        private AclInheritanceType aclInheritanceType = AclInheritanceType.NOT_APPLICABLE;
+        private AclInheritanceType aclInheritanceType =
+                AclInheritanceType.NOT_APPLICABLE;
     }
 }

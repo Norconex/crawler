@@ -105,9 +105,11 @@ class GoogleCloudSearchClient {
     static final String FIELD_CONTENT_TYPE = "document.contentType";
 
     private static final String DEFAULT_TEXT_CONTENT_TYPE = "text/plain";
-    private static final String DEFAULT_BINARY_CONTENT_TYPE = "application/octet-stream";
+    private static final String DEFAULT_BINARY_CONTENT_TYPE =
+            "application/octet-stream";
     private static final int INLINE_CONTENT_MAX_BYTES = 102400;
-    private static final String INDEXING_SCOPE = "https://www.googleapis.com/auth/cloud_search.indexing";
+    private static final String INDEXING_SCOPE =
+            "https://www.googleapis.com/auth/cloud_search.indexing";
     private static final String CONTENT_ITEM_TYPE = "CONTENT_ITEM";
 
     private final GoogleCloudSearchCommitterConfig config;
@@ -139,7 +141,7 @@ class GoogleCloudSearchClient {
             var builder = new CloudSearch.Builder(
                     GoogleNetHttpTransport.newTrustedTransport(),
                     GsonFactory.getDefaultInstance(), initializer)
-                    .setApplicationName(config.getApplicationName());
+                            .setApplicationName(config.getApplicationName());
             if (StringUtils.isNotBlank(config.getApiEndpoint())) {
                 builder.setRootUrl(
                         ensureTrailingSlash(config.getApiEndpoint()));
@@ -268,12 +270,14 @@ class GoogleCloudSearchClient {
                         objectType, config.getObjectTypeDefaultValue()));
         itemMetadata.setMimeType(contentType);
 
-        var containerName = metadataValue(metadata, config.getContainerNameField());
+        var containerName =
+                metadataValue(metadata, config.getContainerNameField());
         if (StringUtils.isNotBlank(containerName)) {
             itemMetadata.setContainerName(containerName);
         }
 
-        var contentLanguage = metadataValue(metadata, config.getContentLanguageField());
+        var contentLanguage =
+                metadataValue(metadata, config.getContentLanguageField());
         contentLanguage = StringUtils.defaultIfBlank(
                 contentLanguage, config.getContentLanguageDefaultValue());
         if (StringUtils.isNotBlank(contentLanguage)) {
@@ -296,10 +300,11 @@ class GoogleCloudSearchClient {
             }
         }
 
-        var sourceRepositoryUrl = StringUtils.isNotBlank(config.getSourceRepositoryUrlField())
-                ? metadataValue(
-                        metadata, config.getSourceRepositoryUrlField())
-                : null;
+        var sourceRepositoryUrl =
+                StringUtils.isNotBlank(config.getSourceRepositoryUrlField())
+                        ? metadataValue(
+                                metadata, config.getSourceRepositoryUrlField())
+                        : null;
         sourceRepositoryUrl = StringUtils.defaultIfBlank(
                 sourceRepositoryUrl, request.getReference());
         if (StringUtils.isNotBlank(sourceRepositoryUrl)) {
@@ -502,7 +507,8 @@ class GoogleCloudSearchClient {
         }
 
         AclInheritanceMapping aclInheritance = config.getAclInheritance();
-        var parentValue = metadataValue(metadata, aclInheritance.getFromField());
+        var parentValue =
+                metadataValue(metadata, aclInheritance.getFromField());
         var hasInheritance = StringUtils.isNotBlank(parentValue);
 
         var acl = new ItemAcl();
