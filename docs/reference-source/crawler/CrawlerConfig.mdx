@@ -21,6 +21,10 @@ The top-level crawler configuration. Controls all aspects of a crawl session inc
 
 Configuration for the crawler cluster. Controls how the crawler runs across one or more nodes, including distribution of work and inter-node communication.
 
+### changeDiscovery
+
+Defines how the crawler discovers changes during a run. `CRAWLER_SCAN` (default) discovers changes by scanning source inventory and can treat missing references as orphan evidence in incremental runs. `SOURCE_DELTA` expects explicit source-side change/delete signals, so missing references alone are not treated as orphan evidence.
+
 ### committers
 
 One or more Committers responsible for sending crawled documents to their final storage destinations (e.g., search engines, databases). Documents that pass all filters and processing steps are forwarded to each configured Committer.

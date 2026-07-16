@@ -21,6 +21,10 @@ The top-level configuration for a web crawler. Extends the base crawl configurat
 
 The detector used to identify canonical link declarations in HTTP responses and HTML meta tags, rejecting non-canonical URLs to avoid duplicates. Defaults to `GenericCanonicalLinkDetector`. Set to `null` to disable canonical link detection.
 
+### changeDiscovery
+
+Defines how the crawler discovers changes during a run. `CRAWLER_SCAN` (default) discovers changes by scanning source inventory and can treat missing references as orphan evidence in incremental runs. `SOURCE_DELTA` expects explicit source-side change/delete signals, so missing references alone are not treated as orphan evidence.
+
 ### cluster
 
 Cluster configuration for the crawler, including the connector type, whether clustering is enabled, and administrative port settings.

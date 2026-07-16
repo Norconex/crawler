@@ -48,6 +48,10 @@ configuration is generated automatically.
 Kerberos principal name (for example, `user@REALM`). Required for
 keytab-based authentication.
 
+### servicePrincipalName
+
+Kerberos service principal name (SPN) of the target service, typically in the form `HTTP/hostname@REALM` or `HTTP/hostname`.
+
 ### useTicketCache
 
 Whether the system ticket cache should be used. When enabled, an existing

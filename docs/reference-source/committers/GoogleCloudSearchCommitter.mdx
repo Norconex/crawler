@@ -77,6 +77,10 @@ Default value used for `metadata.objectType` when `objectTypeField` is missing o
 
 Configures the committer queue used to batch documents before sending them to the target system. Adjust queue settings to tune throughput and memory usage.
 
+### requestMode
+
+Priority/consistency mode sent with indexing and delete requests. Use `ASYNCHRONOUS` (default) for connector-style full or incremental crawls with higher throughput, or `SYNCHRONOUS` for latency-sensitive, interactive requests that are more strictly rate-limited by Google Cloud Search.
+
 ### restrictions
 
 Defines filter conditions that restrict which documents this committer processes. Documents not matching the restrictions are ignored by this committer.
