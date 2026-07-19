@@ -22,7 +22,7 @@ The current validated baseline in this repository is a local CMIS Atom test
 server exercising Atom 1.0 and Atom 1.1 traversal behavior.
 
 - Test coverage source:
-  [CmisAtomFileSystemIT](../../../crawler/fs/src/test/java/com/norconex/crawler/fs/fetch/impl/cmis/CmisAtomFileSystemIT.java)
+  [CmisAtomFileSystemIT](https://github.com/Norconex/crawler/blob/main/crawler/fs/src/test/java/com/norconex/crawler/fs/fetch/impl/cmis/CmisAtomFileSystemIT.java)
 - Result:
   **Verified** for generic CMIS Atom-boundary crawling behavior in the local
   fixture.
@@ -55,10 +55,10 @@ instances:
 
 Key in-repo assets:
 
-- [CmisTestServer](../../../crawler/fs/src/test/java/com/norconex/crawler/fs/fetch/impl/cmis/CmisTestServer.java)
-- [CmisAtomFileSystemIT](../../../crawler/fs/src/test/java/com/norconex/crawler/fs/fetch/impl/cmis/CmisAtomFileSystemIT.java)
-- [CmisAtomSessionTest](../../../crawler/fs/src/test/java/com/norconex/crawler/fs/fetch/impl/cmis/CmisAtomSessionTest.java)
-- [CmisFetcherTest](../../../crawler/fs/src/test/java/com/norconex/crawler/fs/fetch/impl/cmis/CmisFetcherTest.java)
+- [CmisTestServer](https://github.com/Norconex/crawler/blob/main/crawler/fs/src/test/java/com/norconex/crawler/fs/fetch/impl/cmis/CmisTestServer.java)
+- [CmisAtomFileSystemIT](https://github.com/Norconex/crawler/blob/main/crawler/fs/src/test/java/com/norconex/crawler/fs/fetch/impl/cmis/CmisAtomFileSystemIT.java)
+- [CmisAtomSessionTest](https://github.com/Norconex/crawler/blob/main/crawler/fs/src/test/java/com/norconex/crawler/fs/fetch/impl/cmis/CmisAtomSessionTest.java)
+- [CmisFetcherTest](https://github.com/Norconex/crawler/blob/main/crawler/fs/src/test/java/com/norconex/crawler/fs/fetch/impl/cmis/CmisFetcherTest.java)
 
 ## Validating without local product installs
 
