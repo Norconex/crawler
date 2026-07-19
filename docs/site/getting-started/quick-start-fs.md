@@ -144,11 +144,11 @@ startReferences:
 For Box, Google Drive, Egnyte, and M365-specific examples, use the dedicated fetcher
 reference pages so configuration examples stay canonical in one place:
 
-- [CmisFetcher](../reference-source/crawler/CmisFetcher)
-- [BoxFetcher](../reference-source/crawler/BoxFetcher)
-- [GoogleDriveFetcher](../reference-source/crawler/GoogleDriveFetcher)
-- [EgnyteFetcher](../reference-source/crawler/EgnyteFetcher)
-- [M365GraphFetcher](../reference-source/crawler/M365GraphFetcher)
+- [CmisFetcher](../reference/crawler/CmisFetcher)
+- [BoxFetcher](../reference/crawler/BoxFetcher)
+- [GoogleDriveFetcher](../reference/crawler/GoogleDriveFetcher)
+- [EgnyteFetcher](../reference/crawler/EgnyteFetcher)
+- [M365GraphFetcher](../reference/crawler/M365GraphFetcher)
 
 For CMIS product readiness and caveats, see
 [CMIS Compatibility Matrix](../concepts/cmis-compatibility-matrix.md).
