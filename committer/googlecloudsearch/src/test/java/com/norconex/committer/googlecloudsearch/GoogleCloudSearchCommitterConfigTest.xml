@@ -25,15 +25,39 @@
 	<connectorName>connectorName</connectorName>
 	<sourceIdField>sourceIdField</sourceIdField>
 	<keepSourceIdField>true</keepSourceIdField>
-	<titleField>titleField</titleField>
-	<objectTypeField>objectTypeField</objectTypeField>
-	<objectTypeDefaultValue>webpage</objectTypeDefaultValue>
-	<updateTimeField>updateTimeField</updateTimeField>
-	<createTimeField>createTimeField</createTimeField>
-	<containerNameField>containerNameField</containerNameField>
-	<contentLanguageField>contentLanguageField</contentLanguageField>
-	<contentLanguageDefaultValue>en-US</contentLanguageDefaultValue>
-	<sourceRepositoryUrlField>sourceRepositoryUrlField</sourceRepositoryUrlField>
+	<metadataMappings>
+		<mapping>
+			<fromField>titleField</fromField>
+			<toField>title</toField>
+		</mapping>
+		<mapping>
+			<fromField>objectTypeField</fromField>
+			<toField>objectType</toField>
+			<defaultValue>webpage</defaultValue>
+		</mapping>
+		<mapping>
+			<fromField>updateTimeField</fromField>
+			<toField>updateTime</toField>
+		</mapping>
+		<mapping>
+			<fromField>createTimeField</fromField>
+			<toField>createTime</toField>
+		</mapping>
+		<mapping>
+			<fromField>containerNameField</fromField>
+			<toField>containerName</toField>
+		</mapping>
+		<mapping>
+			<fromField>contentLanguageField</fromField>
+			<toField>contentLanguage</toField>
+			<defaultValue>en-US</defaultValue>
+		</mapping>
+		<mapping>
+			<fromField>sourceRepositoryUrlField</fromField>
+			<toField>sourceRepositoryUrl</toField>
+			<keepFromField>true</keepFromField>
+		</mapping>
+	</metadataMappings>
 	<typedStructuredData>true</typedStructuredData>
 
 	<aclMappings>

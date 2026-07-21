@@ -37,22 +37,6 @@ The application name sent to Google Cloud Search. Default is "Norconex Google Cl
 
 The connector name sent with indexing requests. Defaults to the application name when not set.
 
-### containerNameField
-
-Metadata field mapped to the Google Cloud Search item container name.
-
-### contentLanguageField
-
-Metadata field mapped to the Google Cloud Search item content language.
-
-### contentLanguageDefaultValue
-
-Default value used for `metadata.contentLanguage` when `contentLanguageField` is missing or blank.
-
-### createTimeField
-
-Metadata field mapped to the Google Cloud Search item create time.
-
 ### dataSourceId
 
 The Google Cloud Search data source ID to index documents into.
@@ -65,13 +49,17 @@ Mapping of source fields to target ones (Google Cloud Search structured data fie
 
 Whether to keep the source ID field in the document metadata after it has been extracted.
 
-### objectTypeField
+### metadataMappings
 
-Metadata field mapped to the Google Cloud Search item object type. Default is "objectType".
+Mappings used to populate Google Cloud Search predefined `ItemMetadata` entries. Each `mapping` supports:
+- `fromField` (optional): crawler metadata source field.
+- `toField` (required): Google metadata target field (`title`, `objectType`, `mimeType`, `updateTime`, `createTime`, `containerName`, `contentLanguage`, `sourceRepositoryUrl`).
+- `defaultValue` (optional): fallback when `fromField` is missing or blank.
+- `keepFromField` (optional): when `true`, keeps `fromField` in structured data; otherwise it is excluded.
 
-### objectTypeDefaultValue
+Reference list (Google): https://developers.google.com/workspace/cloud-search/docs/reference/rest/v1/ItemMetadata
 
-Default value used for `metadata.objectType` when `objectTypeField` is missing or blank. Default is "document".
+When a mapping does not produce a value, committer defaults are applied where available (`objectType=document`, `mimeType` from detected content type, `sourceRepositoryUrl` from document reference).
 
 ### queue
 
@@ -93,21 +81,9 @@ Path to the Google service account JSON key file, with access to the Cloud Searc
 
 Metadata field holding the value to use as the document unique identifier. Defaults to the document reference.
 
-### sourceRepositoryUrlField
-
-Metadata field mapped to the Google Cloud Search item source repository URL. If the mapped field is missing or blank, the committer falls back to the document reference.
-
 ### typedStructuredData
 
 Whether structured data values should be inferred as Google Cloud Search typed values (`date`, `timestamp`, `integer`, `double`, `enum`) instead of always using text values. Values that do not match a supported type are sent as text.
-
-### titleField
-
-Metadata field mapped to the Google Cloud Search item title. Default is "title".
-
-### updateTimeField
-
-Metadata field mapped to the Google Cloud Search item update time. Default is "Last-Modified".
 
 ### uploadFormat
 

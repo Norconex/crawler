@@ -83,6 +83,8 @@ import com.norconex.committer.core.DeleteRequest;
 import com.norconex.committer.core.UpsertRequest;
 import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig.AclInheritanceMapping;
 import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig.AclMapping;
+import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig.MetadataField;
+import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig.MetadataMapping;
 import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig.PrincipalType;
 import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig.UploadFormat;
 import com.norconex.commons.lang.map.Properties;
@@ -257,32 +259,44 @@ class GoogleCloudSearchClient {
         var metadata = request.getMetadata();
         var itemMetadata = new ItemMetadata();
 
-        var title = metadata.getString(config.getTitleField());
+        var title = resolveMetadataValue(
+                metadata, MetadataField.TITLE, request.getReference(),
+                contentType);
         if (StringUtils.isNotBlank(title)) {
             itemMetadata.setTitle(title);
         }
 
-        var objectType = metadata.getString(config.getObjectTypeField());
-        itemMetadata.setObjectType(
-                StringUtils.defaultIfBlank(
-                        objectType, config.getObjectTypeDefaultValue()));
-        itemMetadata.setMimeType(contentType);
+        var objectType = resolveMetadataValue(
+                metadata, MetadataField.OBJECT_TYPE,
+                request.getReference(), contentType);
+        if (StringUtils.isNotBlank(objectType)) {
+            itemMetadata.setObjectType(objectType);
+        }
 
-        var containerName =
-                metadataValue(metadata, config.getContainerNameField());
+        var mimeType = resolveMetadataValue(
+                metadata, MetadataField.MIME_TYPE, request.getReference(),
+                contentType);
+        if (StringUtils.isNotBlank(mimeType)) {
+            itemMetadata.setMimeType(mimeType);
+        }
+
+        var containerName = resolveMetadataValue(
+                metadata, MetadataField.CONTAINER_NAME,
+                request.getReference(), contentType);
         if (StringUtils.isNotBlank(containerName)) {
             itemMetadata.setContainerName(containerName);
         }
 
-        var contentLanguage =
-                metadataValue(metadata, config.getContentLanguageField());
-        contentLanguage = StringUtils.defaultIfBlank(
-                contentLanguage, config.getContentLanguageDefaultValue());
+        var contentLanguage = resolveMetadataValue(
+                metadata, MetadataField.CONTENT_LANGUAGE,
+                request.getReference(), contentType);
         if (StringUtils.isNotBlank(contentLanguage)) {
             itemMetadata.setContentLanguage(contentLanguage);
         }
 
-        var updateTime = metadataValue(metadata, config.getUpdateTimeField());
+        var updateTime = resolveMetadataValue(
+                metadata, MetadataField.UPDATE_TIME,
+                request.getReference(), contentType);
         if (StringUtils.isNotBlank(updateTime)) {
             var parsedTime = toRfc3339(updateTime);
             if (parsedTime != null) {
@@ -290,7 +304,9 @@ class GoogleCloudSearchClient {
             }
         }
 
-        var createTime = metadataValue(metadata, config.getCreateTimeField());
+        var createTime = resolveMetadataValue(
+                metadata, MetadataField.CREATE_TIME,
+                request.getReference(), contentType);
         if (StringUtils.isNotBlank(createTime)) {
             var parsedTime = toRfc3339(createTime);
             if (parsedTime != null) {
@@ -298,17 +314,60 @@ class GoogleCloudSearchClient {
             }
         }
 
-        var sourceRepositoryUrl =
-                StringUtils.isNotBlank(config.getSourceRepositoryUrlField())
-                        ? metadataValue(
-                                metadata, config.getSourceRepositoryUrlField())
-                        : null;
-        sourceRepositoryUrl = StringUtils.defaultIfBlank(
-                sourceRepositoryUrl, request.getReference());
+        var sourceRepositoryUrl = resolveMetadataValue(
+                metadata, MetadataField.SOURCE_REPOSITORY_URL,
+                request.getReference(), contentType);
         if (StringUtils.isNotBlank(sourceRepositoryUrl)) {
             itemMetadata.setSourceRepositoryUrl(sourceRepositoryUrl);
         }
         return itemMetadata;
+    }
+
+    private String resolveMetadataValue(
+            Properties metadata,
+            MetadataField field,
+            String reference,
+            String contentType) {
+        var mapping = findMetadataMapping(field);
+        if (mapping != null) {
+            var value = metadataValue(metadata, mapping.getFromField());
+            value = StringUtils.defaultIfBlank(value,
+                    mapping.getDefaultValue());
+            if (StringUtils.isNotBlank(value)) {
+                return value;
+            }
+        }
+
+        return switch (field) {
+            case TITLE -> metadataValue(
+                    metadata,
+                    GoogleCloudSearchCommitterConfig.DEFAULT_TITLE_SOURCE_FIELD);
+            case OBJECT_TYPE -> StringUtils.defaultIfBlank(
+                    metadataValue(
+                            metadata,
+                            GoogleCloudSearchCommitterConfig.DEFAULT_OBJECT_TYPE_SOURCE_FIELD),
+                    GoogleCloudSearchCommitterConfig.DEFAULT_OBJECT_TYPE);
+            case MIME_TYPE -> contentType;
+            case UPDATE_TIME -> metadataValue(
+                    metadata,
+                    GoogleCloudSearchCommitterConfig.DEFAULT_UPDATE_TIME_SOURCE_FIELD);
+            case CREATE_TIME, CONTAINER_NAME, CONTENT_LANGUAGE -> null;
+            case SOURCE_REPOSITORY_URL -> reference;
+        };
+    }
+
+    private MetadataMapping findMetadataMapping(MetadataField targetField) {
+        for (var mapping : config.getMetadataMappings()) {
+            if (mapping == null
+                    || StringUtils.isBlank(mapping.getToField())) {
+                continue;
+            }
+            var field = MetadataField.fromValue(mapping.getToField());
+            if (field == targetField) {
+                return mapping;
+            }
+        }
+        return null;
     }
 
     private ItemStructuredData buildStructuredData(Properties metadata) {
@@ -475,6 +534,13 @@ class GoogleCloudSearchClient {
         if (StringUtils.isNotBlank(
                 config.getAclInheritance().getFromField())) {
             excludedFields.add(config.getAclInheritance().getFromField());
+        }
+        for (MetadataMapping mapping : config.getMetadataMappings()) {
+            if (mapping != null
+                    && !mapping.isKeepFromField()
+                    && StringUtils.isNotBlank(mapping.getFromField())) {
+                excludedFields.add(mapping.getFromField());
+            }
         }
         return excludedFields;
     }

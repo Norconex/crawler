@@ -28,6 +28,7 @@ import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig
 import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig.AclInheritanceType;
 import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig.AclMapping;
 import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig.AclTarget;
+import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig.MetadataMapping;
 import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig.PrincipalType;
 import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig.UploadFormat;
 import com.norconex.commons.lang.ResourceLoader;
@@ -39,67 +40,94 @@ import com.norconex.commons.lang.text.TextMatcher;
 @Timeout(30)
 class GoogleCloudSearchCommitterConfigTest {
 
-    @Test
-    void testWriteRead() throws Exception {
-        var q = new FsQueue();
-        q.getConfiguration()
-                .setBatchSize(10)
-                .setMaxPerFolder(5);
+        @Test
+        void testWriteRead() throws Exception {
+                var q = new FsQueue();
+                q.getConfiguration()
+                                .setBatchSize(10)
+                                .setMaxPerFolder(5);
 
-        var c = new GoogleCloudSearchCommitter();
-        c.getConfiguration()
-                .setSecretKeyPath("/path/to/service-account.json")
-                .setDataSourceId("dataSourceId")
-                .setUploadFormat(UploadFormat.TEXT)
-                .setApiEndpoint("https://mock.local/")
-                .setApplicationName("applicationName")
-                .setConnectorName("connectorName")
-                .setSourceIdField("sourceIdField")
-                .setKeepSourceIdField(true)
-                .setTitleField("titleField")
-                .setObjectTypeField("objectTypeField")
-                .setObjectTypeDefaultValue("webpage")
-                .setUpdateTimeField("updateTimeField")
-                .setCreateTimeField("createTimeField")
-                .setContainerNameField("containerNameField")
-                .setContentLanguageField("contentLanguageField")
-                .setContentLanguageDefaultValue("en-US")
-                .setSourceRepositoryUrlField("sourceRepositoryUrlField")
-                .setTypedStructuredData(true)
-                .setAclMappings(
-                        List.of(
-                                new AclMapping()
-                                        .setFromField("acl.reader.user")
-                                        .setTarget(AclTarget.READERS)
-                                        .setPrincipalType(PrincipalType.USER),
-                                new AclMapping()
-                                        .setFromField("acl.owner")
-                                        .setTarget(AclTarget.OWNERS)
-                                        .setPrincipalType(
-                                                PrincipalType.CUSTOMER)))
-                .setAclInheritance(
-                        new AclInheritanceMapping()
-                                .setFromField("parentReference")
-                                .setAclInheritanceType(
-                                        AclInheritanceType.BOTH_PERMIT))
-                .setQueue(q)
-                .setFieldMapping("subject", "title")
-                .addRestriction(
-                        new PropertyMatcher(
-                                TextMatcher.basic("document.reference"),
-                                TextMatcher.wildcard("*.pdf")));
+                var c = new GoogleCloudSearchCommitter();
+                c.getConfiguration()
+                                .setSecretKeyPath(
+                                                "/path/to/service-account.json")
+                                .setDataSourceId("dataSourceId")
+                                .setUploadFormat(UploadFormat.TEXT)
+                                .setApiEndpoint("https://mock.local/")
+                                .setApplicationName("applicationName")
+                                .setConnectorName("connectorName")
+                                .setSourceIdField("sourceIdField")
+                                .setKeepSourceIdField(true)
+                                .setMetadataMappings(
+                                                List.of(
+                                                                new MetadataMapping()
+                                                                                .setFromField("titleField")
+                                                                                .setToField("title"),
+                                                                new MetadataMapping()
+                                                                                .setFromField("objectTypeField")
+                                                                                .setToField("objectType")
+                                                                                .setDefaultValue(
+                                                                                                "webpage"),
+                                                                new MetadataMapping()
+                                                                                .setFromField("updateTimeField")
+                                                                                .setToField("updateTime"),
+                                                                new MetadataMapping()
+                                                                                .setFromField("createTimeField")
+                                                                                .setToField("createTime"),
+                                                                new MetadataMapping()
+                                                                                .setFromField("containerNameField")
+                                                                                .setToField("containerName"),
+                                                                new MetadataMapping()
+                                                                                .setFromField("contentLanguageField")
+                                                                                .setToField("contentLanguage")
+                                                                                .setDefaultValue(
+                                                                                                "en-US"),
+                                                                new MetadataMapping()
+                                                                                .setFromField(
+                                                                                                "sourceRepositoryUrlField")
+                                                                                .setToField("sourceRepositoryUrl")
+                                                                                .setKeepFromField(
+                                                                                                true)))
+                                .setTypedStructuredData(true)
+                                .setAclMappings(
+                                                List.of(
+                                                                new AclMapping()
+                                                                                .setFromField("acl.reader.user")
+                                                                                .setTarget(AclTarget.READERS)
+                                                                                .setPrincipalType(
+                                                                                                PrincipalType.USER),
+                                                                new AclMapping()
+                                                                                .setFromField("acl.owner")
+                                                                                .setTarget(AclTarget.OWNERS)
+                                                                                .setPrincipalType(
+                                                                                                PrincipalType.CUSTOMER)))
+                                .setAclInheritance(
+                                                new AclInheritanceMapping()
+                                                                .setFromField("parentReference")
+                                                                .setAclInheritanceType(
+                                                                                AclInheritanceType.BOTH_PERMIT))
+                                .setQueue(q)
+                                .setFieldMapping("subject", "title")
+                                .addRestriction(
+                                                new PropertyMatcher(
+                                                                TextMatcher.basic(
+                                                                                "document.reference"),
+                                                                TextMatcher.wildcard(
+                                                                                "*.pdf")));
 
-        assertThatNoException().isThrownBy(
-                () -> BeanMapper.DEFAULT.assertWriteRead(c));
-    }
+                assertThatNoException().isThrownBy(
+                                () -> BeanMapper.DEFAULT.assertWriteRead(c));
+        }
 
-    @Test
-    void testValidation() throws IOException {
-        Assertions.assertDoesNotThrow(() -> {
-            try (var r = ResourceLoader.getXmlReader(this.getClass())) {
-                BeanMapper.DEFAULT.read(
-                        GoogleCloudSearchCommitter.class, r, Format.XML);
-            }
-        });
-    }
+        @Test
+        void testValidation() throws IOException {
+                Assertions.assertDoesNotThrow(() -> {
+                        try (var r = ResourceLoader
+                                        .getXmlReader(this.getClass())) {
+                                BeanMapper.DEFAULT.read(
+                                                GoogleCloudSearchCommitter.class,
+                                                r, Format.XML);
+                        }
+                });
+        }
 }

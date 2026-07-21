@@ -41,14 +41,15 @@ public class GoogleCloudSearchCommitterConfig
     /** Default Google Cloud Search committer application name. */
     public static final String DEFAULT_APPLICATION_NAME =
             "Norconex Google Cloud Search Committer";
-    /** Default document title metadata field. */
-    public static final String DEFAULT_TITLE_FIELD = "title";
-    /** Default document object type metadata field. */
-    public static final String DEFAULT_OBJECT_TYPE_FIELD = "objectType";
+    /** Default document title metadata source field. */
+    public static final String DEFAULT_TITLE_SOURCE_FIELD = "title";
+    /** Default document object type metadata source field. */
+    public static final String DEFAULT_OBJECT_TYPE_SOURCE_FIELD = "objectType";
     /** Default object type value when no metadata value is provided. */
     public static final String DEFAULT_OBJECT_TYPE = "document";
-    /** Default update time metadata field. */
-    public static final String DEFAULT_UPDATE_TIME_FIELD = "Last-Modified";
+    /** Default update time metadata source field. */
+    public static final String DEFAULT_UPDATE_TIME_SOURCE_FIELD =
+            "Last-Modified";
 
     /** Format used to upload document content. */
     public enum UploadFormat {
@@ -91,6 +92,45 @@ public class GoogleCloudSearchCommitterConfig
     /** How ACLs are inherited from a parent item. */
     public enum AclInheritanceType {
         NOT_APPLICABLE, CHILD_OVERRIDE, PARENT_OVERRIDE, BOTH_PERMIT
+    }
+
+    /**
+     * Supported Google Cloud Search item metadata targets.
+     *
+     * See Google reference:
+     * https://developers.google.com/workspace/cloud-search/docs/reference/rest/v1/ItemMetadata
+     */
+    public enum MetadataField {
+        TITLE("title"),
+        OBJECT_TYPE("objectType"),
+        MIME_TYPE("mimeType"),
+        UPDATE_TIME("updateTime"),
+        CREATE_TIME("createTime"),
+        CONTAINER_NAME("containerName"),
+        CONTENT_LANGUAGE("contentLanguage"),
+        SOURCE_REPOSITORY_URL("sourceRepositoryUrl");
+
+        private final String value;
+
+        MetadataField(String value) {
+            this.value = value;
+        }
+
+        public String getValue() {
+            return value;
+        }
+
+        public static MetadataField fromValue(String value) {
+            if (value == null) {
+                return null;
+            }
+            for (var field : values()) {
+                if (field.value.equalsIgnoreCase(value)) {
+                    return field;
+                }
+            }
+            return null;
+        }
     }
 
     /**
@@ -148,56 +188,15 @@ public class GoogleCloudSearchCommitterConfig
     private boolean keepSourceIdField;
 
     /**
-     * Metadata field mapped to the Google Cloud Search item title.
-     * Default is {@value #DEFAULT_TITLE_FIELD}.
+     * Metadata mappings to populate Google Cloud Search predefined metadata
+     * fields. Mapped source fields are excluded from structured data unless
+     * {@code keepFromField} is set to {@code true}.
+     *
+     * See Google reference:
+     * https://developers.google.com/workspace/cloud-search/docs/reference/rest/v1/ItemMetadata
      */
-    private String titleField = DEFAULT_TITLE_FIELD;
-
-    /**
-     * Metadata field mapped to the Google Cloud Search item object type.
-     * Default is {@value #DEFAULT_OBJECT_TYPE_FIELD}.
-     */
-    private String objectTypeField = DEFAULT_OBJECT_TYPE_FIELD;
-
-    /**
-     * Default value for the Google Cloud Search item object type when
-     * {@link #objectTypeField} is missing or blank.
-     */
-    private String objectTypeDefaultValue = DEFAULT_OBJECT_TYPE;
-
-    /**
-     * Metadata field mapped to the Google Cloud Search item update time.
-     * Default is {@value #DEFAULT_UPDATE_TIME_FIELD}.
-     */
-    private String updateTimeField = DEFAULT_UPDATE_TIME_FIELD;
-
-    /**
-     * Metadata field mapped to the Google Cloud Search item create time.
-     */
-    private String createTimeField;
-
-    /**
-     * Metadata field mapped to the Google Cloud Search item container name.
-     */
-    private String containerNameField;
-
-    /**
-     * Metadata field mapped to the Google Cloud Search item content
-     * language.
-     */
-    private String contentLanguageField;
-
-    /**
-     * Default value for the Google Cloud Search item content language when
-     * {@link #contentLanguageField} is missing or blank.
-     */
-    private String contentLanguageDefaultValue;
-
-    /**
-     * Metadata field mapped to the Google Cloud Search item source
-     * repository URL. Defaults to the document reference.
-     */
-    private String sourceRepositoryUrlField;
+    @JsonXmlCollection(entryName = "mapping")
+    private final List<MetadataMapping> metadataMappings = new ArrayList<>();
 
     /**
      * Whether to infer typed structured-data values (date, timestamp,
@@ -228,6 +227,16 @@ public class GoogleCloudSearchCommitterConfig
     public GoogleCloudSearchCommitterConfig setAclMappings(
             List<AclMapping> aclMappings) {
         CollectionUtil.setAll(this.aclMappings, aclMappings);
+        return this;
+    }
+
+    public List<MetadataMapping> getMetadataMappings() {
+        return Collections.unmodifiableList(metadataMappings);
+    }
+
+    public GoogleCloudSearchCommitterConfig setMetadataMappings(
+            List<MetadataMapping> metadataMappings) {
+        CollectionUtil.setAll(this.metadataMappings, metadataMappings);
         return this;
     }
 
@@ -263,5 +272,31 @@ public class GoogleCloudSearchCommitterConfig
          */
         private AclInheritanceType aclInheritanceType =
                 AclInheritanceType.NOT_APPLICABLE;
+    }
+
+    /**
+     * Maps crawler metadata fields to Google Cloud Search predefined
+     * metadata fields.
+     *
+     * See Google reference:
+     * https://developers.google.com/workspace/cloud-search/docs/reference/rest/v1/ItemMetadata
+     */
+    @Data
+    @Accessors(chain = true)
+    public static class MetadataMapping implements Serializable {
+        private static final long serialVersionUID = 1L;
+
+        /** Optional source metadata field in crawler documents. */
+        private String fromField;
+        /** Mandatory target Google Cloud Search metadata field. */
+        private String toField;
+        /**
+         * Optional fallback value when {@link #fromField} is missing or blank.
+         */
+        private String defaultValue;
+        /**
+         * Whether to keep {@link #fromField} in structured data.
+         */
+        private boolean keepFromField;
     }
 }
