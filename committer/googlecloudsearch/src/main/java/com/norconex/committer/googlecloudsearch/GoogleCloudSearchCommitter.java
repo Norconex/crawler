@@ -21,7 +21,6 @@ import org.apache.commons.lang3.StringUtils;
 import com.norconex.committer.core.CommitterException;
 import com.norconex.committer.core.CommitterRequest;
 import com.norconex.committer.core.batch.AbstractBatchCommitter;
-import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig.MetadataField;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -82,14 +81,16 @@ public class GoogleCloudSearchCommitter
             configuration.setConnectorName(configuration.getApplicationName());
         }
         for (var mapping : configuration.getMetadataMappings()) {
-            if (mapping == null || StringUtils.isBlank(mapping.getToField())) {
+            if (mapping == null || mapping.getToField() == null) {
                 throw new CommitterException(
                         "Each metadata mapping must declare a non-blank toField.");
             }
-            if (MetadataField.fromValue(mapping.getToField()) == null) {
+        }
+        for (var mapping : configuration.getStructuredDataMappings()) {
+            if (mapping == null || StringUtils.isBlank(mapping.getField())) {
                 throw new CommitterException(
-                        "Unsupported metadata mapping toField: "
-                                + mapping.getToField());
+                        "Each structured data mapping must declare a "
+                                + "non-blank field.");
             }
         }
         client = new GoogleCloudSearchClient(configuration);

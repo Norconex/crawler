@@ -95,42 +95,11 @@ public class GoogleCloudSearchCommitterConfig
     }
 
     /**
-     * Supported Google Cloud Search item metadata targets.
-     *
-     * See Google reference:
-     * https://developers.google.com/workspace/cloud-search/docs/reference/rest/v1/ItemMetadata
+     * Google Cloud Search structured data value type. See Google reference:
+     * https://developers.google.com/workspace/cloud-search/docs/reference/rest/v1/indexing.datasources.items#NamedProperty
      */
-    public enum MetadataField {
-        TITLE("title"),
-        OBJECT_TYPE("objectType"),
-        MIME_TYPE("mimeType"),
-        UPDATE_TIME("updateTime"),
-        CREATE_TIME("createTime"),
-        CONTAINER_NAME("containerName"),
-        CONTENT_LANGUAGE("contentLanguage"),
-        SOURCE_REPOSITORY_URL("sourceRepositoryUrl");
-
-        private final String value;
-
-        MetadataField(String value) {
-            this.value = value;
-        }
-
-        public String getValue() {
-            return value;
-        }
-
-        public static MetadataField fromValue(String value) {
-            if (value == null) {
-                return null;
-            }
-            for (var field : values()) {
-                if (field.value.equalsIgnoreCase(value)) {
-                    return field;
-                }
-            }
-            return null;
-        }
+    public enum StructuredDataType {
+        TEXT, INTEGER, DOUBLE, DATE, TIMESTAMP, BOOLEAN, ENUM, HTML
     }
 
     /**
@@ -193,16 +162,24 @@ public class GoogleCloudSearchCommitterConfig
      * {@code keepFromField} is set to {@code true}.
      *
      * See Google reference:
-     * https://developers.google.com/workspace/cloud-search/docs/reference/rest/v1/ItemMetadata
+     * https://developers.google.com/workspace/cloud-search/docs/reference/rest/v1/indexing.datasources.items#ItemMetadata
      */
     @JsonXmlCollection(entryName = "mapping")
     private final List<MetadataMapping> metadataMappings = new ArrayList<>();
 
     /**
-     * Whether to infer typed structured-data values (date, timestamp,
-     * integer, double, enum) instead of always sending text values.
+     * Declares the Google Cloud Search structured data value type to use
+     * for individual metadata fields sent as structured data. Fields
+     * without a matching mapping are sent as {@link StructuredDataType#TEXT},
+     * which is always a safe choice since every Cloud Search schema
+     * property accepts text. Declaring another type here must match the
+     * type actually registered for that property name in the connected
+     * data source's schema; this committer has no way to verify that on
+     * its own.
      */
-    private boolean typedStructuredData;
+    @JsonXmlCollection(entryName = "mapping")
+    private final List<StructuredDataMapping> structuredDataMappings =
+            new ArrayList<>();
 
     /**
      * Mappings of metadata fields to Google Cloud Search ACL principals.
@@ -237,6 +214,17 @@ public class GoogleCloudSearchCommitterConfig
     public GoogleCloudSearchCommitterConfig setMetadataMappings(
             List<MetadataMapping> metadataMappings) {
         CollectionUtil.setAll(this.metadataMappings, metadataMappings);
+        return this;
+    }
+
+    public List<StructuredDataMapping> getStructuredDataMappings() {
+        return Collections.unmodifiableList(structuredDataMappings);
+    }
+
+    public GoogleCloudSearchCommitterConfig setStructuredDataMappings(
+            List<StructuredDataMapping> structuredDataMappings) {
+        CollectionUtil.setAll(
+                this.structuredDataMappings, structuredDataMappings);
         return this;
     }
 
@@ -279,7 +267,7 @@ public class GoogleCloudSearchCommitterConfig
      * metadata fields.
      *
      * See Google reference:
-     * https://developers.google.com/workspace/cloud-search/docs/reference/rest/v1/ItemMetadata
+     * https://developers.google.com/workspace/cloud-search/docs/reference/rest/v1/indexing.datasources.items#ItemMetadata
      */
     @Data
     @Accessors(chain = true)
@@ -289,7 +277,7 @@ public class GoogleCloudSearchCommitterConfig
         /** Optional source metadata field in crawler documents. */
         private String fromField;
         /** Mandatory target Google Cloud Search metadata field. */
-        private String toField;
+        private MetadataField toField;
         /**
          * Optional fallback value when {@link #fromField} is missing or blank.
          */
@@ -298,5 +286,21 @@ public class GoogleCloudSearchCommitterConfig
          * Whether to keep {@link #fromField} in structured data.
          */
         private boolean keepFromField;
+    }
+
+    /**
+     * Declares the Google Cloud Search structured data value type to use
+     * for a given metadata field sent as structured data. See
+     * {@link #structuredDataMappings}.
+     */
+    @Data
+    @Accessors(chain = true)
+    public static class StructuredDataMapping implements Serializable {
+        private static final long serialVersionUID = 1L;
+
+        /** Metadata/structured-data field name this mapping applies to. */
+        private String field;
+        /** Value type to use for this field. Default is {@code TEXT}. */
+        private StructuredDataType type = StructuredDataType.TEXT;
     }
 }

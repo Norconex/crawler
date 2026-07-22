@@ -58,6 +58,7 @@ import com.google.api.services.cloudsearch.v1.model.DateValues;
 import com.google.api.services.cloudsearch.v1.model.DoubleValues;
 import com.google.api.services.cloudsearch.v1.model.EnumValues;
 import com.google.api.services.cloudsearch.v1.model.GSuitePrincipal;
+import com.google.api.services.cloudsearch.v1.model.HtmlValues;
 import com.google.api.services.cloudsearch.v1.model.IndexItemRequest;
 import com.google.api.services.cloudsearch.v1.model.IntegerValues;
 import com.google.api.services.cloudsearch.v1.model.Item;
@@ -69,6 +70,7 @@ import com.google.api.services.cloudsearch.v1.model.Media;
 import com.google.api.services.cloudsearch.v1.model.NamedProperty;
 import com.google.api.services.cloudsearch.v1.model.Operation;
 import com.google.api.services.cloudsearch.v1.model.Principal;
+import com.google.api.services.cloudsearch.v1.model.SearchQualityMetadata;
 import com.google.api.services.cloudsearch.v1.model.StartUploadItemRequest;
 import com.google.api.services.cloudsearch.v1.model.StructuredDataObject;
 import com.google.api.services.cloudsearch.v1.model.TextValues;
@@ -83,9 +85,10 @@ import com.norconex.committer.core.DeleteRequest;
 import com.norconex.committer.core.UpsertRequest;
 import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig.AclInheritanceMapping;
 import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig.AclMapping;
-import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig.MetadataField;
 import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig.MetadataMapping;
 import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig.PrincipalType;
+import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig.StructuredDataMapping;
+import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig.StructuredDataType;
 import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig.UploadFormat;
 import com.norconex.commons.lang.map.Properties;
 
@@ -111,6 +114,9 @@ class GoogleCloudSearchClient {
     private static final String INDEXING_SCOPE =
             "https://www.googleapis.com/auth/cloud_search.indexing";
     private static final String CONTENT_ITEM_TYPE = "CONTENT_ITEM";
+    // Google Cloud Search hard limit on the number of values a single
+    // enum-typed structured data property may carry per item.
+    private static final int MAX_ENUM_VALUES = 32;
 
     private final GoogleCloudSearchCommitterConfig config;
     private final AtomicLong versionSequence = new AtomicLong();
@@ -320,6 +326,34 @@ class GoogleCloudSearchClient {
         if (StringUtils.isNotBlank(sourceRepositoryUrl)) {
             itemMetadata.setSourceRepositoryUrl(sourceRepositoryUrl);
         }
+
+        var hash = resolveMetadataValue(
+                metadata, MetadataField.HASH, request.getReference(),
+                contentType);
+        if (StringUtils.isNotBlank(hash)) {
+            itemMetadata.setHash(hash);
+        }
+
+        var keywords = resolveMetadataValues(metadata, MetadataField.KEYWORDS);
+        if (keywords != null && !keywords.isEmpty()) {
+            itemMetadata.setKeywords(keywords);
+        }
+
+        var quality = resolveMetadataValue(
+                metadata, MetadataField.SEARCH_QUALITY_METADATA,
+                request.getReference(), contentType);
+        if (StringUtils.isNotBlank(quality)) {
+            if (isDouble(quality)) {
+                itemMetadata.setSearchQualityMetadata(
+                        new SearchQualityMetadata()
+                                .setQuality(Double.valueOf(quality)));
+            } else {
+                LOG.warn(
+                        "Ignoring non-numeric searchQualityMetadata "
+                                + "value: {}",
+                        quality);
+            }
+        }
         return itemMetadata;
     }
 
@@ -351,19 +385,35 @@ class GoogleCloudSearchClient {
             case UPDATE_TIME -> metadataValue(
                     metadata,
                     GoogleCloudSearchCommitterConfig.DEFAULT_UPDATE_TIME_SOURCE_FIELD);
-            case CREATE_TIME, CONTAINER_NAME, CONTENT_LANGUAGE -> null;
+            case CREATE_TIME, CONTAINER_NAME, CONTENT_LANGUAGE,
+                    HASH, SEARCH_QUALITY_METADATA -> null;
             case SOURCE_REPOSITORY_URL -> reference;
+            case KEYWORDS -> null;
         };
+    }
+
+    private List<String> resolveMetadataValues(
+            Properties metadata, MetadataField field) {
+        var mapping = findMetadataMapping(field);
+        if (mapping == null) {
+            return null;
+        }
+        var values = metadata.getStrings(mapping.getFromField());
+        if (values != null && !values.isEmpty()) {
+            return values;
+        }
+        if (StringUtils.isNotBlank(mapping.getDefaultValue())) {
+            return Collections.singletonList(mapping.getDefaultValue());
+        }
+        return null;
     }
 
     private MetadataMapping findMetadataMapping(MetadataField targetField) {
         for (var mapping : config.getMetadataMappings()) {
-            if (mapping == null
-                    || StringUtils.isBlank(mapping.getToField())) {
+            if (mapping == null || mapping.getToField() == null) {
                 continue;
             }
-            var field = MetadataField.fromValue(mapping.getToField());
-            if (field == targetField) {
+            if (mapping.getToField() == targetField) {
                 return mapping;
             }
         }
@@ -391,45 +441,116 @@ class GoogleCloudSearchClient {
 
     private NamedProperty toNamedProperty(String name, List<String> values) {
         var property = new NamedProperty().setName(name);
-        if (!config.isTypedStructuredData()) {
-            property.setTextValues(
-                    new TextValues().setValues(new ArrayList<>(values)));
-            return property;
-        }
+        var type = findStructuredDataType(name);
 
-        var dates = parseAllDates(values);
-        if (dates != null) {
-            property.setDateValues(new DateValues().setValues(dates));
-            return property;
+        switch (type) {
+            case DATE -> {
+                var dates = parseAllDates(values);
+                if (dates != null) {
+                    return property.setDateValues(
+                            new DateValues().setValues(dates));
+                }
+                LOG.warn(
+                        "Field '{}' is mapped as structured data type "
+                                + "'date' but not all values could be "
+                                + "parsed as a date. Sending as text "
+                                + "instead: {}",
+                        name, values);
+            }
+            case TIMESTAMP -> {
+                if (allMatch(values, this::isRfc3339Timestamp)) {
+                    return property.setTimestampValues(new TimestampValues()
+                            .setValues(new ArrayList<>(values)));
+                }
+                LOG.warn(
+                        "Field '{}' is mapped as structured data type "
+                                + "'timestamp' but not all values could be "
+                                + "parsed as one. Sending as text instead: "
+                                + "{}",
+                        name, values);
+            }
+            case INTEGER -> {
+                if (allMatch(values, this::isLong)) {
+                    return property.setIntegerValues(
+                            new IntegerValues().setValues(toLongs(values)));
+                }
+                LOG.warn(
+                        "Field '{}' is mapped as structured data type "
+                                + "'integer' but not all values could be "
+                                + "parsed as one. Sending as text instead: "
+                                + "{}",
+                        name, values);
+            }
+            case DOUBLE -> {
+                if (allMatch(values, this::isDouble)) {
+                    return property.setDoubleValues(
+                            new DoubleValues().setValues(toDoubles(values)));
+                }
+                LOG.warn(
+                        "Field '{}' is mapped as structured data type "
+                                + "'double' but not all values could be "
+                                + "parsed as one. Sending as text instead: "
+                                + "{}",
+                        name, values);
+            }
+            case BOOLEAN -> {
+                var bool = toBoolean(values.get(0));
+                if (bool != null) {
+                    return property.setBooleanValue(bool);
+                }
+                LOG.warn(
+                        "Field '{}' is mapped as structured data type "
+                                + "'boolean' but its value could not be "
+                                + "parsed as one. Sending as text instead: "
+                                + "{}",
+                        name, values);
+            }
+            case ENUM -> {
+                // Google Cloud Search caps the number of values a single
+                // enum property can carry per item. Fields exceeding it
+                // (e.g., a repeatable tag/keyword field) must fall back to
+                // text rather than fail the whole batch.
+                if (values.size() <= MAX_ENUM_VALUES) {
+                    return property.setEnumValues(new EnumValues()
+                            .setValues(new ArrayList<>(values)));
+                }
+                LOG.warn(
+                        "Field '{}' is mapped as structured data type "
+                                + "'enum' but has {} values, exceeding "
+                                + "Google Cloud Search's limit of {}. "
+                                + "Sending as text instead.",
+                        name, values.size(), MAX_ENUM_VALUES);
+            }
+            case HTML -> {
+                return property.setHtmlValues(
+                        new HtmlValues().setValues(new ArrayList<>(values)));
+            }
+            case TEXT -> {
+                // Fall through to text below.
+            }
         }
-
-        if (allMatch(values, this::isRfc3339Timestamp)) {
-            property.setTimestampValues(
-                    new TimestampValues().setValues(new ArrayList<>(values)));
-            return property;
-        }
-
-        if (allMatch(values, this::isLong)) {
-            property.setIntegerValues(
-                    new IntegerValues().setValues(toLongs(values)));
-            return property;
-        }
-
-        if (allMatch(values, this::isDouble)) {
-            property.setDoubleValues(
-                    new DoubleValues().setValues(toDoubles(values)));
-            return property;
-        }
-
-        if (allMatch(values, this::isEnumLike)) {
-            property.setEnumValues(
-                    new EnumValues().setValues(new ArrayList<>(values)));
-            return property;
-        }
-
-        property.setTextValues(
+        return property.setTextValues(
                 new TextValues().setValues(new ArrayList<>(values)));
-        return property;
+    }
+
+    private StructuredDataType findStructuredDataType(String field) {
+        for (var mapping : config.getStructuredDataMappings()) {
+            if (mapping != null
+                    && java.util.Objects.equals(mapping.getField(), field)) {
+                return mapping.getType();
+            }
+        }
+        return StructuredDataType.TEXT;
+    }
+
+    private Boolean toBoolean(String value) {
+        if ("true".equalsIgnoreCase(value)) {
+            return Boolean.TRUE;
+        }
+        if ("false".equalsIgnoreCase(value)) {
+            return Boolean.FALSE;
+        }
+        return null;
     }
 
     private boolean allMatch(
@@ -499,13 +620,6 @@ class GoogleCloudSearchClient {
         } catch (NumberFormatException e) {
             return false;
         }
-    }
-
-    private boolean isEnumLike(String value) {
-        return !"true".equalsIgnoreCase(value)
-                && !"false".equalsIgnoreCase(value)
-                && value.matches("[A-Za-z0-9_\\-]+")
-                && value.length() <= 256;
     }
 
     private boolean isRfc3339Timestamp(String value) {

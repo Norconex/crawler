@@ -53,11 +53,13 @@ Whether to keep the source ID field in the document metadata after it has been e
 
 Mappings used to populate Google Cloud Search predefined `ItemMetadata` entries. Each `mapping` supports:
 - `fromField` (optional): crawler metadata source field.
-- `toField` (required): Google metadata target field (`title`, `objectType`, `mimeType`, `updateTime`, `createTime`, `containerName`, `contentLanguage`, `sourceRepositoryUrl`).
+- `toField` (required): Google metadata target field (`title`, `objectType`, `mimeType`, `updateTime`, `createTime`, `containerName`, `contentLanguage`, `sourceRepositoryUrl`, `hash`, `keywords`, `searchQualityMetadata`).
 - `defaultValue` (optional): fallback when `fromField` is missing or blank.
 - `keepFromField` (optional): when `true`, keeps `fromField` in structured data; otherwise it is excluded.
 
-Reference list (Google): https://developers.google.com/workspace/cloud-search/docs/reference/rest/v1/ItemMetadata
+Reference list (Google): https://developers.google.com/workspace/cloud-search/docs/reference/rest/v1/indexing.datasources.items#ItemMetadata
+
+Two `ItemMetadata` fields are not supported by a mapping: `contextAttributes` and `interactions`. Both are lists of nested objects rather than a single value derived from one crawled field, so they don't fit this mapping model.
 
 When a mapping does not produce a value, committer defaults are applied where available (`objectType=document`, `mimeType` from detected content type, `sourceRepositoryUrl` from document reference).
 
@@ -81,9 +83,29 @@ Path to the Google service account JSON key file, with access to the Cloud Searc
 
 Metadata field holding the value to use as the document unique identifier. Defaults to the document reference.
 
-### typedStructuredData
+### structuredDataMappings
 
-Whether structured data values should be inferred as Google Cloud Search typed values (`date`, `timestamp`, `integer`, `double`, `enum`) instead of always using text values. Values that do not match a supported type are sent as text.
+Declares the Google Cloud Search structured data value type to use for individual metadata fields sent as structured data. Each `mapping` supports:
+- `field` (required): the metadata/structured-data field name.
+- `type` (optional, default `TEXT`): one of `TEXT`, `INTEGER`, `DOUBLE`, `DATE`, `TIMESTAMP`, `BOOLEAN`, `ENUM`, `HTML`.
+
+Fields without a matching mapping are always sent as `TEXT`, which is safe regardless of how the property is declared in your Cloud Search data source schema. The declared `type` must match what your schema actually registers for that property; this committer cannot verify that on its own. Values that fail to parse as the declared type are logged as a warning and sent as text instead of failing the batch.
+
+Supported `type` values:
+- `TEXT` — any string (the default).
+- `INTEGER` — whole number, e.g. `123`.
+- `DOUBLE` — decimal number, e.g. `1.5`.
+- `DATE` — calendar date, no time: `2026-07-14`.
+- `TIMESTAMP` — date **and** time (RFC-3339): `2026-07-14T12:30:00Z`.
+- `BOOLEAN` — `true` or `false`.
+- `ENUM` — any string (see the 32-value cap below).
+- `HTML` — a string containing HTML markup.
+
+For date-like fields: use `DATE` when only the calendar day matters (e.g., a publish date), and `TIMESTAMP` when the time itself matters (e.g., a last-crawled instant).
+
+Google Cloud Search also caps `ENUM` properties at 32 values per item; a field mapped as `ENUM` that exceeds this falls back to text with a warning rather than failing the whole batch.
+
+**Multi-valued fields:** nothing special needed on this committer's side. Every metadata field already holds a list of values by default, and whichever `type` is declared, the committer sends the complete list of values to Google for that field — no extra configuration required. Whether Google accepts multiple values for a given property depends on your data source's schema (specifically, that property's repeatable setting) — for that side, check Google's own documentation on repeatable properties, since that's configured and enforced entirely by Google, not something this committer can see or control. One exception on this committer's side: `BOOLEAN` values are always sent as a single value (Google's API models booleans as non-repeatable), so if a repeatable field is mapped as `type="BOOLEAN"`, only the first value collected is sent.
 
 ### uploadFormat
 

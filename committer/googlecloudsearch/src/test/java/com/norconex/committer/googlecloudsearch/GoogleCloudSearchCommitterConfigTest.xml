@@ -57,8 +57,26 @@
 			<toField>sourceRepositoryUrl</toField>
 			<keepFromField>true</keepFromField>
 		</mapping>
+		<mapping>
+			<fromField>tagsField</fromField>
+			<toField>keywords</toField>
+		</mapping>
+		<mapping>
+			<fromField>qualityField</fromField>
+			<toField>searchQualityMetadata</toField>
+			<defaultValue>0.0</defaultValue>
+		</mapping>
 	</metadataMappings>
-	<typedStructuredData>true</typedStructuredData>
+	<structuredDataMappings>
+		<mapping>
+			<field>rating</field>
+			<type>DOUBLE</type>
+		</mapping>
+		<mapping>
+			<field>status</field>
+			<type>ENUM</type>
+		</mapping>
+	</structuredDataMappings>
 
 	<aclMappings>
 		<mapping>
