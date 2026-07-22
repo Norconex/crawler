@@ -26,8 +26,8 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import com.google.api.client.http.HttpRequestInitializer;
-import com.google.api.client.testing.http.MockHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
+import com.google.api.client.testing.http.MockHttpTransport;
 import com.google.api.services.cloudsearch.v1.CloudSearch;
 import com.norconex.committer.core.CommitterException;
 import com.norconex.committer.core.CommitterRequest;
