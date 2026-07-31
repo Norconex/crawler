@@ -717,8 +717,7 @@ public class GenericHttpFetcher extends AbstractHttpFetcher {
         var authConfig = cfg.getAuthConfig();
         if (authConfig != null
                 && authConfig.getCredentials().isSet()
-                && !AUTH_METHOD_FORM.equalsIgnoreCase(authConfig.getMethod())
-                && authConfig.getHost() != null) {
+                && !AUTH_METHOD_FORM.equalsIgnoreCase(authConfig.getMethod())) {
             if (credsProvider == null) {
                 credsProvider = new BasicCredentialsProvider();
             }
@@ -736,9 +735,14 @@ public class GenericHttpFetcher extends AbstractHttpFetcher {
                         authConfig.getCredentials().getUsername(),
                         password);
             }
+            // A host is optional. As documented on HttpAuthConfig#getHost(),
+            // not specifying one means the credentials apply to "any host"
+            // (AuthScope.ANY_HOST/ANY_PORT), consistent with how this was
+            // handled prior to 3.0.0.
+            var authHost = authConfig.getHost();
             credsProvider.setCredentials(new AuthScope(
-                    authConfig.getHost().getName(),
-                    authConfig.getHost().getPort(),
+                    authHost != null ? authHost.getName() : null,
+                    authHost != null ? authHost.getPort() : AuthScope.ANY_PORT,
                     authConfig.getRealm(),
                     authConfig.getMethod()),
                     creds);

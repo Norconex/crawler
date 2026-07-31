@@ -14,8 +14,15 @@
  */
 package com.norconex.collector.http.fetch.impl;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.NTCredentials;
 import org.junit.jupiter.api.Test;
 
+import com.norconex.commons.lang.security.Credentials;
 import com.norconex.commons.lang.xml.XML;
 
 public class GenericHttpFetcherTest  {
@@ -31,5 +38,34 @@ public class GenericHttpFetcherTest  {
 
         GenericHttpFetcher f = new GenericHttpFetcher(cfg);
         XML.assertWriteRead(f, "fetcher");
+    }
+
+    // Regression test for https://github.com/Norconex/crawler/issues/1302:
+    // NTLM (and Basic/Digest) credentials must still be registered when no
+    // <host> is configured, applying to "any host" as documented on
+    // HttpAuthConfig#getHost().
+    @Test
+    public void testNtlmCredentialsWithoutHost() {
+        var authConfig = new HttpAuthConfig();
+        authConfig.setMethod(GenericHttpFetcher.AUTH_METHOD_NTLM);
+        authConfig.setCredentials(
+                new Credentials().setUsername("joeUser")
+                        .setPassword("joePassword"));
+        authConfig.setDomain("DOMAIN");
+        // host intentionally left unset, as it would be when a user leaves
+        // <host/> empty in XML.
+
+        var cfg = new GenericHttpFetcherConfig();
+        cfg.setAuthConfig(authConfig);
+
+        var fetcher = new GenericHttpFetcher(cfg);
+        var credsProvider = fetcher.createCredentialsProvider();
+
+        assertNotNull(credsProvider);
+        var creds = credsProvider.getCredentials(new AuthScope(
+                "intranet.example.com", 443, AuthScope.ANY_REALM,
+                GenericHttpFetcher.AUTH_METHOD_NTLM));
+        assertInstanceOf(NTCredentials.class, creds);
+        assertEquals("DOMAIN\\joeUser", creds.getUserPrincipal().getName());
     }
 }
