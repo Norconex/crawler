@@ -45,6 +45,30 @@ The Google Cloud Search data source ID to index documents into.
 
 Mapping of source fields to target ones (Google Cloud Search structured data field names).
 
+### httpBackoffInitialIntervalMillis
+
+Optional exponential backoff initial interval, in milliseconds, applied to retried Google API requests. Use `-1` (the default) to keep the Google API client's default.
+
+### httpBackoffMaxElapsedTimeMillis
+
+Optional exponential backoff maximum elapsed time, in milliseconds, applied to retried Google API requests. Use `-1` (the default) to keep the Google API client's default.
+
+### httpBackoffMaxIntervalMillis
+
+Optional exponential backoff maximum interval, in milliseconds, applied to retried Google API requests. Use `-1` (the default) to keep the Google API client's default.
+
+### httpConnectTimeoutMillis
+
+Optional HTTP connect timeout, in milliseconds, applied to Google API requests. Use `-1` (the default) to keep the Google API client's default.
+
+### httpMaxRetries
+
+Optional maximum number of HTTP retries for Google API requests. Use `-1` (the default) to keep the Google API client's default.
+
+### httpReadTimeoutMillis
+
+Optional HTTP read timeout, in milliseconds, applied to Google API requests. Use `-1` (the default) to keep the Google API client's default.
+
 ### keepSourceIdField
 
 Whether to keep the source ID field in the document metadata after it has been extracted.
