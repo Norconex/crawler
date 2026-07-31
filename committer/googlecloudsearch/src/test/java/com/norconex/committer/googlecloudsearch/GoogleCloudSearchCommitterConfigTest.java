@@ -35,7 +35,6 @@ import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig
 import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig.UploadFormat;
 import com.norconex.commons.lang.ResourceLoader;
 import com.norconex.commons.lang.bean.BeanMapper;
-import com.norconex.commons.lang.bean.BeanMapper.Format;
 import com.norconex.commons.lang.map.PropertyMatcher;
 import com.norconex.commons.lang.text.TextMatcher;
 
@@ -58,6 +57,12 @@ class GoogleCloudSearchCommitterConfigTest {
                 .setApiEndpoint("https://mock.local/")
                 .setApplicationName("applicationName")
                 .setConnectorName("connectorName")
+                .setHttpConnectTimeoutMillis(30000)
+                .setHttpReadTimeoutMillis(120000)
+                .setHttpMaxRetries(3)
+                .setHttpBackoffInitialIntervalMillis(500)
+                .setHttpBackoffMaxIntervalMillis(60000)
+                .setHttpBackoffMaxElapsedTimeMillis(900000)
                 .setSourceIdField("sourceIdField")
                 .setKeepSourceIdField(true)
                 .setMetadataMappings(
@@ -146,7 +151,8 @@ class GoogleCloudSearchCommitterConfigTest {
                     .getXmlReader(this.getClass())) {
                 BeanMapper.DEFAULT.read(
                         GoogleCloudSearchCommitter.class,
-                        r, Format.XML);
+                        r,
+                        BeanMapper.Format.XML);
             }
         });
     }

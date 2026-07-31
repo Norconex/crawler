@@ -80,6 +80,24 @@ public class GoogleCloudSearchCommitter
         if (StringUtils.isBlank(configuration.getConnectorName())) {
             configuration.setConnectorName(configuration.getApplicationName());
         }
+        validateOptionalNonNegative(
+                "httpConnectTimeoutMillis",
+                configuration.getHttpConnectTimeoutMillis());
+        validateOptionalNonNegative(
+                "httpReadTimeoutMillis",
+                configuration.getHttpReadTimeoutMillis());
+        validateOptionalNonNegative(
+                "httpMaxRetries",
+                configuration.getHttpMaxRetries());
+        validateOptionalNonNegative(
+                "httpBackoffInitialIntervalMillis",
+                configuration.getHttpBackoffInitialIntervalMillis());
+        validateOptionalNonNegative(
+                "httpBackoffMaxIntervalMillis",
+                configuration.getHttpBackoffMaxIntervalMillis());
+        validateOptionalNonNegative(
+                "httpBackoffMaxElapsedTimeMillis",
+                configuration.getHttpBackoffMaxElapsedTimeMillis());
         for (var mapping : configuration.getMetadataMappings()) {
             if (mapping == null || mapping.getToField() == null) {
                 throw new CommitterException(
@@ -94,6 +112,16 @@ public class GoogleCloudSearchCommitter
             }
         }
         client = new GoogleCloudSearchClient(configuration);
+    }
+
+    private static void validateOptionalNonNegative(String name, int value)
+            throws CommitterException {
+        if (value < -1) {
+            throw new CommitterException(
+                    "Invalid value for " + name
+                            + ". Use -1 to keep library defaults or "
+                            + "a value >= 0.");
+        }
     }
 
     @Override

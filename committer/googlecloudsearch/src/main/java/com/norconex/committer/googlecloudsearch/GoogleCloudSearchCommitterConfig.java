@@ -145,6 +145,42 @@ public class GoogleCloudSearchCommitterConfig
     private String connectorName;
 
     /**
+     * Optional HTTP connect timeout in milliseconds applied to Google API
+     * requests. Use {@code -1} to keep Google client defaults.
+     */
+    private int httpConnectTimeoutMillis = -1;
+
+    /**
+     * Optional HTTP read timeout in milliseconds applied to Google API
+     * requests. Use {@code -1} to keep Google client defaults.
+     */
+    private int httpReadTimeoutMillis = -1;
+
+    /**
+     * Optional HTTP retry count for Google API requests. Use {@code -1}
+     * to keep Google client defaults.
+     */
+    private int httpMaxRetries = -1;
+
+    /**
+     * Optional exponential backoff initial interval in milliseconds.
+     * Use {@code -1} to keep Google client defaults.
+     */
+    private int httpBackoffInitialIntervalMillis = -1;
+
+    /**
+     * Optional exponential backoff maximum interval in milliseconds.
+     * Use {@code -1} to keep Google client defaults.
+     */
+    private int httpBackoffMaxIntervalMillis = -1;
+
+    /**
+     * Optional exponential backoff maximum elapsed time in milliseconds.
+     * Use {@code -1} to keep Google client defaults.
+     */
+    private int httpBackoffMaxElapsedTimeMillis = -1;
+
+    /**
      * Metadata field holding the value to use as the document unique
      * identifier. Defaults to the document reference.
      */

@@ -721,8 +721,7 @@ public class HttpClientFetcher
         var authConfig = configuration.getAuthentication();
         if (authConfig != null
                 && authConfig.getCredentials().isSet()
-                && HttpAuthMethod.FORM != authConfig.getMethod()
-                && authConfig.getHost() != null) {
+                && HttpAuthMethod.FORM != authConfig.getMethod()) {
             if (credsProvider == null) {
                 credsProvider = new BasicCredentialsProvider();
             }
@@ -755,13 +754,15 @@ public class HttpClientFetcher
                         trimToEmpty(password)
                                 .toCharArray());
             }
+            // A host is optional. As documented on HttpAuthConfig#getHost(),
+            // not specifying one means the credentials apply to "any host"
+            // (null host / -1 port on the AuthScope).
+            var authHost = authConfig.getHost();
             credsProvider.setCredentials(
                     new AuthScope(
-                            new HttpHost(
-                                    authConfig.getHost()
-                                            .getName(),
-                                    authConfig.getHost()
-                                            .getPort()),
+                            null,
+                            authHost != null ? authHost.getName() : null,
+                            authHost != null ? authHost.getPort() : -1,
                             authConfig.getRealm(),
                             Objects.toString(
                                     authConfig.getMethod(),

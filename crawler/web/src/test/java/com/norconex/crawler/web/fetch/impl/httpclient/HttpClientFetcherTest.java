@@ -20,12 +20,17 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
+import java.io.Reader;
+import java.io.StringReader;
 import java.lang.reflect.Field;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 
+import org.apache.hc.client5.http.auth.AuthScope;
+import org.apache.hc.client5.http.auth.NTCredentials;
 import org.apache.hc.client5.http.classic.HttpClient;
 import org.apache.hc.client5.http.classic.methods.HttpUriRequestBase;
 import org.apache.hc.client5.http.config.RequestConfig;
@@ -40,6 +45,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import com.norconex.commons.lang.bean.BeanMapper;
+import com.norconex.commons.lang.bean.BeanMapper.Format;
 import com.norconex.commons.lang.bean.BeanUtil;
 import com.norconex.commons.lang.net.Host;
 import com.norconex.commons.lang.security.Credentials;
@@ -342,6 +348,67 @@ class HttpClientFetcherTest {
         var provider = fetcher.createCredentialsProvider();
 
         assertThat(provider).isNull();
+    }
+
+    // Regression test for https://github.com/Norconex/crawler/issues/1302:
+    // leaving <host> unset must not disable authentication. A null host
+    // means "any host", per HttpAuthConfig#getHost() Javadoc.
+    @Test
+    void testCreateCredentialsProviderNtlmCredsWithoutHost() {
+        var fetcher = new HttpClientFetcher();
+        var authCfg = new HttpAuthConfig();
+        authCfg.setMethod(HttpAuthMethod.NTLM);
+        authCfg.setCredentials(new Credentials("joeUser", "joePassword"));
+        authCfg.setDomain("DOMAIN");
+        // host intentionally left unset, as it would be when a user leaves
+        // <host/> empty (or omits it) in XML.
+        fetcher.getConfiguration().setAuthentication(authCfg);
+
+        var provider = fetcher.createCredentialsProvider();
+
+        assertThat(provider).isNotNull();
+        var creds = provider.getCredentials(
+                new AuthScope("intranet.example.com", 443), null);
+        assertThat(creds).isInstanceOf(NTCredentials.class);
+    }
+
+    // Related to https://github.com/Norconex/crawler/issues/1302: when a
+    // <host> is specified with a name but no <port>, the resulting
+    // credentials must still apply to the real (any) port used by the site,
+    // not be pinned to a literal port 0.
+    @Test
+    void testCreateCredentialsProviderHostNameOnlyNoPortFromXml()
+            throws IOException {
+        var fetcher = new HttpClientFetcher();
+        var xml = """
+                <fetcher>
+                  <authentication>
+                    <method>ntlm</method>
+                    <credentials>
+                      <username>joeUser</username>
+                      <password>joePassword</password>
+                    </credentials>
+                    <host>
+                      <name>intranet.example.com</name>
+                    </host>
+                  </authentication>
+                </fetcher>""";
+        try (Reader r = new StringReader(xml)) {
+            BeanMapper.DEFAULT.read(fetcher, r, Format.XML);
+        }
+
+        var host = fetcher.getConfiguration().getAuthentication().getHost();
+        System.out.println("Host loaded from XML without <port>: " + host);
+
+        var provider = fetcher.createCredentialsProvider();
+        assertThat(provider).isNotNull();
+
+        // The real site is on port 443 (https). If the missing <port>
+        // silently became a literal 0 instead of "any port" (-1), this
+        // lookup will not match and creds will be null.
+        var creds = provider.getCredentials(
+                new AuthScope("intranet.example.com", 443), null);
+        assertThat(creds).isInstanceOf(NTCredentials.class);
     }
 
     @Test

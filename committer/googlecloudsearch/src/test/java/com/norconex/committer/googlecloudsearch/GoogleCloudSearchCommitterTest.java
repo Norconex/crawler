@@ -101,6 +101,19 @@ class GoogleCloudSearchCommitterTest {
     }
 
     @Test
+    void initBatchCommitterRejectsInvalidHttpOption() {
+        var committer = new GoogleCloudSearchCommitter();
+        committer.getConfiguration()
+                .setSecretKeyPath("missing.json")
+                .setDataSourceId("ds")
+                .setHttpReadTimeoutMillis(-2);
+
+        assertThatThrownBy(committer::initBatchCommitter)
+                .isInstanceOf(CommitterException.class)
+                .hasMessageContaining("httpReadTimeoutMillis");
+    }
+
+    @Test
     void commitBatchDelegatesToClient() throws Exception {
         var committer = new GoogleCloudSearchCommitter();
         var client = new SpyClient();

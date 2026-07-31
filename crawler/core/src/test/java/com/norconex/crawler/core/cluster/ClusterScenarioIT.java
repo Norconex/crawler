@@ -21,7 +21,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
@@ -303,63 +302,61 @@ class ClusterScenarioIT {
                             cfg.setMaxQueueBatchSize(
                                     1);
                         }))) {
-            try (var executor = Executors
-                    .newVirtualThreadPerTaskExecutor()) {
-                var futureResult = timing.measure(
-                        "first-run-launch",
-                        () -> CompletableFuture
-                                .supplyAsync(
-                                        () -> harness.launchSync(
-                                                nodeNames),
-                                        executor));
-                timing.measure("wait-for-processing-begin",
-                        () -> harness.waitFor(
-                                CLUSTER_JOIN_WAIT)
-                                .anyNodeToHaveFired(
-                                        CrawlerEvent.DOCUMENT_PROCESSING_BEGIN));
-                timing.measure("crash-node-1",
-                        () -> harness.crashNode(
-                                "node-1"));
-                timing.measure("wait-for-node-1-death",
-                        () -> harness.waitFor(
-                                NODE_DIE_WAIT)
-                                .nodeToHaveDied("node-1"));
+            // Launched directly on the test thread (not via an external
+            // executor) so a Docker/Postgres unavailability check inside
+            // launchAsync() aborts the test immediately instead of being
+            // trapped inside a CompletableFuture, which would otherwise
+            // surface as a misleading waitFor() timeout below.
+            var futureResult = timing.measure(
+                    "first-run-launch",
+                    () -> harness.launchAsync(nodeNames));
+            timing.measure("wait-for-processing-begin",
+                    () -> harness.waitFor(
+                            CLUSTER_JOIN_WAIT)
+                            .anyNodeToHaveFired(
+                                    CrawlerEvent.DOCUMENT_PROCESSING_BEGIN));
+            timing.measure("crash-node-1",
+                    () -> harness.crashNode(
+                            "node-1"));
+            timing.measure("wait-for-node-1-death",
+                    () -> harness.waitFor(
+                            NODE_DIE_WAIT)
+                            .nodeToHaveDied("node-1"));
 
-                var firstResult = timing.measure(
-                        "await-first-run",
-                        () -> futureResult.get(120,
-                                TimeUnit.SECONDS));
-                assertThat(firstResult.getNodeOutput("node-2")
-                        .getEventNames())
-                                .contains(CrawlerEvent.CRAWLER_CRAWL_END);
+            var firstResult = timing.measure(
+                    "await-first-run",
+                    () -> futureResult.get(120,
+                            TimeUnit.SECONDS));
+            assertThat(firstResult.getNodeOutput("node-2")
+                    .getEventNames())
+                            .contains(CrawlerEvent.CRAWLER_CRAWL_END);
 
-                harness.getInstrumentTemplate()
-                        .setRecordCaches(true)
-                        .setConfigModifier(cfg -> {
-                            baseConfig(numOfRefs, 0)
-                                    .accept(cfg);
-                            cfg.setId("scenario-coordinator-crash-"
-                                    + numOfRefs);
-                            cfg.setMaxQueueBatchSize(
-                                    50);
-                        });
+            harness.getInstrumentTemplate()
+                    .setRecordCaches(true)
+                    .setConfigModifier(cfg -> {
+                        baseConfig(numOfRefs, 0)
+                                .accept(cfg);
+                        cfg.setId("scenario-coordinator-crash-"
+                                + numOfRefs);
+                        cfg.setMaxQueueBatchSize(
+                                50);
+                    });
 
-                var secondResult = timing.measure("resume-run",
-                        () -> harness.launchSync(
-                                nodeNames));
-                var coordinatorOutput =
-                        requireCoordinator(
-                                secondResult);
-                var statusCounts = coordinatorOutput
-                        .getLedgerStatusCounts();
-                assertThat(statusCounts.getQueued()).isZero();
-                assertThat(statusCounts.getUntracked())
-                        .isZero();
-                assertThat(
-                        statusCounts.getProcessed()
-                                + statusCounts.getProcessing())
-                                        .isEqualTo(numOfRefs);
-            }
+            var secondResult = timing.measure("resume-run",
+                    () -> harness.launchSync(
+                            nodeNames));
+            var coordinatorOutput =
+                    requireCoordinator(
+                            secondResult);
+            var statusCounts = coordinatorOutput
+                    .getLedgerStatusCounts();
+            assertThat(statusCounts.getQueued()).isZero();
+            assertThat(statusCounts.getUntracked())
+                    .isZero();
+            assertThat(
+                    statusCounts.getProcessed()
+                            + statusCounts.getProcessing())
+                                    .isEqualTo(numOfRefs);
         } finally {
             timing.finish();
         }
@@ -386,65 +383,59 @@ class ClusterScenarioIT {
                             cfg.setMaxQueueBatchSize(
                                     5);
                         }))) {
-            try (var executor = Executors
-                    .newVirtualThreadPerTaskExecutor()) {
-                var initialFuture = timing.measure(
-                        "initial-node-launch",
-                        () -> CompletableFuture
-                                .supplyAsync(
-                                        () -> harness.launchSync(
-                                                initialNodeNames),
-                                        executor));
-                timing.measure("wait-for-initial-processing-begin",
-                        () -> harness.waitFor(
-                                CLUSTER_JOIN_WAIT)
-                                .nodeToHaveFired(
-                                        initialNodeNames[0],
-                                        CrawlerEvent.DOCUMENT_PROCESSING_BEGIN));
-                var lateFuture = timing.measure(
-                        "late-node-launch",
-                        () -> CompletableFuture
-                                .supplyAsync(
-                                        () -> harness.launchSync(
-                                                lateNodeName),
-                                        executor));
-                timing.measure("wait-for-late-node-processing-begin",
-                        () -> harness.waitFor(
-                                CLUSTER_JOIN_WAIT)
-                                .nodeToHaveFired(
-                                        lateNodeName,
-                                        CrawlerEvent.DOCUMENT_PROCESSING_BEGIN));
-                timing.measure("wait-for-late-node-import",
-                        () -> harness.waitFor(
-                                CLUSTER_JOIN_WAIT)
-                                .nodeToHaveFired(
-                                        lateNodeName,
-                                        CrawlerEvent.DOCUMENT_IMPORTED));
+            // Launched directly on the test thread (not via an external
+            // executor) so a Docker/Postgres unavailability check inside
+            // launchAsync() aborts the test immediately instead of being
+            // trapped inside a CompletableFuture, which would otherwise
+            // surface as a misleading waitFor() timeout below.
+            var initialFuture = timing.measure(
+                    "initial-node-launch",
+                    () -> harness.launchAsync(initialNodeNames));
+            timing.measure("wait-for-initial-processing-begin",
+                    () -> harness.waitFor(
+                            CLUSTER_JOIN_WAIT)
+                            .nodeToHaveFired(
+                                    initialNodeNames[0],
+                                    CrawlerEvent.DOCUMENT_PROCESSING_BEGIN));
+            var lateFuture = timing.measure(
+                    "late-node-launch",
+                    () -> harness.launchAsync(lateNodeName));
+            timing.measure("wait-for-late-node-processing-begin",
+                    () -> harness.waitFor(
+                            CLUSTER_JOIN_WAIT)
+                            .nodeToHaveFired(
+                                    lateNodeName,
+                                    CrawlerEvent.DOCUMENT_PROCESSING_BEGIN));
+            timing.measure("wait-for-late-node-import",
+                    () -> harness.waitFor(
+                            CLUSTER_JOIN_WAIT)
+                            .nodeToHaveFired(
+                                    lateNodeName,
+                                    CrawlerEvent.DOCUMENT_IMPORTED));
 
-                // Budget starts here — after the waitFor calls — so cluster
-                // formation time does not eat into the completion window.
-                timing.measure("await-both-nodes-complete",
-                        () -> CompletableFuture.allOf(
-                                initialFuture,
-                                lateFuture)
-                                .get(60,
-                                        TimeUnit.SECONDS));
-                var initialResult = initialFuture.join();
-                var lateResult = lateFuture.join();
+            // Budget starts here — after the waitFor calls — so cluster
+            // formation time does not eat into the completion window.
+            timing.measure("await-both-nodes-complete",
+                    () -> CompletableFuture.allOf(
+                            initialFuture,
+                            lateFuture)
+                            .get(60,
+                                    TimeUnit.SECONDS));
+            var initialResult = initialFuture.join();
+            var lateResult = lateFuture.join();
 
-                var lateOutput = lateResult
-                        .getNodeOutput(lateNodeName);
-                assertThat(lateOutput).isNotNull();
-                assertThat(lateOutput.getEventNames())
-                        .contains(CrawlerEvent.DOCUMENT_PROCESSING_BEGIN);
-                assertThat(lateOutput.getEventNameBag()
-                        .getCount(CrawlerEvent.DOCUMENT_IMPORTED))
-                                .isGreaterThan(0);
-                assertThat(initialResult.getNodeOutput("node-1")
-                        .getEventNameBag()
-                        .getCount(CrawlerEvent.DOCUMENT_IMPORTED))
-                                .isGreaterThan(0);
-            }
+            var lateOutput = lateResult
+                    .getNodeOutput(lateNodeName);
+            assertThat(lateOutput).isNotNull();
+            assertThat(lateOutput.getEventNames())
+                    .contains(CrawlerEvent.DOCUMENT_PROCESSING_BEGIN);
+            assertThat(lateOutput.getEventNameBag()
+                    .getCount(CrawlerEvent.DOCUMENT_IMPORTED))
+                            .isGreaterThan(0);
+            assertThat(initialResult.getNodeOutput("node-1")
+                    .getEventNameBag()
+                    .getCount(CrawlerEvent.DOCUMENT_IMPORTED))
+                            .isGreaterThan(0);
         } finally {
             timing.finish();
         }

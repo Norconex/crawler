@@ -34,6 +34,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import com.google.api.client.http.GenericUrl;
 import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.http.LowLevelHttpRequest;
 import com.google.api.client.http.LowLevelHttpResponse;
@@ -62,6 +63,42 @@ class GoogleCloudSearchClientTest {
     private static final String REFERENCE = "https://example.com/path?q=1";
 
     // --- Pure helper method tests -------------------------------------
+
+    @Test
+    void httpRequestOptionsApplyConfiguredValues() throws Exception {
+        var options = new GoogleCloudSearchClient.HttpRequestOptions()
+                .setConnectTimeoutMillis(1234)
+                .setReadTimeoutMillis(5678)
+                .setMaxRetries(9)
+                .setBackoffInitialIntervalMillis(500)
+                .setBackoffMaxIntervalMillis(10000)
+                .setBackoffMaxElapsedTimeMillis(60000);
+
+        var request = new MockHttpTransport()
+                .createRequestFactory()
+                .buildGetRequest(new GenericUrl("http://localhost/test"));
+
+        options.apply(request);
+
+        assertThat(request.getConnectTimeout()).isEqualTo(1234);
+        assertThat(request.getReadTimeout()).isEqualTo(5678);
+        assertThat(request.getNumberOfRetries()).isEqualTo(9);
+        assertThat(request.getIOExceptionHandler()).isNotNull();
+        assertThat(request.getUnsuccessfulResponseHandler()).isNotNull();
+    }
+
+    @Test
+    void httpRequestOptionsLeaveDefaultsWhenUnset() throws Exception {
+        var options = new GoogleCloudSearchClient.HttpRequestOptions();
+        var request = new MockHttpTransport()
+                .createRequestFactory()
+                .buildGetRequest(new GenericUrl("http://localhost/test"));
+
+        options.apply(request);
+
+        assertThat(request.getIOExceptionHandler()).isNull();
+        assertThat(request.getUnsuccessfulResponseHandler()).isNull();
+    }
 
     @Test
     void encodeItemIdUsesUrlSafeBase64ForShortIds() {
@@ -156,8 +193,7 @@ class GoogleCloudSearchClientTest {
         var config = newConfig()
                 .setSecretKeyPath(secretPath.toString());
 
-        GoogleCloudSearchClient client =
-                new GoogleCloudSearchClient(config);
+        GoogleCloudSearchClient client = new GoogleCloudSearchClient(config);
 
         assertThat(client).isNotNull();
     }
