@@ -372,6 +372,24 @@ class HttpClientFetcherTest {
         assertThat(creds).isInstanceOf(NTCredentials.class);
     }
 
+    @Test
+    void testCreateCredentialsProviderHostWithZeroPortUsesAnyPort() {
+        var fetcher = new HttpClientFetcher();
+        var authCfg = new HttpAuthConfig();
+        authCfg.setMethod(HttpAuthMethod.NTLM);
+        authCfg.setCredentials(new Credentials("joeUser", "joePassword"));
+        authCfg.setDomain("DOMAIN");
+        authCfg.setHost(new Host("intranet.example.com", 0));
+        fetcher.getConfiguration().setAuthentication(authCfg);
+
+        var provider = fetcher.createCredentialsProvider();
+
+        assertThat(provider).isNotNull();
+        var creds = provider.getCredentials(
+                new AuthScope("intranet.example.com", 443), null);
+        assertThat(creds).isInstanceOf(NTCredentials.class);
+    }
+
     // Related to https://github.com/Norconex/crawler/issues/1302: when a
     // <host> is specified with a name but no <port>, the resulting
     // credentials must still apply to the real (any) port used by the site,
@@ -396,9 +414,6 @@ class HttpClientFetcherTest {
         try (Reader r = new StringReader(xml)) {
             BeanMapper.DEFAULT.read(fetcher, r, Format.XML);
         }
-
-        var host = fetcher.getConfiguration().getAuthentication().getHost();
-        System.out.println("Host loaded from XML without <port>: " + host);
 
         var provider = fetcher.createCredentialsProvider();
         assertThat(provider).isNotNull();

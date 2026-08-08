@@ -762,7 +762,7 @@ public class HttpClientFetcher
                     new AuthScope(
                             null,
                             authHost != null ? authHost.getName() : null,
-                            authHost != null ? authHost.getPort() : -1,
+                            authScopePort(authHost),
                             authConfig.getRealm(),
                             Objects.toString(
                                     authConfig.getMethod(),
@@ -770,6 +770,13 @@ public class HttpClientFetcher
                     creds);
         }
         return credsProvider;
+    }
+
+    private int authScopePort(com.norconex.commons.lang.net.Host authHost) {
+        if (authHost == null || authHost.getPort() <= 0) {
+            return -1;
+        }
+        return authHost.getPort();
     }
 
     /**
