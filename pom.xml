@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!-- 
    Copyright 2022-2026 Norconex Inc.
 
@@ -132,6 +133,7 @@
     <maven-failsafe-plugin.version>3.5.5</maven-failsafe-plugin.version>
     <maven-surefire-plugin.version>3.5.5</maven-surefire-plugin.version>
     <nexus-staging-maven-plugin.version>1.7.0</nexus-staging-maven-plugin.version>
+    <sonar-maven-plugin.version>3.10.0.2594</sonar-maven-plugin.version>
     <therapi.version>0.15.0</therapi.version>
     <versions-maven-plugin.version>2.21.0</versions-maven-plugin.version>
     <wagon-ssh.version>3.5.3</wagon-ssh.version>
@@ -1001,418 +1003,47 @@
               </configuration>
             </execution>
           </executions>
-          <dependencies>
-            <dependency>
-              <groupId>org.apache.groovy</groupId>
-              <artifactId>groovy</artifactId>
-              <version>${groovy.version}</version>
-              <scope>runtime</scope>
-            </dependency>
-            <dependency>
-              <groupId>org.apache.groovy</groupId>
-              <artifactId>groovy-json</artifactId>
-              <version>${groovy.version}</version>
-              <scope>runtime</scope>
-            </dependency>            
-          </dependencies>        
           <inherited>true</inherited>
         </plugin>
 
         <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-assembly-plugin</artifactId>
-          <version>${maven-assembly-plugin.version}</version>
-          <executions>
-            <execution>
-              <id>make-dist-assembly</id>
-              <phase>package</phase>
-              <goals>
-                <goal>single</goal>
-              </goals>
-              <configuration>
-                <descriptors>
-                  <descriptor>${project.parent.basedir}/assembly/dist.xml</descriptor>
-                </descriptors>
-                <appendAssemblyId>false</appendAssemblyId>
-              </configuration>
-            </execution>
-          </executions>
+          <groupId>org.sonarsource.scanner.maven</groupId>
+          <artifactId>sonar-maven-plugin</artifactId>
+          <version>${sonar-maven-plugin.version}</version>
           <inherited>true</inherited>
         </plugin>
 
-
-        <!-- Use VM argument -Dgpg.skip=true to disable GPG signing. -->
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-gpg-plugin</artifactId>
-          <version>${maven-gpg-plugin.version}</version>
-          <executions>
-            <execution>
-              <id>sign-artifacts</id>
-              <phase>verify</phase>
-              <goals>
-                <goal>sign</goal>
-              </goals>
-              <configuration>
-                <!-- This is necessary for gpg to not try to use the pinentry programs -->
-                <gpgArguments>
-                  <arg>--pinentry-mode</arg>
-                  <arg>loopback</arg>
-                </gpgArguments>
-              </configuration>
-            </execution>
-          </executions>
-          <inherited>true</inherited>
-        </plugin>
-
-        <plugin>
-          <groupId>org.sonatype.plugins</groupId>
-          <artifactId>nexus-staging-maven-plugin</artifactId>
-          <version>${nexus-staging-maven-plugin.version}</version>
-          <inherited>true</inherited>
-        </plugin>
-
-        <!-- TODO: Do we still publish javadocs via mvn site? Delete if not. -->         
-<!--        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-site-plugin</artifactId>
-          <version>${maven-site-plugin.version}</version>
-          <dependencies>
-            <dependency>
-              <groupId>org.apache.maven.wagon</groupId>
-              <artifactId>wagon-ssh</artifactId>
-              <version>${wagon-ssh.version}</version>
-            </dependency>
-          </dependencies>
-          <inherited>true</inherited>
-        </plugin>        
-        
--->
-
-        <plugin>
-          <groupId>net.revelc.code.formatter</groupId>
-          <artifactId>formatter-maven-plugin</artifactId>
-          <version>${formatter-maven-plugin.version}</version>
-          <executions>
-            <execution>
-              <goals>
-                <goal>format</goal>
-              </goals>
-            </execution>
-          </executions>
-          <configuration>
-            <compilerSource>${java.version}</compilerSource>
-            <compilerCompliance>${java.version}</compilerCompliance>
-            <compilerTargetPlatform>${java.version}</compilerTargetPlatform>
-            <lineEnding>LF</lineEnding>
-            <encoding>UTF-8</encoding>
-            <configFile>${project.parent.basedir}/norconex-formatter.xml</configFile>
-            <includes>
-              <include>com/norconex/**/*.java</include>
-            </includes>
-          </configuration>
-          <inherited>true</inherited>
-        </plugin>
-        
-        <plugin>
-          <groupId>org.projectlombok</groupId>
-          <artifactId>lombok-maven-plugin</artifactId>
-          <version>${lombok-maven-plugin.version}</version>
-          <dependencies>
-            <dependency>
-              <groupId>org.projectlombok</groupId>
-              <artifactId>lombok</artifactId>
-              <version>${lombok.version}</version>
-            </dependency>
-          </dependencies>
-          <executions>
-            <execution>
-              <id>delombok</id>
-              <phase>process-sources</phase>
-              <goals>
-                <goal>delombok</goal>
-              </goals>
-              <configuration>
-                <addOutputDirectory>false</addOutputDirectory>
-                <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
-              </configuration>
-            </execution>
-          </executions>
-          <inherited>true</inherited>
-        </plugin>
-
-        <!-- From command-prompt:  
-           mvn versions:display-dependency-updates ^
-               versions:display-plugin-updates ^
-               versions:display-property-updates ^
-               -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
-           -->
-        <plugin>
-          <groupId>org.codehaus.mojo</groupId>
-          <artifactId>versions-maven-plugin</artifactId>
-          <version>${versions-maven-plugin.version}</version>
-          <inherited>true</inherited>
-        </plugin>
-        
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-enforcer-plugin</artifactId>
-          <version>${maven-enforcer-plugin.version}</version>
-          <executions>
-            <execution>
-              <id>enforce-versions</id>
-              <goals>
-                <goal>enforce</goal>
-              </goals>
-              <configuration>
-                <rules>
-                  <requireMavenVersion>
-                    <version>[3.8.8,)</version>
-                  </requireMavenVersion>
-                  <requireJavaVersion>
-                    <version>[${java.version},)</version>
-                  </requireJavaVersion>
-                </rules>    
-              </configuration>
-            </execution>
-          </executions>
-          <inherited>true</inherited>
-        </plugin>
- 
         <plugin>
           <groupId>org.jacoco</groupId>
           <artifactId>jacoco-maven-plugin</artifactId>
           <version>${jacoco-maven-plugin.version}</version>
           <executions>
             <execution>
-              <id>prepare-agent</id>              
               <goals>
                 <goal>prepare-agent</goal>
               </goals>
-              <configuration>
-                <propertyName>argLine</propertyName>
-                <destFile>${project.build.directory}/jacoco.exec</destFile>
-              </configuration>
             </execution>
             <execution>
               <id>report</id>
-              <phase>verify</phase>
+              <phase>test</phase>
               <goals>
                 <goal>report</goal>
               </goals>
-              <configuration>
-                <dataFile>${project.build.directory}/jacoco.exec</dataFile>
-                <outputDirectory>${project.build.directory}/site/jacoco</outputDirectory>
-                <formats>
-                  <format>XML</format>
-                </formats>
-              </configuration>
             </execution>
           </executions>
           <inherited>true</inherited>
         </plugin>
- 
+
         <plugin>
-          <groupId>org.ec4j.maven</groupId>
-          <artifactId>editorconfig-maven-plugin</artifactId>
-          <version>${editorconfig-maven-plugin.version}</version>
-          <executions>
-            <execution>
-              <id>fix-editorconfig</id>
-              <goals>
-                <goal>format</goal>
-              </goals>
-              <phase>validate</phase>
-            </execution>
-            <execution>
-              <id>check-editorconfig</id>
-              <goals>
-                <goal>check</goal>
-              </goals>
-              <phase>verify</phase>
-              <configuration>
-                <failOnFormatViolation>true</failOnFormatViolation>
-              </configuration>
-            </execution>
-          </executions>
-          <configuration>
-            <includes>
-              <include>**/*.java</include>
-              <include>**/*.json</include>
-              <include>**/*.md</include>
-              <include>**/*.xml</include>
-              <include>**/*.yaml</include>
-              <!-- 
-                We don't include .txt on purpose. We rarely use
-                and when we do, it is sometimes to test oddities.
-                -->
-            </includes>
-          </configuration>          
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-enforcer-plugin</artifactId>
+          <version>${maven-enforcer-plugin.version}</version>
           <inherited>true</inherited>
         </plugin>
-         
+
       </plugins>
     </pluginManagement>
 
-    <plugins>
-    
-      <!-- === Plugins bound to "Verify" (order matters) == -->
-    
-      <!-- Enforce formatting rules first to fail fast if there are issues -->
-      <plugin>
-        <groupId>org.ec4j.maven</groupId>
-        <artifactId>editorconfig-maven-plugin</artifactId>
-      </plugin>
-
-      <!-- Run JaCoCo to generate coverage reports -->
-      <plugin>
-        <groupId>org.jacoco</groupId>
-        <artifactId>jacoco-maven-plugin</artifactId>
-      </plugin>
-
-      <!-- Run SonarQube to analyze code and consume JaCoCo reports -->
-      <!--
-      <plugin>
-        <groupId>org.sonarsource.scanner.maven</groupId>
-        <artifactId>sonar-maven-plugin</artifactId>
-      </plugin>            
-      -->
-
-      <!--  Use VM argument -Dgpg.skip=true to disable GPG signing. -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-gpg-plugin</artifactId>
-      </plugin>
-
-      <!-- === Other plugins == -->
-
-      <plugin>
-        <groupId>org.projectlombok</groupId>
-        <artifactId>lombok-maven-plugin</artifactId>
-      </plugin>
-      
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>versions-maven-plugin</artifactId>
-      </plugin>
-
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-enforcer-plugin</artifactId>      
-      </plugin>
-      
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-      </plugin>
-
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-failsafe-plugin</artifactId>
-        <executions>
-          <execution>
-            <goals>
-              <goal>integration-test</goal>
-              <goal>verify</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-
-      <plugin>
-        <groupId>net.revelc.code.formatter</groupId>
-        <artifactId>formatter-maven-plugin</artifactId>
-      </plugin>          
-      
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>license-maven-plugin</artifactId>      
-      </plugin>          
-
-      <plugin>
-        <groupId>org.codehaus.gmavenplus</groupId>
-        <artifactId>gmavenplus-plugin</artifactId>
-      </plugin>
-      
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <executions>
-          <execution>
-            <?m2e ignore?>
-            <id>unpack-shared-resources</id>
-            <goals>
-              <goal>unpack</goal>
-            </goals>
-            <phase>process-resources</phase>
-            
-            <configuration>
-              <artifactItems>
-                <artifactItem>
-                  <groupId>com.norconex.commons</groupId>
-                  <artifactId>norconex-commons-lang</artifactId>
-                  <version>${norconex-commons-lang.version}</version>
-                  <classifier>resources</classifier>
-                  <type>zip</type>
-                  <overWrite>true</overWrite>
-                  <outputDirectory>${project.build.directory}/shared-resources</outputDirectory>
-                </artifactItem>
-              </artifactItems>
-            </configuration>              
-          </execution>
-        </executions>
-      </plugin>        
-
-    </plugins>
-
   </build>
 
-  <organization>
-    <name>Norconex Inc.</name>
-    <url>https://norconex.com</url>
-  </organization>
-  <url>https://opensource.norconex.com/crawlers</url>
-  <scm>
-    <url>https://github.com/Norconex/crawlers</url>
-    <connection>scm:git:git@github.com:Norconex/crawlers.git</connection>
-    <developerConnection>scm:git:git@github.com:Norconex/crawlers.git</developerConnection>
-  </scm>
-  <issueManagement>
-    <system>GitHub</system>
-    <url>https://github.com/Norconex/crawlers/issues</url>
-  </issueManagement>
-
-  <developers>
-    <developer>
-      <id>Norconex</id>
-      <email>info@norconex.com</email>
-      <organization>Norconex Inc.</organization>
-      <organizationUrl>https://norconex.com</organizationUrl>
-    </developer>
-  </developers>
-  <contributors>
-  </contributors>
-
-  <description>Maven parent POM for Norconex crawler-related projects.</description>
-  <modules>
-    <module>committer/core</module>
-    <module>committer/solr</module>
-    <module>committer/elasticsearch</module>
-    <module>committer/idol</module>
-    <module>committer/amazoncloudsearch</module>
-    <module>committer/googlecloudsearch</module>
-    <module>committer/sql</module>
-    <module>committer/neo4j</module>
-    <module>committer/azurecognitivesearch</module>
-    <module>committer/apachekafka</module>
-    <module>importer</module>
-    <module>crawler/core</module>
-    <module>crawler/web</module>
-    <module>crawler/fs</module>
-    
-<!--
-  TODO: when ready, add these:
-    <XXmodule>tools/config-converter</module>
- -->
-  </modules>
 </project>
