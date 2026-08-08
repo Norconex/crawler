@@ -325,7 +325,7 @@ class GoogleCloudSearchClient {
         var item = new Item()
                 .setName(itemName)
                 .setItemType(CONTENT_ITEM_TYPE)
-                .encodeVersion(nextVersion().getBytes(UTF_8))
+                .setVersion(encodeVersion(nextVersion()))
                 .setMetadata(buildMetadata(request, contentType))
                 .setStructuredData(buildStructuredData(request.getMetadata()))
                 .setAcl(buildAcl(request.getMetadata()));
@@ -359,6 +359,11 @@ class GoogleCloudSearchClient {
                 .datasources()
                 .items()
                 .delete(itemName)
+                // Like Item#version, the delete "version" is a bytes field and
+                // must be base64-encoded on the wire. Cloud Search compares the
+                // decoded bytes of both lexically, so the encoding here has to
+                // match the one used by queueUpsert.
+                .setVersion(encodeVersion(nextVersion()))
                 .setMode(config.getRequestMode().name())
                 .queue(batch, failures);
     }
@@ -941,7 +946,26 @@ class GoogleCloudSearchClient {
     String nextVersion() {
         var millis = clock.getAsLong();
         var sequence = versionSequence.incrementAndGet();
-        return String.format("%019d-%06d", millis, sequence);
+        // Both parts are zero-padded to a fixed width so versions keep sorting
+        // correctly as raw bytes, which is how Cloud Search compares them. The
+        // sequence is only a tie-breaker within a same-millisecond burst, but
+        // it is padded wide enough that it never grows a digit and inverts the
+        // ordering on crawls of more than a million documents.
+        return String.format("%019d-%012d", millis, sequence);
+    }
+
+    /**
+     * Encodes a version string the way Cloud Search expects it on the wire.
+     * Both {@code Item.version} and the delete request's {@code version} query
+     * parameter are bytes fields, so they must carry base64 rather than the
+     * raw string. URL-safe base64 is used because the value also travels as a
+     * query parameter on deletes.
+     * @param version raw version string
+     * @return base64-encoded version
+     */
+    String encodeVersion(String version) {
+        return Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(version.getBytes(UTF_8));
     }
 
     String toRfc3339(String value) {

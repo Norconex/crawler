@@ -31,6 +31,7 @@ import java.util.Base64;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Test;
 
@@ -61,6 +62,7 @@ import com.norconex.commons.lang.map.Properties;
 class GoogleCloudSearchClientTest {
 
     private static final String REFERENCE = "https://example.com/path?q=1";
+    private static final String VERSION_PATTERN = "\\d{19}-\\d{12}";
 
     // --- Pure helper method tests -------------------------------------
 
@@ -76,7 +78,8 @@ class GoogleCloudSearchClientTest {
 
         var request = new MockHttpTransport()
                 .createRequestFactory()
-                .buildGetRequest(new GenericUrl("http://localhost/test"));
+                .buildGetRequest(new GenericUrl(
+                        "http://localhost/test"));
 
         options.apply(request);
 
@@ -84,7 +87,8 @@ class GoogleCloudSearchClientTest {
         assertThat(request.getReadTimeout()).isEqualTo(5678);
         assertThat(request.getNumberOfRetries()).isEqualTo(9);
         assertThat(request.getIOExceptionHandler()).isNotNull();
-        assertThat(request.getUnsuccessfulResponseHandler()).isNotNull();
+        assertThat(request.getUnsuccessfulResponseHandler())
+                .isNotNull();
     }
 
     @Test
@@ -92,7 +96,8 @@ class GoogleCloudSearchClientTest {
         var options = new GoogleCloudSearchClient.HttpRequestOptions();
         var request = new MockHttpTransport()
                 .createRequestFactory()
-                .buildGetRequest(new GenericUrl("http://localhost/test"));
+                .buildGetRequest(new GenericUrl(
+                        "http://localhost/test"));
 
         options.apply(request);
 
@@ -171,9 +176,35 @@ class GoogleCloudSearchClientTest {
     void nextVersionUsesFixedClockAndIncrements() {
         var client = newClient(newConfig(), 1000L);
         assertThat(client.nextVersion())
-                .isEqualTo("0000000000000001000-000001");
+                .isEqualTo("0000000000000001000-000000000001");
         assertThat(client.nextVersion())
-                .isEqualTo("0000000000000001000-000002");
+                .isEqualTo("0000000000000001000-000000000002");
+    }
+
+    @Test
+    void nextVersionKeepsByteOrderingPastOneMillionDocuments() {
+        // The sequence is zero-padded wide enough that it never grows a digit
+        // and inverts the lexical byte ordering Cloud Search relies on.
+        var client = newClient(newConfig(), 1000L);
+        String previous = null;
+        for (var i = 0; i < 1_000_002; i++) {
+            var current = client.nextVersion();
+            if (previous != null) {
+                assertThat(current).isGreaterThan(previous);
+            }
+            previous = current;
+        }
+    }
+
+    @Test
+    void encodeVersionProducesDecodableUrlSafeBase64() {
+        var client = newClient(newConfig(), 1000L);
+        var raw = client.nextVersion();
+        var encoded = client.encodeVersion(raw);
+
+        assertThat(encoded).matches("[A-Za-z0-9_-]+");
+        assertThat(new String(Base64.getUrlDecoder().decode(encoded), UTF_8))
+                .isEqualTo(raw);
     }
 
     @Test
@@ -193,7 +224,8 @@ class GoogleCloudSearchClientTest {
         var config = newConfig()
                 .setSecretKeyPath(secretPath.toString());
 
-        GoogleCloudSearchClient client = new GoogleCloudSearchClient(config);
+        GoogleCloudSearchClient client =
+                new GoogleCloudSearchClient(config);
 
         assertThat(client).isNotNull();
     }
@@ -737,20 +769,17 @@ class GoogleCloudSearchClientTest {
         assertThat(batchBody).contains("Example title");
         assertThat(batchBody).contains("reader@example.com");
 
-        // Item.version is a base64-encoded bytes field on the wire.
-        // Regression test for a bug where the raw, unencoded version
-        // string was sent as-is, which the real Cloud Search API
-        // rejected with "Base64 decoding failed".
-        var versionMatcher = java.util.regex.Pattern
-                .compile("\"version\":\"([^\"]+)\"")
-                .matcher(batchBody);
-        assertThat(versionMatcher.find()).isTrue();
-        var decodedVersion = new String(
-                java.util.Base64.getUrlDecoder()
-                        .decode(versionMatcher
-                                .group(1)),
-                UTF_8);
-        assertThat(decodedVersion).matches("\\d{19}-\\d{6}");
+        // Both Item.version and the delete request's "version" query
+        // parameter are base64-encoded bytes fields on the wire. Regression
+        // test for a bug where the raw, unencoded version string was sent
+        // as-is, which the real Cloud Search API rejected -- on deletes with
+        // "DeleteItemRequest.version cannot be zero/empty/uninitialised",
+        // because the raw string contains a "-" that standard base64 cannot
+        // decode.
+        assertThat(decodeVersion(extractIndexVersion(batchBody)))
+                .matches(VERSION_PATTERN);
+        assertThat(decodeVersion(extractDeleteVersion(batchBody)))
+                .matches(VERSION_PATTERN);
     }
 
     @Test
@@ -874,6 +903,32 @@ class GoogleCloudSearchClientTest {
                 .setDataSourceId("datasource-id")
                 .setApplicationName("Test Application")
                 .setConnectorName("Test Application");
+    }
+
+    private String extractIndexVersion(String batchBody) {
+        return extract(batchBody, "\"version\":\"([^\"]+)\"", "Item.version");
+    }
+
+    private String extractDeleteVersion(String batchBody) {
+        return extract(batchBody,
+                "(?im)^DELETE\\s+\\S*[?&]version=([^&\\s]+)",
+                "delete version query parameter");
+    }
+
+    private String extract(String batchBody, String regex, String what) {
+        var matcher = Pattern.compile(regex).matcher(batchBody);
+        assertThat(matcher.find())
+                .as("%s present in batch body:%n%s", what, batchBody)
+                .isTrue();
+        return matcher.group(1);
+    }
+
+    private String decodeVersion(String encoded) {
+        // Fails the test if the value was sent unencoded: the raw version
+        // string contains a "-", which is not in the standard base64
+        // alphabet, and url-safe decoding of it yields bytes that do not
+        // match VERSION_PATTERN.
+        return new String(Base64.getUrlDecoder().decode(encoded), UTF_8);
     }
 
     private GoogleCloudSearchClient newClient(
