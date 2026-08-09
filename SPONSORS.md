@@ -1,8 +1,9 @@
 # Sponsors
 
-Norconex Crawler is free and Apache-2.0 licensed, and it stays that way.
-Sponsorship funds the maintenance that keeps it that way — and puts your name
-in front of the people using it.
+Norconex Crawler is free and Apache-2.0 licensed, built and maintained by
+[Norconex Inc.](https://norconex.com) Sponsorship funds further development
+on top of what we already invest, and puts your name in front of the people
+using it.
 
 👉 **[Become a sponsor](https://github.com/sponsors/Norconex)** ·
 [What sponsorship includes](https://crawler.norconex.com/support#back-the-project)
