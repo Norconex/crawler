@@ -772,8 +772,10 @@
           <configuration>
             <skip>${maven.javadoc.skip}</skip>
             <!-- The plugin appends 'apidocs/' to outputDirectory, so setting it to
-                 target/site makes the final output land at target/site/apidocs/
-                 (the Maven standard location), regardless of Maven/site-plugin version. -->
+                 target/site makes the final output land at target/site/apidocs/.
+                 Nothing to do with maven-site-plugin, which is no longer used —
+                 that is simply where crawler-website's scripts/stage-javadoc.js
+                 expects to find the aggregate Javadoc. -->
             <outputDirectory>${project.build.directory}/site</outputDirectory>
             <sourceFileIncludes>
               <sourceInclude>com/norconex/**/*.java</sourceInclude>
