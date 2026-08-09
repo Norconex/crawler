@@ -127,12 +127,6 @@
     </plugins>
   </build>
 
-  <distributionManagement>
-    <site>
-      <id>norconex-site-deployment</id>
-      <url>${site.baseurl}/committers/amazoncloudsearch/v4</url>
-    </site>
-  </distributionManagement>
 
   <url>https://opensource.norconex.com/committers/amazoncloudsearch/</url>
 </project>

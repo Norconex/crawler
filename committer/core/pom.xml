@@ -108,12 +108,6 @@
     </plugins>
   </build>
 
-  <distributionManagement>
-    <site>
-      <id>norconex-site-deployment</id>
-      <url>${site.baseurl}/committers/core/v4</url>
-    </site>
-  </distributionManagement>
   
   <url>https://opensource.norconex.com/committers/core</url>
   <description>Norconex Committer is a java library and command line application used to route content to local or remote target repositories, such as a search engine index.</description>

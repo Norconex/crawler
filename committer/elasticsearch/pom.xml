@@ -141,12 +141,6 @@
     </plugins>
   </build>
 
-  <distributionManagement>
-    <site>
-      <id>norconex-site-deployment</id>
-      <url>${site.baseurl}/committers/elasticsearch/v6</url>
-    </site>
-  </distributionManagement>
 
   <url>https://opensource.norconex.com/committers/elasticsearch</url>
 

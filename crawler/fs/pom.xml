@@ -308,12 +308,6 @@
   
   <!-- Only used to publish javadoc with "site:deploy", 
        after they were generated -->
-  <distributionManagement>
-    <site>
-      <id>norconex-site-deployment</id>
-      <url>${site.baseurl}/crawlers/filesystem/v4</url>
-    </site>
-  </distributionManagement>
  
   <url>https://opensource.norconex.com/crawlers/filesystem</url>
   <description>Norconex File System Crawler. Walks through directories and files and extracts their content for integration into any target repository.  It aims to be very flexible, easy to extend, and portable</description>

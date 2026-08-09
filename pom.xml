@@ -128,7 +128,6 @@
     <maven-jar-plugin.version>3.5.0</maven-jar-plugin.version>
     <maven-javadoc-plugin.version>3.12.0</maven-javadoc-plugin.version>
     <maven-remote-resources-plugin.version>3.2.0</maven-remote-resources-plugin.version>
-    <maven-site-plugin.version>4.0.0-M14</maven-site-plugin.version>
     <maven-source-plugin.version>3.4.0</maven-source-plugin.version>
     <maven-failsafe-plugin.version>3.5.5</maven-failsafe-plugin.version>
     <maven-surefire-plugin.version>3.5.5</maven-surefire-plugin.version>
@@ -136,7 +135,6 @@
     <sonar-maven-plugin.version>3.10.0.2594</sonar-maven-plugin.version>
     <therapi.version>0.15.0</therapi.version>
     <versions-maven-plugin.version>2.21.0</versions-maven-plugin.version>
-    <wagon-ssh.version>3.5.3</wagon-ssh.version>
 
     <!-- Empty by default, see "jacoco" profile-->
     <jacocoArgLine></jacocoArgLine>
@@ -739,13 +737,6 @@
         </includes>
       </testResource>
     </testResources>
-    <extensions>
-      <extension>
-        <groupId>org.apache.maven.wagon</groupId>
-        <artifactId>wagon-ssh</artifactId>
-        <version>${wagon-ssh.version}</version>
-      </extension>
-    </extensions>
 
     <pluginManagement>
       <plugins>
@@ -1073,23 +1064,6 @@
           <version>${nexus-staging-maven-plugin.version}</version>
           <inherited>true</inherited>
         </plugin>
-
-        <!-- TODO: Do we still publish javadocs via mvn site? Delete if not. -->         
-<!--        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-site-plugin</artifactId>
-          <version>${maven-site-plugin.version}</version>
-          <dependencies>
-            <dependency>
-              <groupId>org.apache.maven.wagon</groupId>
-              <artifactId>wagon-ssh</artifactId>
-              <version>${wagon-ssh.version}</version>
-            </dependency>
-          </dependencies>
-          <inherited>true</inherited>
-        </plugin>        
-        
--->
 
         <plugin>
           <groupId>net.revelc.code.formatter</groupId>
