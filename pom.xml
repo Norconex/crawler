@@ -1373,13 +1373,13 @@
   </organization>
   <url>https://opensource.norconex.com/crawlers</url>
   <scm>
-    <url>https://github.com/Norconex/crawlers</url>
-    <connection>scm:git:git@github.com:Norconex/crawlers.git</connection>
-    <developerConnection>scm:git:git@github.com:Norconex/crawlers.git</developerConnection>
+    <url>https://github.com/Norconex/crawler</url>
+    <connection>scm:git:git@github.com:Norconex/crawler.git</connection>
+    <developerConnection>scm:git:git@github.com:Norconex/crawler.git</developerConnection>
   </scm>
   <issueManagement>
     <system>GitHub</system>
-    <url>https://github.com/Norconex/crawlers/issues</url>
+    <url>https://github.com/Norconex/crawler/issues</url>
   </issueManagement>
 
   <developers>

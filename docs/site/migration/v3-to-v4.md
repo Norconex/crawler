@@ -171,4 +171,4 @@ A small number of v3 features were removed or replaced in v4:
 | Groovy-scripted filters (pre-Import)     | Use `ScriptFilter` with updated syntax  |
 | Custom `ICrawlDataStore` implementations | Use the new `IDataStoreEngine` SPI      |
 
-If you encounter a v3 feature not covered here, open a [GitHub Discussion](https://github.com/Norconex/crawlers/discussions).
+If you encounter a v3 feature not covered here, open a [GitHub Discussion](https://github.com/Norconex/crawler/discussions).

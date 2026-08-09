@@ -9,7 +9,7 @@ https://opensource.norconex.com/crawlers/
 
 This branch holds version 4 code, which is still in development.
 
-**For the latest stable release of Norconex Web Crawler, use the [version 3 branch](https://github.com/Norconex/crawlers/tree/3.x-branch).**
+**For the latest stable release of Norconex Web Crawler, use the [version 3 branch](https://github.com/Norconex/crawler/tree/3.x-branch).**
 
 # UPCOMING: Crawler V4 Stack
 
@@ -23,7 +23,7 @@ Contributions are welcome — whether it's a bug report, a fix, a new feature, o
 
 # Projects
 
-[![Java CI with Maven](https://github.com/Norconex/crawlers/actions/workflows/maven-ci-cd.yaml/badge.svg)](https://github.com/Norconex/crawlers/actions/workflows/maven-ci-cd.yaml)
+[![Java CI with Maven](https://github.com/Norconex/crawler/actions/workflows/maven-ci-cd.yaml/badge.svg)](https://github.com/Norconex/crawler/actions/workflows/maven-ci-cd.yaml)
 
 | Folder                          | Artifact Id                       | Build                                                                                                                                                                                                                                                               |
 | ------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

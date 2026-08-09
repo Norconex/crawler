@@ -20,7 +20,7 @@ jobs:
       # Clone the branch, setup user information, and checkout main branch for later files checking  
       - name: Fetch all branches and setup user information
         run: |
-          git clone https://github.com/Norconex/crawlers.git /home/runner/work/crawlers/crawlers
+          git clone https://github.com/Norconex/crawler.git /home/runner/work/crawlers/crawlers
           cd /home/runner/work/crawlers/crawlers            
           git config user.name "GitHub Action"
           git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"

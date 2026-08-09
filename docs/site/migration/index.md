@@ -44,5 +44,5 @@ including the V3 mapping callout.
 
 ## Need help?
 
-- Open a [GitHub Discussion](https://github.com/Norconex/crawlers/discussions) with your v3 config
-- Check [Issues](https://github.com/Norconex/crawlers/issues) for known migration edge cases
+- Open a [GitHub Discussion](https://github.com/Norconex/crawler/discussions) with your v3 config
+- Check [Issues](https://github.com/Norconex/crawler/issues) for known migration edge cases

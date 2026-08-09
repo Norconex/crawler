@@ -246,5 +246,5 @@ automatically at runtime.
 ## Resources
 
 - [Reference](/docs/reference/) — all built-in extension points with examples
-- [GitHub: crawlers](https://github.com/Norconex/crawlers) — source code and
+- [GitHub: Norconex/crawler](https://github.com/Norconex/crawler) — source code and
   existing implementations to use as a reference

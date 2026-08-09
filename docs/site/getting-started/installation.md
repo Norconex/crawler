@@ -141,7 +141,7 @@ and reusable fragments.
 ## Option 4 — Build from source
 
 ```bash
-git clone https://github.com/Norconex/crawlers.git
+git clone https://github.com/Norconex/crawler.git
 cd crawlers
 
 # Web crawler

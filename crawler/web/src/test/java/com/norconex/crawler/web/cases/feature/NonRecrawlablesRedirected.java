@@ -32,7 +32,7 @@ import com.norconex.crawler.web.junit.WebCrawlingTest;
 import com.norconex.crawler.web.junit.WebCrawlingTestCapturer;
 import com.norconex.crawler.web.mocks.MockWebsite;
 
-// Test for https://github.com/Norconex/crawlers/issues/1121
+// Test for https://github.com/Norconex/crawler/issues/1121
 // Redirected URL targets should not be orphaned if not ready to be recrawled
 @MockServerSettings
 public class NonRecrawlablesRedirected {
