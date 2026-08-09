@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!-- 
    Copyright 2022-2026 Norconex Inc.
 
@@ -132,6 +133,7 @@
     <maven-failsafe-plugin.version>3.5.5</maven-failsafe-plugin.version>
     <maven-surefire-plugin.version>3.5.5</maven-surefire-plugin.version>
     <nexus-staging-maven-plugin.version>1.7.0</nexus-staging-maven-plugin.version>
+    <sonar-maven-plugin.version>3.10.0.2594</sonar-maven-plugin.version>
     <therapi.version>0.15.0</therapi.version>
     <versions-maven-plugin.version>2.21.0</versions-maven-plugin.version>
     <wagon-ssh.version>3.5.3</wagon-ssh.version>
@@ -1211,7 +1213,18 @@
           </executions>
           <inherited>true</inherited>
         </plugin>
- 
+
+        <!-- Managed here so the version resolves when Sonar analysis runs as
+             a subprocess (see assembly/sonar/run-sonar-analysis.groovy). The
+             plugin itself is invoked from the command line / CI, not bound to
+             a lifecycle phase. -->
+        <plugin>
+          <groupId>org.sonarsource.scanner.maven</groupId>
+          <artifactId>sonar-maven-plugin</artifactId>
+          <version>${sonar-maven-plugin.version}</version>
+          <inherited>true</inherited>
+        </plugin>
+
         <plugin>
           <groupId>org.ec4j.maven</groupId>
           <artifactId>editorconfig-maven-plugin</artifactId>
