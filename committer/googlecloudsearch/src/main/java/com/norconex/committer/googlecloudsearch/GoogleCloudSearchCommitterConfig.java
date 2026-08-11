@@ -193,6 +193,18 @@ public class GoogleCloudSearchCommitterConfig
     private boolean keepSourceIdField;
 
     /**
+     * Whether a delete request targeting an item that does not exist in the
+     * index is treated as a failure. Crawlers routinely delete references
+     * that were never indexed (rejected, orphan or unmodified documents), and
+     * Google Cloud Search answers those with a "404 NOT_FOUND". Since the
+     * desired outcome (the item is absent) already holds, such responses are
+     * ignored by default. Set to {@code true} to have them fail the batch
+     * instead. Only delete requests are affected: a "404" on an index request
+     * always fails, since it signals a bad data source or connector name.
+     */
+    private boolean failOnDeleteNotFound;
+
+    /**
      * Metadata mappings to populate Google Cloud Search predefined metadata
      * fields. Mapped source fields are excluded from structured data unless
      * {@code keepFromField} is set to {@code true}.

@@ -70,5 +70,7 @@ committers:
 After your first successful crawl with `LogCommitter`, switch to your target
 committer and tune fetcher-specific options in the reference docs.
 
-For CMIS-specific product caveats and validation status, see
-[CMIS Compatibility Matrix](../concepts/cmis-compatibility-matrix.md).
+CMIS is a standard, so the same fetcher reaches Alfresco, Nuxeo, OpenText,
+Documentum, IBM FileNet and any other compliant repository. See
+[Content Sources](https://crawler.norconex.com/sources) for the full list and
+for what to do about systems that do not expose CMIS.

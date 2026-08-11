@@ -7,12 +7,42 @@ title: Crawl Pipeline
 Every document processed by Norconex Crawler — whether a web page or a file
 system file — moves through the same three-stage pipeline.
 
-```
-Crawl  ──►  Process  ──►  Commit
+```mermaid
+flowchart TB
+  start(["Start references"]) --> queue
+
+  subgraph stage1["Stage 1 — Crawl"]
+    direction TB
+    queue["Queue processor<br/>deduplicates, persists to disk"]
+    reffilter{"Reference<br/>filters"}
+    fetch["Fetch<br/>HTTP request or file read"]
+    docfilter{"Document<br/>filters"}
+    queue --> reffilter
+    reffilter -->|accepted| fetch
+    fetch --> docfilter
+  end
+
+  subgraph stage2["Stage 2 — Process"]
+    importer["Importer handlers<br/>parse, transform, split, conditions"]
+  end
+
+  subgraph stage3["Stage 3 — Commit"]
+    committers["Committers"]
+  end
+
+  docfilter -->|accepted| importer
+  importer --> committers
+  committers --> destination[("Search engine,<br/>database, or queue")]
+
+  fetch -.->|links discovered<br/>web crawler| queue
+  reffilter -->|rejected| discarded(["Discarded"])
+  docfilter -->|rejected| discarded
 ```
 
 Understanding this pipeline is the key to configuring and extending the crawler
-effectively.
+effectively. For the stage-by-stage version — every filter, checksum, and
+rejection point, in diagrams you can zoom into — see
+[Crawler Flow](./crawl-flow.md).
 
 **Filtering** is not a separate stage — it is a cross-cutting capability
 available at multiple checkpoints within the pipeline, letting you discard
@@ -67,7 +97,7 @@ Multiple committers can run in parallel for the same crawl session.
 All configurable options are described in the [Reference](/docs/reference/)
 section.
 
-The [Visual Configurator](https://configurator.norconex.com.com) makes it
+The [Visual Configurator](https://configurator.norconex.com) makes it
 easy to configure every pipeline stage.
 
 All stages are configurable in a YAML, JSON, or XML config file.

@@ -34,9 +34,10 @@ pipeline components for customer-specific requirements.
 - **Pipeline** — every document flows through: Crawl → Process → Commit
 - **Committers** — pluggable output targets (Elasticsearch, Solr, Kafka, SQL, Neo4j, ...)
 
-A hosted companion tool, the [Visual Configurator](https://configurator.norconex.com),
-lets you build and validate crawler configs visually — it is not part of the open-source
-distribution.
+The [Visual Configurator](https://configurator.norconex.com), a web application
+Norconex hosts and offers free of charge, lets you build and validate crawler
+configs visually. The Configurator itself is not open source — the crawler is,
+and remains so.
 
 ## Where to go next
 

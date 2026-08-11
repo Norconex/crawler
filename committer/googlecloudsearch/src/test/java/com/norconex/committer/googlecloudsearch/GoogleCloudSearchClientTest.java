@@ -17,6 +17,7 @@ package com.norconex.committer.googlecloudsearch;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.ByteArrayInputStream;
@@ -194,6 +195,103 @@ class GoogleCloudSearchClientTest {
             }
             previous = current;
         }
+    }
+
+    @Test
+    void deleteOfMissingItemIsToleratedByDefault() throws Exception {
+        // Crawlers routinely delete references that were never indexed
+        // (rejected, orphan or unmodified documents). Cloud Search answers
+        // those with a 404, which must not fail the batch -- nor the upserts
+        // travelling with it.
+        var transport = new RecordingTransport();
+        transport.enqueue(jsonResponse(
+                successfulBatchResponseHeader(),
+                batchResponseBody(200, 404)));
+
+        var client = clientFor(
+                newConfig().setUploadFormat(UploadFormat.TEXT), transport);
+
+        List<CommitterRequest> requests = new ArrayList<>();
+        requests.add(new UpsertRequest(
+                REFERENCE, new Properties(),
+                new ByteArrayInputStream("body".getBytes(UTF_8))));
+        requests.add(new DeleteRequest(
+                REFERENCE + "/gone", new Properties()));
+
+        assertThatNoException().isThrownBy(
+                () -> client.post(requests.iterator()));
+    }
+
+    @Test
+    void deleteOfMissingItemFailsWhenConfiguredToFail() throws Exception {
+        var transport = new RecordingTransport();
+        transport.enqueue(jsonResponse(
+                successfulBatchResponseHeader(),
+                batchResponseBody(404)));
+
+        var client = clientFor(
+                newConfig().setFailOnDeleteNotFound(true), transport);
+
+        List<CommitterRequest> requests = new ArrayList<>();
+        requests.add(new DeleteRequest(
+                REFERENCE + "/gone", new Properties()));
+
+        assertThatThrownBy(() -> client.post(requests.iterator()))
+                .isInstanceOf(CommitterException.class)
+                .hasMessageContaining("batch failure")
+                // the failing document must be named
+                .hasMessageContaining(REFERENCE + "/gone")
+                .hasMessageContaining("delete");
+    }
+
+    @Test
+    void indexNotFoundAlwaysFailsEvenWhenDeletesAreTolerated()
+            throws Exception {
+        // A 404 on an index request means a bad data source or connector
+        // name -- tolerating delete 404s must never mask it.
+        var transport = new RecordingTransport();
+        transport.enqueue(jsonResponse(
+                successfulBatchResponseHeader(),
+                batchResponseBody(404)));
+
+        var client = clientFor(
+                newConfig().setUploadFormat(UploadFormat.TEXT), transport);
+
+        List<CommitterRequest> requests = new ArrayList<>();
+        requests.add(new UpsertRequest(
+                REFERENCE, new Properties(),
+                new ByteArrayInputStream("body".getBytes(UTF_8))));
+
+        assertThatThrownBy(() -> client.post(requests.iterator()))
+                .isInstanceOf(CommitterException.class)
+                .hasMessageContaining(REFERENCE)
+                .hasMessageContaining("index");
+    }
+
+    @Test
+    void batchFailuresAreAttributedToTheirOwnDocument() throws Exception {
+        // Failure deliberately in the middle: an ordering mistake would
+        // attribute it to the wrong document.
+        var transport = new RecordingTransport();
+        transport.enqueue(jsonResponse(
+                successfulBatchResponseHeader(),
+                batchResponseBody(200, 404, 200)));
+
+        var client = clientFor(
+                newConfig().setUploadFormat(UploadFormat.TEXT), transport);
+
+        List<CommitterRequest> requests = new ArrayList<>();
+        for (var name : List.of("first", "second", "third")) {
+            requests.add(new UpsertRequest(
+                    "https://example.com/" + name, new Properties(),
+                    new ByteArrayInputStream("body".getBytes(UTF_8))));
+        }
+
+        assertThatThrownBy(() -> client.post(requests.iterator()))
+                .isInstanceOf(CommitterException.class)
+                .hasMessageContaining("https://example.com/second")
+                .hasMessageNotContaining("https://example.com/first")
+                .hasMessageNotContaining("https://example.com/third");
     }
 
     @Test
@@ -903,6 +1001,48 @@ class GoogleCloudSearchClientTest {
                 .setDataSourceId("datasource-id")
                 .setApplicationName("Test Application")
                 .setConnectorName("Test Application");
+    }
+
+    /**
+     * Builds a batch response where each supplied status decides whether the
+     * matching sub-request succeeded or failed with that HTTP code.
+     */
+    private String batchResponseBody(int... statuses) {
+        var b = new StringBuilder();
+        for (var i = 0; i < statuses.length; i++) {
+            var status = statuses[i];
+            b.append("--batch_test\r\n")
+                    .append("Content-Type: application/http\r\n")
+                    .append("Content-ID: response-").append(i + 1)
+                    .append("\r\n\r\n");
+            if (status == 200) {
+                b.append("HTTP/1.1 200 OK\r\n")
+                        .append("Content-Type: application/json; "
+                                + "charset=UTF-8\r\n\r\n")
+                        .append("{\"name\":\"operations/op-").append(i + 1)
+                        .append("\",\"done\":true}\r\n");
+            } else {
+                b.append("HTTP/1.1 ").append(status).append(" Error\r\n")
+                        .append("Content-Type: application/json; "
+                                + "charset=UTF-8\r\n\r\n")
+                        .append("{\"error\":{\"code\":").append(status)
+                        .append(",\"message\":\"Requested entity was not "
+                                + "found.\",\"status\":\"NOT_FOUND\"}}\r\n");
+            }
+        }
+        return b.append("--batch_test--\r\n").toString();
+    }
+
+    private GoogleCloudSearchClient clientFor(
+            GoogleCloudSearchCommitterConfig config,
+            RecordingTransport transport) {
+        var cloudSearch = new CloudSearch.Builder(
+                transport, GsonFactory.getDefaultInstance(),
+                noOpInitializer())
+                        .setApplicationName(config.getApplicationName())
+                        .setRootUrl("https://mock.local/")
+                        .build();
+        return new GoogleCloudSearchClient(config, cloudSearch, () -> 1000L);
     }
 
     private String extractIndexVersion(String batchBody) {

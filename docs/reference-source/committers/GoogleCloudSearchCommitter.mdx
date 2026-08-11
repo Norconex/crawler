@@ -41,6 +41,12 @@ The connector name sent with indexing requests. Defaults to the application name
 
 The Google Cloud Search data source ID to index documents into.
 
+### failOnDeleteNotFound
+
+Whether a delete request targeting an item that does not exist in the index is treated as a failure. Crawlers routinely delete references that were never indexed (rejected, orphan or unmodified documents), and Google Cloud Search answers those with a `404 NOT_FOUND`. Since the desired outcome (the item is absent) already holds, such responses are ignored by default. Set to `true` to have them fail the batch instead.
+
+Only delete requests are affected. A `404` on an index request always fails, since it signals a bad data source or connector name.
+
 ### fieldMappings
 
 Mapping of source fields to target ones (Google Cloud Search structured data field names).

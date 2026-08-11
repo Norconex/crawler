@@ -93,6 +93,7 @@ import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig
 import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig.PrincipalType;
 import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig.StructuredDataType;
 import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig.UploadFormat;
+import com.norconex.commons.lang.ExceptionUtil;
 import com.norconex.commons.lang.map.Properties;
 
 import lombok.extern.slf4j.Slf4j;
@@ -303,8 +304,14 @@ class GoogleCloudSearchClient {
         } catch (CommitterException e) {
             throw e;
         } catch (Exception e) {
+            // Spell out the cause chain: the CommitterException is reported
+            // through a CommitterEvent whose toString only carries this
+            // message, so a setup that suppresses stack traces would
+            // otherwise leave nothing to diagnose.
             throw new CommitterException(
-                    "Could not commit batch to Google Cloud Search.", e);
+                    "Could not commit batch to Google Cloud Search:\n"
+                            + ExceptionUtil.getFormattedMessages(e),
+                    e);
         }
     }
 
@@ -344,7 +351,8 @@ class GoogleCloudSearchClient {
                 .datasources()
                 .items()
                 .index(itemName, indexRequest)
-                .queue(batch, failures);
+                .queue(batch, failures.callbackFor(
+                        "index", request.getReference(), false));
     }
 
     private void queueDelete(
@@ -365,7 +373,9 @@ class GoogleCloudSearchClient {
                 // match the one used by queueUpsert.
                 .setVersion(encodeVersion(nextVersion()))
                 .setMode(config.getRequestMode().name())
-                .queue(batch, failures);
+                .queue(batch, failures.callbackFor(
+                        "delete", request.getReference(),
+                        !config.isFailOnDeleteNotFound()));
     }
 
     private ItemMetadata buildMetadata(
@@ -1002,29 +1012,64 @@ class GoogleCloudSearchClient {
         return metadata.getString(field);
     }
 
-    private static final class BatchFailureCollector
-            extends JsonBatchCallback<Operation> {
+    /**
+     * Accumulates the failures reported by a batch. Google invokes the
+     * callback registered with each queued request, so every outcome can be
+     * attributed to the document that produced it instead of being reported
+     * as an anonymous error.
+     */
+    static final class BatchFailureCollector {
+        private static final int NOT_FOUND = 404;
+
         private final List<String> failures = new ArrayList<>();
 
-        @Override
-        public void onSuccess(Operation operation,
-                HttpHeaders responseHeaders) {
-            // NOOP
+        /**
+         * Creates the callback for a single queued operation.
+         * @param operation operation name, for reporting
+         * @param reference document reference the operation applies to
+         * @param tolerateNotFound whether a "404" is an acceptable outcome
+         * @return callback to register with the batch request
+         */
+        JsonBatchCallback<Operation> callbackFor(
+                String operation, String reference,
+                boolean tolerateNotFound) {
+            return new JsonBatchCallback<Operation>() {
+                @Override
+                public void onSuccess(Operation op, HttpHeaders headers) {
+                    // NOOP
+                }
+
+                @Override
+                public void onFailure(
+                        GoogleJsonError e, HttpHeaders headers) {
+                    if (tolerateNotFound && e.getCode() == NOT_FOUND) {
+                        LOG.debug("Ignoring \"not found\" response for {} of "
+                                + "\"{}\": the item is already absent from "
+                                + "the index.", operation, reference);
+                        return;
+                    }
+                    var detail = describe(e);
+                    LOG.error("Google Cloud Search rejected the {} of "
+                            + "\"{}\": {}", operation, reference, detail);
+                    failures.add(String.format(
+                            "%s of \"%s\": %s", operation, reference, detail));
+                }
+            };
         }
 
-        @Override
-        public void onFailure(GoogleJsonError e, HttpHeaders responseHeaders) {
+        private static String describe(GoogleJsonError e) {
             try {
-                failures.add(e.toPrettyString());
+                return e.toPrettyString();
             } catch (IOException ioe) {
-                failures.add(String.valueOf(e));
+                return String.valueOf(e);
             }
         }
 
         void throwIfAny() throws CommitterException {
             if (!failures.isEmpty()) {
                 throw new CommitterException(
-                        "Google Cloud Search returned batch failures: "
+                        "Google Cloud Search returned " + failures.size()
+                                + " batch failure(s):\n"
                                 + StringUtils.join(failures, "\n"));
             }
         }

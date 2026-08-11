@@ -150,8 +150,9 @@ reference pages so configuration examples stay canonical in one place:
 - [EgnyteFetcher](../reference/crawler/EgnyteFetcher)
 - [M365GraphFetcher](../reference/crawler/M365GraphFetcher)
 
-For CMIS product readiness and caveats, see
-[CMIS Compatibility Matrix](../concepts/cmis-compatibility-matrix.md).
+CMIS is a standard, so one fetcher covers Alfresco, Nuxeo, OpenText,
+Documentum, IBM FileNet and any other compliant repository. See
+[Content Sources](https://crawler.norconex.com/sources) for the full list.
 
 ## Step 6 — Send to a real target
 
@@ -173,6 +174,6 @@ require this extra step.
 
 ## Next steps
 
-- Use the [Visual Configurator](https://configurator.norconex.com.com) to build your config visually
+- Use the [Visual Configurator](https://configurator.norconex.com) to build your config visually
 - Read [Concepts: Crawl Pipeline](../concepts/crawl-pipeline) to understand how documents are processed
 - Read [Concepts: Sessions](../concepts/sessions) to understand resume, deduplication, recrawl policy, and external run scheduling
