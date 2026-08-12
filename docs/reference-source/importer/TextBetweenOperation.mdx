@@ -19,7 +19,7 @@ Defines a pair of start and end string matchers used by the TextBetweenTransform
 
 ### endMatcher
 
-TODO: Add documentation for this property.
+Matcher for the text that closes the region to extract. The text between the first `startMatcher` hit and the next `endMatcher` hit becomes the extracted value.
 
 ### fieldMatcher
 
@@ -27,7 +27,7 @@ Matches document fields based on specified patterns and methods. Use this to res
 
 ### inclusive
 
-When `true`, documents matching the criteria are included (accepted); when `false`, matching documents are excluded (rejected).
+Whether the delimiters themselves are part of the extracted value. Default is `false`, which returns only the text between them.
 
 ### onSet
 

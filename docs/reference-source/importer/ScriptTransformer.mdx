@@ -27,13 +27,11 @@ The following are variables made available to your script for each document:
 - `sectionIndex`: Content section index if it had to be split, as an integer.
 There are no expected return value from your script. Returning one has no effect.
 
-**TODO: rewrite it as lua do not support in some case, and some issue in js(recall in DnD)**
-
 ## Properties
 
 ### engineName
 
-TODO: Add documentation for this property.
+Which scripting engine runs the script. `JavaScript`, `lua` and `velocity` are available out of the box; any other JSR-223 engine on the classpath can be named here, such as `python` with Jython installed. Required — there is no default.
 
 ### fieldMatcher
 

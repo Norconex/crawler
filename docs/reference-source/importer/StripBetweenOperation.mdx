@@ -19,12 +19,13 @@ Defines a pair of start and end string matchers used by the StripBetweenTransfor
 
 ### endMatcher
 
-TODO: Add documentation for this property.
+Matcher for the text that closes the region to strip. Everything between the first `startMatcher` hit and the next `endMatcher` hit is removed.
 
 ### inclusive
 
-When `true`, documents matching the criteria are included (accepted); when `false`, matching documents are excluded (rejected).
+Whether the delimiters themselves are stripped along with the text between them. Default is `false`, which leaves the matched start and end text in place.
 
 ### startMatcher
 
-Restricts which start references are processed, based on a pattern match against each reference.
+Matcher for the text that opens the region to strip.
+

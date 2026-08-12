@@ -133,34 +133,42 @@ How long Tesseract may spend on a single document before it is abandoned.
 
 ## Examples
 
-Runs OCR on scanned PDFs and TIFFs in English and French, skipping anything
-outside a sensible size range.
+OCR is configured on the parser that will use it, under `ocr`. Here
+[DefaultParser](./DefaultParser) runs OCR on scanned PDFs and TIFFs in English
+and French, skipping anything outside a sensible size range.
 
 <ConfigBlock
   json={{
-    "parseConfig": {
-      "ocrConfig": {
-        "tesseractPath": "/usr/bin/tesseract",
-        "language": "eng+fra",
-        "contentTypeMatcher": {
-          "method": "regex",
-          "pattern": "application/pdf|image/tiff"
-        },
-        "minFileSizeToOcr": 10000,
-        "maxFileSizeToOcr": 50000000,
-        "timeoutSeconds": 120
+    "handlers": [
+      {
+        "handler": {
+          "class": "DefaultParser",
+          "ocr": {
+            "tesseractPath": "/usr/bin/tesseract",
+            "language": "eng+fra",
+            "contentTypeMatcher": {
+              "method": "regex",
+              "pattern": "application/pdf|image/tiff"
+            },
+            "minFileSizeToOcr": 10000,
+            "maxFileSizeToOcr": 50000000,
+            "timeoutSeconds": 120
+          }
+        }
       }
-    }
+    ]
   }}
   xml={`
-    <parseConfig>
-      <ocrConfig>
-        <tesseractPath>/usr/bin/tesseract</tesseractPath>
-        <language>eng+fra</language>
-        <contentTypeMatcher method="regex">application/pdf|image/tiff</contentTypeMatcher>
-        <minFileSizeToOcr>10000</minFileSizeToOcr>
-        <maxFileSizeToOcr>50000000</maxFileSizeToOcr>
-        <timeoutSeconds>120</timeoutSeconds>
-      </ocrConfig>
-    </parseConfig>`}
+    <handlers>
+      <handler class="DefaultParser">
+        <ocr>
+          <tesseractPath>/usr/bin/tesseract</tesseractPath>
+          <language>eng+fra</language>
+          <contentTypeMatcher method="regex" pattern="application/pdf|image/tiff"/>
+          <minFileSizeToOcr>10000</minFileSizeToOcr>
+          <maxFileSizeToOcr>50000000</maxFileSizeToOcr>
+          <timeoutSeconds>120</timeoutSeconds>
+        </ocr>
+      </handler>
+    </handlers>`}
 />

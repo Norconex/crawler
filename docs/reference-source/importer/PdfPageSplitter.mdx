@@ -13,25 +13,31 @@ Split PDFs pages so each pages are treated as individual documents.
 
 ## Notes
 
-**TODO: convert the XML example to ts**
-**where is EmptyFilter**
+May not work on all PDFs — encrypted ones in particular.
 
-May not work on all PDFs (e.g., encrypted PDFs).
+Each page produced carries a `document.pdf.pageNumber` field and a
+`document.pdf.numberOfPages` field. The original PDF is kept alongside its
+pages; set `discardOriginal` to `true` to keep only the pages.
 
-The original PDF is kept intact. If you want to eliminate it to keep only the split pages, make sure to filter it. You can do so by filtering out PDFs without one of these two fields added to each pages: `document.pdf.pageNumber` or `document.pdf.numberOfPages`. A filtering example:
+To drop the original later in the pipeline instead, reject the documents that
+have no page number — those are the containers rather than the pages:
 
-``` xml
-<filter
-  class="com.norconex.importer.handler.filter.impl.EmptyFilter"     
-  onMatch="exclude">
-    <fieldMatcher
-      matchWhole="true">
-      document.pdf.pageNumber
-    </fieldMatcher>
-</filter>
+```json
+{
+  "if": {
+    "condition": {
+      "class": "BlankCondition",
+      "fieldMatcher": { "pattern": "document.pdf.pageNumber" }
+    },
+    "then": [
+      { "handler": { "class": "Reject", "message": "Original PDF container" } }
+    ]
+  }
+}
 ```
 
-By default this splitter restricts its use to` document.contentType` matching `application/pdf`.
+By default this splitter applies only to documents whose content type is
+`application/pdf`.
 
 Should be used as a pre-parse handler.
 

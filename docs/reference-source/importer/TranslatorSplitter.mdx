@@ -43,19 +43,22 @@ Note: This class is not a document "splitter" in the strict sense, but like spli
 
 ### api
 
-TODO: Add documentation for this property.
+Which translation service to use: `microsoft`, `google`, `lingo24`, `moses` or
+`yandex`. Each expects its own credentials, listed above — the other
+authentication properties are ignored.
 
 ### apiKey
 
-API key for the translation service.
+API key for the translation service. Used by **google** and **yandex**.
 
 ### clientId
 
-TODO: Add documentation for this property.
+Client ID for the **microsoft** API, obtained on Microsoft Azure Marketplace
+with your Microsoft account.
 
 ### clientSecret
 
-TODO: Add documentation for this property.
+Client secret paired with `clientId` for the **microsoft** API.
 
 ### discardOriginal
 
@@ -67,7 +70,9 @@ Matches document fields based on specified patterns and methods. Use this to res
 
 ### ignoreNonTranslatedFields
 
-TODO: Add documentation for this property.
+Whether child documents should carry only the fields that were actually
+translated. Default is `false`, which copies every field of the parent onto each
+child. Set it to `true` to keep the children lean.
 
 ### label
 
@@ -75,31 +80,39 @@ An optional, user-supplied label for this step in the importer pipeline. It has 
 
 ### scriptPath
 
-TODO: Add documentation for this property.
+Path to the **moses** scripts directory. Required with `smtPath` when `api` is
+`moses`, which runs locally rather than as a hosted service.
 
 ### smtPath
 
-TODO: Add documentation for this property.
+Path to the **moses** statistical machine translation installation. Required
+with `scriptPath` when `api` is `moses`.
 
 ### sourceLanguage
 
-TODO: Add documentation for this property.
+The language documents are translated *from*, when it is the same for the whole
+crawl. Use `sourceLanguageField` instead when it varies per document.
 
 ### sourceLanguageField
 
-TODO: Add documentation for this property.
+Name of a document field holding the original language. Takes precedence over
+`sourceLanguage` and is the usual choice after a
+[LanguageTransformer](./LanguageTransformer) has detected the language.
 
 ### targetLanguages
 
-TODO: Add documentation for this property.
+The languages to translate *to*. One child document is created per language,
+per document.
 
 ### userKey
 
-TODO: Add documentation for this property.
+User key for the **lingo24** API.
 
 ## Examples
 
-
+Translates each document into English and French with the Google API, taking
+the original language from a `langField` field. Two child documents are created
+per document.
 
 <ConfigBlock
   json={{

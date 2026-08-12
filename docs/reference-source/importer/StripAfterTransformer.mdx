@@ -23,7 +23,7 @@ Matches document fields based on specified patterns and methods
 
 ### inclusive
 
-When `true`, documents matching the criteria are included (accepted); when `false`, matching documents are excluded (rejected).
+Whether the matched text is stripped along with everything after it. Default is `false`, which leaves the match itself in place and strips only what follows.
 
 ### label
 
@@ -44,8 +44,6 @@ Specifies the pattern to match for stripping content after.
 ## Examples
 
 The above example will strip all text starting with the following HTML comment and everything after it: `<!-- FOOTER -->`.
-
-**TODO: do example still need CDATA??**
 
 <ConfigBlock
   json={{

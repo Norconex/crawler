@@ -13,14 +13,16 @@ Kerberos/SPNEGO authentication settings for HDFS WebHDFS access.
 
 ## Notes
 
-Used by `HdfsFetcher` when `authMethod` is set to `KERBEROS`.
+Shared by two fetchers: `HdfsFetcher` when its `authMethod` is `KERBEROS`, and
+the web `HttpClientFetcher` when its authentication method is `KERBEROS` or
+`SPNEGO`. `servicePrincipalName` applies to the web case only.
 
 At a minimum, provide a valid Kerberos configuration (`krb5.conf`) and one
 of the following authentication mechanisms:
 
 - keytab-based login (`keytabPath` + `principal`)
 - ticket-cache login (`useTicketCache`)
-- username/password JAAS login through HDFS fetcher credentials
+- username/password JAAS login through the fetcher's credentials
 
 When `loginModuleName` is not set, the crawler creates a built-in JAAS
 configuration from the provided properties.
@@ -60,62 +62,85 @@ required.
 
 ## Examples
 
-<ReferenceExamples
-  examples={[
-    {
-      title: "Kerberos with Keytab",
-      description: "Uses a keytab and principal for non-interactive authentication.",
-      codeByLanguage: {
-        yaml: `class: HdfsFetcher
+Uses a keytab and principal for non-interactive authentication against HDFS.
+
+<ConfigBlock
+  yaml={`class: HdfsFetcher
 authMethod: KERBEROS
 kerberosConfig:
   krb5ConfigPath: /etc/krb5.conf
   keytabPath: /etc/security/keytabs/hdfs-user.keytab
-  principal: hdfs-user@EXAMPLE.COM`,
-        json: `{
-  "class": "HdfsFetcher",
-  "authMethod": "KERBEROS",
-  "kerberosConfig": {
-    "krb5ConfigPath": "/etc/krb5.conf",
-    "keytabPath": "/etc/security/keytabs/hdfs-user.keytab",
-    "principal": "hdfs-user@EXAMPLE.COM"
-  }
-}`,
-        xml: `<fetcher class="HdfsFetcher">
-  <authMethod>KERBEROS</authMethod>
-  <kerberosConfig>
-    <krb5ConfigPath>/etc/krb5.conf</krb5ConfigPath>
-    <keytabPath>/etc/security/keytabs/hdfs-user.keytab</keytabPath>
-    <principal>hdfs-user@EXAMPLE.COM</principal>
-  </kerberosConfig>
-</fetcher>`,
-      },
-    },
-    {
-      title: "Kerberos with Ticket Cache",
-      description: "Uses existing Kerberos tickets from the system cache.",
-      codeByLanguage: {
-        yaml: `class: HdfsFetcher
+  principal: hdfs-user@EXAMPLE.COM`}
+  json={{
+    "class": "HdfsFetcher",
+    "authMethod": "KERBEROS",
+    "kerberosConfig": {
+      "krb5ConfigPath": "/etc/krb5.conf",
+      "keytabPath": "/etc/security/keytabs/hdfs-user.keytab",
+      "principal": "hdfs-user@EXAMPLE.COM"
+    }
+  }}
+  xml={`
+    <fetcher class="HdfsFetcher">
+      <authMethod>KERBEROS</authMethod>
+      <kerberosConfig>
+        <krb5ConfigPath>/etc/krb5.conf</krb5ConfigPath>
+        <keytabPath>/etc/security/keytabs/hdfs-user.keytab</keytabPath>
+        <principal>hdfs-user@EXAMPLE.COM</principal>
+      </kerberosConfig>
+    </fetcher>`}
+/>
+
+Uses whatever ticket is already in the system cache, as left by `kinit`. No
+keytab or password is needed, but the ticket has to be kept alive for the
+length of the crawl.
+
+<ConfigBlock
+  yaml={`class: HdfsFetcher
 authMethod: KERBEROS
 kerberosConfig:
   krb5ConfigPath: /etc/krb5.conf
-  useTicketCache: true`,
-        json: `{
-  "class": "HdfsFetcher",
-  "authMethod": "KERBEROS",
-  "kerberosConfig": {
-    "krb5ConfigPath": "/etc/krb5.conf",
-    "useTicketCache": true
-  }
-}`,
-        xml: `<fetcher class="HdfsFetcher">
-  <authMethod>KERBEROS</authMethod>
-  <kerberosConfig>
-    <krb5ConfigPath>/etc/krb5.conf</krb5ConfigPath>
-    <useTicketCache>true</useTicketCache>
-  </kerberosConfig>
-</fetcher>`,
-      },
-    },
-  ]}
+  useTicketCache: true`}
+  json={{
+    "class": "HdfsFetcher",
+    "authMethod": "KERBEROS",
+    "kerberosConfig": {
+      "krb5ConfigPath": "/etc/krb5.conf",
+      "useTicketCache": true
+    }
+  }}
+  xml={`
+    <fetcher class="HdfsFetcher">
+      <authMethod>KERBEROS</authMethod>
+      <kerberosConfig>
+        <krb5ConfigPath>/etc/krb5.conf</krb5ConfigPath>
+        <useTicketCache>true</useTicketCache>
+      </kerberosConfig>
+    </fetcher>`}
+/>
+
+Web crawling against a SPNEGO-protected site, where the service principal
+identifies the target server.
+
+<ConfigBlock
+  yaml={`authMethod: SPNEGO
+kerberosConfig:
+  krb5ConfigPath: /etc/krb5.conf
+  servicePrincipalName: HTTP/intranet.example.com@EXAMPLE.COM
+  useTicketCache: true`}
+  json={{
+    "authMethod": "SPNEGO",
+    "kerberosConfig": {
+      "krb5ConfigPath": "/etc/krb5.conf",
+      "servicePrincipalName": "HTTP/intranet.example.com@EXAMPLE.COM",
+      "useTicketCache": true
+    }
+  }}
+  xml={`
+    <authMethod>SPNEGO</authMethod>
+    <kerberosConfig>
+      <krb5ConfigPath>/etc/krb5.conf</krb5ConfigPath>
+      <servicePrincipalName>HTTP/intranet.example.com@EXAMPLE.COM</servicePrincipalName>
+      <useTicketCache>true</useTicketCache>
+    </kerberosConfig>`}
 />

@@ -1,0 +1,61 @@
+---
+component: AclMapping
+module: committer/googlecloudsearch
+locale: en
+propertyCoverage: all
+---
+
+# AclMapping
+
+## Summary
+
+Maps a document field to a Google Cloud Search ACL principal.
+
+## Notes
+
+Each mapping takes the value or values of one document field, reads them as
+security principals, and adds them to one of an item's three access lists.
+Several mappings can be declared — one for the users allowed to read, another
+for a group, another for owners.
+
+Principals must be resolvable in the Google Cloud identity source backing your
+data source, otherwise the item ends up visible to nobody.
+
+## Properties
+
+### fromField
+
+Document field holding the principal value or values — the users, groups or
+customer identifier this entry applies to.
+
+### principalType
+
+What the field values represent: `USER`, `GROUP`, or `CUSTOMER` for everyone in
+the domain. Defaults to `USER`.
+
+### target
+
+Which access list the principals are added to: `READERS` to grant access,
+`DENIED_READERS` to deny it, or `OWNERS`.
+
+## Examples
+
+Grants read access to the principals listed in an `acl_readers` field, and
+denies it to those in `acl_denied`.
+
+<ConfigBlock
+  json={{
+    "aclMappings": [
+      {
+        "fromField": "acl_readers",
+        "principalType": "USER",
+        "target": "READERS"
+      },
+      {
+        "fromField": "acl_denied",
+        "principalType": "GROUP",
+        "target": "DENIED_READERS"
+      }
+    ]
+  }}
+/>

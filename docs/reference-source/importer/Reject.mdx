@@ -25,7 +25,7 @@ An optional, user-supplied label for this step in the importer pipeline. It has 
 
 ### message
 
-TODO: Add documentation for this property.
+Text logged as the reason for the rejection. Without it the log names the condition that triggered the rejection, or the handler itself. Worth setting when several `Reject` handlers can fire, so the log says which rule dropped the document.
 
 ## Examples
 

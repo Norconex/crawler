@@ -1,0 +1,46 @@
+---
+component: StructuredDataMapping
+module: committer/googlecloudsearch
+locale: en
+propertyCoverage: all
+---
+
+# StructuredDataMapping
+
+## Summary
+
+Declares the Google Cloud Search value type to use for a document field sent as
+structured data.
+
+## Notes
+
+Structured data lets you send fields beyond Google's standard metadata set, but
+each one has to be typed so Cloud Search can index, filter and sort it
+correctly. The type declared here must match the property's type in the schema
+registered for your data source — a mismatch is rejected at commit time.
+
+## Properties
+
+### field
+
+Name of the document field this mapping applies to. It must also exist as a
+property in your data source's Cloud Search schema.
+
+### type
+
+Value type of the field: `TEXT` (the default), `INTEGER`, `DOUBLE`, `DATE`,
+`TIMESTAMP`, `BOOLEAN`, `ENUM` or `HTML`.
+
+## Examples
+
+Sends a price as a number and a publication date as a date, so both can be
+sorted and filtered on.
+
+<ConfigBlock
+  json={{
+    "structuredDataMappings": [
+      { "field": "price", "type": "DOUBLE" },
+      { "field": "published", "type": "DATE" }
+    ]
+  }}
+/>

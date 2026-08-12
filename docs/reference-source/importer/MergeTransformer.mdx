@@ -13,17 +13,23 @@ Merge multiple metadata fields into a single one.
 
 ## Notes
 
-**TODO: outdated document, need to rewrite**
+Each entry under `operations` selects source fields with a `fieldMatcher` and
+writes their combined values to `toField`.
 
-Use `fromFields ` to list all fields to merge, separated by commas. Use `fromFieldsRegex` to match fields to merge using a regular expression. Both `fromFields` and `fromFieldsRegex` can be used together. Matching fields from both will be combined, in the order provided/matched, starting with `fromFields` entries.
+By default every value is added to the target field, making it multi-valued.
+Set `singleValue` to `true` to combine them into one string instead, joined by
+`singleValueSeparator` — or by nothing at all if no separator is given.
 
-Unless `singleValue` is set to true, each value will be added to the target field, making it a multi-value field. If `singleValue` is set to `true`, all values will be combined into one string, optionally separated by the `singleValueSeparator`. Single values will be constructed without any separator if none are specified.
+Set `deleteFromFields` to `true` to remove the source fields once merged. The
+target field may itself be one of the source fields: its content is then
+replaced by the merged result, and it survives even with `deleteFromFields`
+enabled.
 
-You can optionally decide do delete source fields after they were merged by setting `deleteFromFields` to `true`.
-
-The target field can be one of the "from" fields. In such case its content will be replaced with the result of the merge (it will not be deleted even if deleteFromFields is true).
-
-If only a single source field is specified or found, it will be copied to the target field and its multi-values will still be merged to a single one if configured to do so. In such cases, this class can become an alternative to using [ForceSingleValueTagger TODO](https://opensource.norconex.com/importer/v3/apidocs/com/norconex/importer/handler/tagger/impl/ForceSingleValueTagger.html) with a `mergeWith` action.
+When the matcher finds only one field, its values are copied to the target and
+still collapsed to a single value if configured to. That makes this handler an
+alternative to
+[ForceSingleValueTransformer](./ForceSingleValueTransformer) with a `mergeWith`
+action.
 
 Can be used both as a pre-parse or post-parse handler.
 
@@ -35,7 +41,7 @@ An optional, user-supplied label for this step in the importer pipeline. It has 
 
 ### operations
 
-Specifies the type of merge operation to be performed. (TODO- "operations" redundancy)
+One or more merges to perform, each naming the fields to merge, the field to merge them into, and whether to collapse the result to a single value. See [MergeOperation](./MergeOperation).
 
 ## Examples
 

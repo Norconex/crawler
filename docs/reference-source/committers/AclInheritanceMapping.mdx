@@ -1,0 +1,52 @@
+---
+component: AclInheritanceMapping
+module: committer/googlecloudsearch
+locale: en
+propertyCoverage: all
+---
+
+# AclInheritanceMapping
+
+## Summary
+
+Declares which document field holds the parent item reference used for Google
+Cloud Search ACL inheritance.
+
+## Notes
+
+Lets an item inherit access rules from a parent instead of carrying the whole
+set itself — a file inheriting from its folder, a page from its site. The
+parent is identified by a reference stored on the document, and the inheritance
+type decides who wins when parent and child disagree.
+
+## Properties
+
+### aclInheritanceType
+
+How the child's own ACLs combine with the parent's:
+
+| Value | Effect |
+| --- | --- |
+| `NOT_APPLICABLE` | No inheritance; the item's own ACLs decide. The default. |
+| `CHILD_OVERRIDE` | The child's ACLs win where the two conflict. |
+| `PARENT_OVERRIDE` | The parent's ACLs win where the two conflict. |
+| `BOTH_PERMIT` | Access requires both parent and child to permit it. |
+
+### fromField
+
+Document field holding the reference of the parent item to inherit from. The
+value must match the parent's item reference as committed.
+
+## Examples
+
+Inherits access from the folder named in a `parent_folder` field, with the
+parent's rules taking precedence.
+
+<ConfigBlock
+  json={{
+    "aclInheritanceMapping": {
+      "fromField": "parent_folder",
+      "aclInheritanceType": "PARENT_OVERRIDE"
+    }
+  }}
+/>

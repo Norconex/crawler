@@ -19,7 +19,7 @@ Defines a single replacement operation for the ReplaceTransformer. Specifies sou
 
 ### discardUnchanged
 
-TODO: Add documentation for this property.
+Whether values left untouched by the replacement are dropped instead of kept. Default is `false`, which keeps every value whether it matched or not. Set it to `true` to end up with only the values that actually changed.
 
 ### fieldMatcher
 
@@ -35,7 +35,7 @@ The target metadata field name where the extracted or computed value will be sto
 
 ### toValue
 
-TODO: Add documentation for this property.
+The replacement text for whatever `valueMatcher` matched. Treated as an empty string when unset, which deletes the matched portion. With a regular-expression `valueMatcher`, group references such as `$1` are available.
 
 ### valueMatcher
 

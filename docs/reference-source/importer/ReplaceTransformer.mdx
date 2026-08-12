@@ -38,11 +38,7 @@ Max characters to read at once
 
 ### operations
 
-- **fieldMatcher**: Defines the fields in which replacements should occur, using patterns or expressions to specify the target fields.
-- **valueMatcher**: Specifies the criteria or pattern to identify the values within the matched fields that should be replaced.
-- **toValue**: Indicates the new value to substitute for the matched values in the specified fields.
-
-**TODO: insert to the children nodes**
+One or more replacements to perform, each pairing a `fieldMatcher` (which fields), a `valueMatcher` (what to replace) and a `toValue` (what to put there). They can also write to a different `toField` and drop values left unchanged. See [ReplaceOperation](./ReplaceOperation).
 
 ### sourceCharset
 

@@ -13,23 +13,31 @@ Transforms an image using common image operations.
 
 ## Notes
 
-This class should only be used as a pre-parsing handler, on image files. It may also be appropriate to disable parsing of those images if you want to keep the transformed version intact. This can be done with [GenericDocumentParserFactory]{TODO link}.
+Scales, rotates, crops and converts images, replacing the document content with
+the transformed image. Operations are applied in that order: **scale, rotate,
+crop**, so `crop` coordinates refer to the image as scaling and rotation left
+it.
 
-### Content-types
-By default, this filter is restricted to (applies only to) documents matching the restrictions returned by [CommonRestrictions.imageIOStandardContentTypes(String)](TODO link). You can specify your own content types if you know they represent a supported image.
+Use it as a pre-parse handler, before any parser runs. If you want the
+transformed image kept as-is, make sure no parser handler runs on these
+documents afterwards — parsing replaces the binary content with extracted text.
 
-### Image dimension format
-For a list of supported image dimension formats, refer to [DimensionConverter](TODO link).
+By default only the image formats
+[ImageIO](https://docs.oracle.com/en/java/javase/21/docs/api/java.desktop/javax/imageio/ImageIO.html)
+supports are processed; see `contentTypeMatcher`.
 
 ## Properties
 
 ### contentTypeMatcher
 
-TODO??? whats the diff between this and the one below??? Defines the character encoding to be applied to the document after processing, ensuring correct output formatting.
+The content types this handler applies to. Documents of any other type pass
+through untouched. Defaults to the standard ImageIO-readable types (JPEG, PNG,
+GIF, BMP, WBMP), so widen it only for a format you know ImageIO can read.
 
 ### crop
 
-Specifies the cropping dimensions for the image.
+Region of the image to keep, given as a top-left corner plus a size. Applied
+after scaling and rotation. See [Crop](./Crop).
 
 ### label
 
@@ -37,24 +45,28 @@ An optional, user-supplied label for this step in the importer pipeline. It has 
 
 ### rotation
 
-Specifies the rotation angle for the image.
+Rotation angle in degrees, from `-360` to `360`. Positive values rotate
+clockwise. Applied after scaling and before cropping.
 
 ### scale
 
-Specifies the scaling factor for the image.
+Target size or ratio for the image, and whether its aspect ratio may be
+distorted to reach it. Applied first. See [Scale](./Scale).
 
 ### targetFormat
 
-TODO: Add documentation for this property.
+Format the transformed image is written in — `png` (the default), `jpg`, `gif`,
+`bmp`, `wbmp`, or any other format ImageIO can write. Set it to convert images
+as well as resize them.
 
 ## Examples
 
-The following example converts images to PNG while scaling it to a maximum dimension of 400 pixels wide and 250 pixel high.
+Converts images to PNG while scaling them to fit within 400 × 250 pixels.
 
 <ConfigBlock
   json={{
     "handler": {
-      "class": "ExternalTransformer",
+      "class": "ImageTransformer",
       "targetFormat": "png",
       "scale": {
         "width": 400,
@@ -62,4 +74,12 @@ The following example converts images to PNG while scaling it to a maximum dimen
       }
     }
   }}
+  xml={`
+    <handler class="ImageTransformer">
+      <targetFormat>png</targetFormat>
+      <scale>
+        <width>400</width>
+        <height>250</height>
+      </scale>
+    </handler>`}
 />

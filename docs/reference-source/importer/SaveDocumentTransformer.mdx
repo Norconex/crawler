@@ -19,15 +19,23 @@ Saves a copy of the document in its current processing state to a specified dire
 
 ### defaultFileName
 
-TODO: Add documentation for this property.
+File name used when the path derived from the reference turns out to be a
+directory — for a reference ending in `/`, or one that is a prefix of another
+already saved. Defaults to `default.file`; `index.html` is a natural choice when
+saving crawled web pages.
 
 ### dirSplitPattern
 
-TODO: Add documentation for this property.
+Regular expression matching the separators used to split a document reference
+into sub-directories. Defaults to `[\:/]`, which turns
+`https://example.com/a/b.html` into `https/example.com/a/b.html`. Set it to a
+pattern that matches nothing to save every document in one flat directory.
 
 ### escape
 
-TODO: Add documentation for this property.
+Whether each path segment is rewritten into a file-system-safe name. Default is
+`false`. Turn it on when references contain characters the file system rejects —
+query strings, colons, wildcards — otherwise saving them fails.
 
 ### label
 
@@ -35,17 +43,29 @@ An optional, user-supplied label for this step in the importer pipeline. It has 
 
 ### maxPathLength
 
-TODO: Add documentation for this property.
+Maximum length of the full saved path, including `saveDir`. Paths longer than
+this are truncated and given a short hash to keep them unique. Default is `-1`,
+and any value under `10` also means unlimited.
+
+Useful on Windows, where the classic path limit is 260 characters and long
+crawled URLs overrun it. If `saveDir` itself is already too long to leave room
+for the hash, truncation is skipped and a warning is logged once.
 
 ### pathToField
 
-TODO: Add documentation for this property.
+Name of a metadata field in which to store the path of the saved file. Leave it
+unset if you don't need the document to carry its own save location.
 
 ### saveDir
 
-TODO: Add documentation for this property.
+Directory the copies are written to. Defaults to `./savedDocuments`, relative to
+the working directory. Sub-directories are created under it following
+`dirSplitPattern`.
 
 ## Examples
+
+Saves a copy of each document under `/path/to/save/documents`, recording where
+it went in a `file.path` field.
 
 <ConfigBlock
   json={{

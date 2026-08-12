@@ -49,6 +49,6 @@ Matches documents where both `title` and `dc:title` are blank or missing.
   }}
   xml={`
     <condition class="BlankCondition">
-      <fieldMatcher method="regex">(title|dc:title)</fieldMatcher>
+      <fieldMatcher method="regex" pattern="(title|dc:title)"/>
     </condition>`}
 />

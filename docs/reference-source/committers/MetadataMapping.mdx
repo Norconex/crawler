@@ -1,0 +1,67 @@
+---
+component: MetadataMapping
+module: committer/googlecloudsearch
+locale: en
+propertyCoverage: all
+---
+
+# MetadataMapping
+
+## Summary
+
+Maps a document field to one of Google Cloud Search's standard item metadata
+fields.
+
+## Notes
+
+Google Cloud Search items carry a fixed set of metadata fields. These mappings
+say which of your document fields fills each one — a `dc:title` becoming
+`title`, a `last_modified` becoming `updateTime`.
+
+Anything not mapped here can still be sent as structured data; see
+[StructuredDataMapping](./StructuredDataMapping).
+
+## Properties
+
+### defaultValue
+
+Value used when `fromField` is missing or blank on a document. Set it alone,
+without `fromField`, to give every item the same constant value.
+
+### fromField
+
+Document field supplying the value.
+
+### keepFromField
+
+Whether `fromField` is also kept in the item's structured data rather than only
+being mapped to `toField`. Default is `false`, which moves the value rather
+than copying it.
+
+### toField
+
+The Google Cloud Search metadata field to populate: `title`, `objectType`,
+`mimeType`, `updateTime`, `createTime`, `containerName`, `contentLanguage`,
+`sourceRepositoryUrl`, `hash`, `keywords` or `searchQualityMetadata`. Required.
+
+## Examples
+
+Fills the item title from `dc:title`, falling back to a constant, and sets the
+update time from the crawler's last-modified field.
+
+<ConfigBlock
+  json={{
+    "metadataMappings": [
+      {
+        "fromField": "dc:title",
+        "toField": "title",
+        "defaultValue": "Untitled"
+      },
+      {
+        "fromField": "document.lastModified",
+        "toField": "updateTime",
+        "keepFromField": true
+      }
+    ]
+  }}
+/>

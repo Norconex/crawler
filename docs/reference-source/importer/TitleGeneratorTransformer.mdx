@@ -31,10 +31,7 @@ This class should be used as a post-parsing handler only (or otherwise on unform
 The algorithm to detect titles is quite basic. It uses a generic statistics-based approach to weight each sentences up to a certain amount, and simply returns the sentence with the highest attributed weight given a minimum threshold has been met. You are strongly encouraged to use a more sophisticated summarization engine if you want more accurate titles generated.
 
 ### Max read size
-This tagger will only analyze up to the first 10,000 characters. You can change this maximum with `AbstractStringTagger.setMaxReadSize(int)`. Given this class is not optimized for large content analysis, setting a huge maximum number of characters could cause serious performance issues on large large files.
-
-**TODO: what to do for inline document**
-**TODO: do we need function description here?? e.g. the paragraph of the isDetectHeading, setDetectHeadingMinLength..etc**
+Only the beginning of the content is analyzed, as set by `maxReadSize`. This handler is not optimized for large content, so raising that limit a long way can cost real performance on big files.
 
 ## Properties
 
@@ -48,7 +45,7 @@ Specifies the maximum length of a heading to be considered for title generation.
 
 ### detectHeadingMinLength
 
-TODO: Add documentation for this property.
+Shortest run of text that may be taken as a heading when `detectHeading` is on. Default is `10` characters, which filters out stray short lines that are rarely titles.
 
 ### fieldMatcher
 
@@ -56,7 +53,7 @@ Matches document fields based on specified patterns and methods
 
 ### fromField
 
-TODO- remove the redundancy `fromField` and `toField`
+Field whose text the title is generated from. Defaults to the document content, which is the usual choice — set this only when the text you want a title for lives in a field.
 
 ### label
 

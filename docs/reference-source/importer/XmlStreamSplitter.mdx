@@ -44,10 +44,9 @@ To split on `<animal>`, you would use this in `path`:
 Should be used as a pre-parse handler.
 
 ### Content-types
-By default, this filter is restricted to (applies only to) documents matching the restrictions returned by CommonRestrictions.xmlContentTypes(String). You can specify your own restrictions to further narrow, or loosen what documents this splitter applies to.
+By default only XML content types are processed; anything else passes through untouched. Use `contentTypeMatcher` to narrow or widen that set.
 
-**TODO: restricted to is no longer valid, remove and mention flow-control???**
-**what about ContentTypes???**
+To restrict this splitter by anything other than content type — a URL pattern, a metadata value — wrap it in an `if` block. See [Importer Flow Control](../importer-flow-control).
 
 ## Properties
 

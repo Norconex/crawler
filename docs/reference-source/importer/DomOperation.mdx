@@ -19,11 +19,11 @@ Defines a single DOM extraction or deletion operation for the DomTransformer. Sp
 
 ### defaultValue
 
-TODO: Add documentation for this property.
+Value stored in `toField` when the selector matches nothing. Without it, no field is created for documents where the selector finds nothing. Not applicable when `delete` is `true`.
 
 ### delete
 
-TODO: Add documentation for this property.
+Whether to delete the matching elements from the document instead of extracting them. Default is `false`. When `true`, `toField`, `defaultValue` and `extract` do not apply — the operation removes markup rather than reading it.
 
 ### extract
 
@@ -31,7 +31,7 @@ Specifies what to extract from the matched DOM element (e.g., `text`, `html`, `o
 
 ### matchBlanks
 
-TODO: Add documentation for this property.
+Whether an element with a blank value counts as a match, storing an empty string. Default is `false`, which treats blank elements as no match at all.
 
 ### onSet
 

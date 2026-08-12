@@ -9,26 +9,35 @@ propertyCoverage: all
 
 ## Summary
 
-Image scaling parameters (width, height, factor, stretch) for an image transformation.
+Image scaling parameters (width, height, factor, stretch) for an image
+transformation.
 
 ## Notes
 
-Defines image scaling parameters for an image transformation operation, including the target width, height, optional scale factor, and whether to stretch the image (ignoring aspect ratio).
+Scaling can be expressed two ways, and both are applied when both are set:
+`factor` resizes by a ratio, while `width` and `height` resize toward a target
+size. Scaling happens before rotation and cropping.
 
 ## Properties
 
 ### factor
 
-TODO: Add documentation for this property.
+Ratio applied to both dimensions — `0.5` halves the image, `2` doubles it.
+Aspect ratio is always preserved.
 
 ### height
 
-TODO: Add documentation for this property.
+Target height in pixels. If only one of `height` and `width` is set, the same
+value is used for both. What the target means depends on `stretch`.
 
 ### stretch
 
-TODO: Add documentation for this property.
+Whether the image may be distorted to hit the target size exactly. Default is
+`false`, which treats `width` and `height` as a bounding box and preserves the
+aspect ratio — the result fits inside the box but rarely fills it. Set it to
+`true` to force the exact dimensions.
 
 ### width
 
-The width dimension, in pixels or as a percentage depending on context.
+Target width in pixels. If only one of `height` and `width` is set, the same
+value is used for both. What the target means depends on `stretch`.

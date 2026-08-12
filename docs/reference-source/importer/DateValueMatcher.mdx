@@ -19,7 +19,11 @@ Specifies a date value and a comparison operator (such as before, after, or equa
 
 ### date
 
-TODO: Add documentation for this property.
+The date to compare against, absolute or relative.
+
+Absolute dates are written `yyyy-MM-dd` or `yyyy-MM-ddThh:mm:ss[.SSS]` — `2015-05-31`, `2015-05-31T22:44:15`.
+
+Relative dates start from `TODAY` (current day, no time) or `NOW` (current day with time), optionally offset by a number of units: `NOW-7d` for a week ago, `TODAY+1M` for next month. Units are `Y`, `M`, `D`, `h`, `m`, `s`. Append `*` — `NOW-7d*` — to have the reference moment refresh on each evaluation rather than being fixed the first time it is used.
 
 ### operator
 
@@ -27,4 +31,5 @@ The logical operator used to combine multiple conditions (`AND` or `OR`).
 
 ### zoneId
 
-TODO: Add documentation for this property.
+Time zone for this matcher's date when the expression does not carry one. Takes precedence over the condition-level `conditionZoneId`.
+

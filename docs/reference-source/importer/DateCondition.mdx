@@ -23,7 +23,7 @@ The default time zone applied to condition dates that do not specify their own. 
 
 ### docZoneId
 
-TODO: Add documentation for this property.
+Time zone applied to document dates that carry none of their own, such as `America/New_York` or `UTC`. It has no effect on values whose format already includes a zone. Defaults to UTC, which matters once you compare at hour or minute granularity.
 
 ### fieldMatcher
 
@@ -31,7 +31,7 @@ Matches document fields based on specified patterns and methods. Use this to res
 
 ### format
 
-TODO: Add documentation for this property.
+Pattern describing how the date is written in the document field, using [DateTimeFormatter](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/time/format/DateTimeFormatter.html) syntax — `yyyy-MM-dd`, `yyyy-MM-dd'T'HH:mm:ssZ`, and so on. When unset, field values are read as EPOCH milliseconds. Values that do not parse are treated as non-matching.
 
 ### label
 

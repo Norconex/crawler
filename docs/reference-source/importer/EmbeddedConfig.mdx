@@ -19,16 +19,19 @@ Controls how the DefaultParser handles embedded documents (such as email attachm
 
 ### maxEmbeddedDepth
 
-TODO: Add documentation for this property.
+How deep to follow embedded documents. `0` is the container itself, `1` its immediate attachments, and so on. Default is `-1`, unlimited. Embedded documents nest — a zip holding an email holding a PDF — so a limit is worth setting when containers are untrusted.
 
 ### skipEmbeddedContentTypes
 
-TODO: Add documentation for this property.
+Content types of the **embedded** documents to leave unparsed, whatever contains them. A common use is skipping the images embedded in office documents, which are numerous and rarely worth extracting.
 
 ### skipEmbeddedOfContentTypes
 
-TODO: Add documentation for this property.
+Content types of **container** files whose embedded documents should not be parsed at all. Use it to ignore the innards of a container type wholesale — the container itself is still processed.
 
 ### splitContentTypes
 
-TODO: Add documentation for this property.
+Content types of container files whose embedded documents should become documents in their own right. By default nothing is split: embedded content and metadata are merged into the parent.
+
+Split documents go through the whole import cycle themselves, this parser included, and are returned as a nested tree under the container.
+

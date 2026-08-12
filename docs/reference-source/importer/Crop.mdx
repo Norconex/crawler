@@ -13,22 +13,30 @@ Cropping dimensions (x, y, width, height) for an image transformation.
 
 ## Notes
 
-Defines the cropping dimensions for an image transformation operation, specifying the x/y offset and the width/height of the region to retain.
+Defines the region of the image to keep: `x` and `y` give its top-left corner,
+`width` and `height` its size. Everything outside that rectangle is discarded.
+
+Cropping is applied last, after scaling and rotation, so the coordinates refer
+to the image as those steps left it.
 
 ## Properties
 
 ### height
 
-TODO: Add documentation for this property.
+Height of the region to keep, in pixels. If only one of `height` and `width` is
+set, the same value is used for both, giving a square.
 
 ### width
 
-The width dimension, in pixels or as a percentage depending on context.
+Width of the region to keep, in pixels. If only one of `height` and `width` is
+set, the same value is used for both, giving a square.
 
 ### x
 
-TODO: Add documentation for this property.
+Distance in pixels from the left edge of the image to the left edge of the
+region to keep. Defaults to `0`.
 
 ### y
 
-TODO: Add documentation for this property.
+Distance in pixels from the top of the image to the top of the region to keep.
+Defaults to `0`.

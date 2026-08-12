@@ -19,7 +19,7 @@ Defines a single merge operation for the MergeTransformer. Specifies the source 
 
 ### deleteFromFields
 
-TODO: Add documentation for this property.
+Whether the source fields are removed once merged. Default is `false`. When `toField` is itself one of the source fields it is kept regardless, holding the merged result.
 
 ### fieldMatcher
 
@@ -27,11 +27,11 @@ Matches document fields based on specified patterns and methods. Use this to res
 
 ### singleValue
 
-TODO: Add documentation for this property.
+Whether the merged values are joined into one value rather than kept as a multi-valued field. Default is `false`.
 
 ### singleValueSeparator
 
-TODO: Add documentation for this property.
+Text placed between values when `singleValue` is `true` — a comma, a space, a pipe. Without it the values are concatenated with nothing between them.
 
 ### toField
 
