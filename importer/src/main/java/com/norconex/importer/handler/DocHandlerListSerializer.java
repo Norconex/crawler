@@ -58,22 +58,34 @@ public class DocHandlerListSerializer
         gen.writeEndArray();
     }
 
+    /*
+     * Element names are written one of two ways, depending on generator state.
+     * Raw writes (used for the flow-control tags) do not advance that state, so
+     * it is tracked here instead: until the first POJO of an element has been
+     * written, the generator is positioned on a value and only setNextName
+     * applies; afterwards it expects a property name and writeName applies.
+     * "atStart" carries that distinction down the recursion.
+     */
+    private void writeXmlName(
+            String name, ToXmlGenerator gen, boolean atStart) {
+        if (atStart) {
+            gen.setNextName(QName.valueOf(name));
+        } else {
+            gen.writeName(name);
+        }
+    }
+
     private void writeXmlDocHandlerList(
             List<DocHandler> handlers,
             ToXmlGenerator gen,
-            boolean isRoot) {
-        var first = true;
+            boolean atStart) {
+        var first = atStart;
         for (var handler : handlers) {
             if ((handler instanceof ConditionalDocHandler condHandler)) {
                 writeXmlConditionalHandler(
-                        condHandler.getName(), condHandler, gen);
+                        condHandler.getName(), condHandler, gen, first);
             } else {
-                // no idea why, but first field name can't be written.
-                if (!isRoot || !first) {
-                    gen.writeName(DocHandler.NAME);
-                } else {
-                    gen.setNextName(QName.valueOf(DocHandler.NAME));
-                }
+                writeXmlName(DocHandler.NAME, gen, first);
                 gen.writePOJO(handler);
             }
             first = false;
@@ -82,11 +94,11 @@ public class DocHandlerListSerializer
 
     private void writeXmlConditionalHandler(
             String tagName, ConditionalDocHandler condHandler,
-            ToXmlGenerator gen) {
+            ToXmlGenerator gen, boolean atStart) {
         gen.writeRaw("<%s>".formatted(tagName));
         gen.flush();
 
-        writeXmlCondition(condHandler.getCondition(), gen);
+        writeXmlCondition(condHandler.getCondition(), gen, atStart);
 
         gen.writeRaw("<then>");
         gen.flush();
@@ -106,22 +118,24 @@ public class DocHandlerListSerializer
     }
 
     private void writeXmlCondition(
-            Condition condition, ToXmlGenerator gen) {
+            Condition condition, ToXmlGenerator gen, boolean atStart) {
         if (condition instanceof ConditionGroup condGroup) {
             var tag = WordUtils
                     .uncapitalize(condGroup.getClass().getSimpleName());
             gen.writeRaw("<condition>");
             gen.writeRaw("<%s>".formatted(tag));
             gen.flush();
+            var first = atStart;
             for (var cond : condGroup.getConditions()) {
-                gen.writeName("condition");
-                writeXmlCondition(cond, gen);
+                // each child writes its own "condition" name
+                writeXmlCondition(cond, gen, first);
+                first = false;
             }
             gen.writeRaw("</%s>".formatted(tag));
             gen.writeRaw("</condition>");
             gen.flush();
         } else {
-            gen.setNextName(QName.valueOf("condition"));
+            writeXmlName("condition", gen, atStart);
             gen.writePOJO(condition);
         }
     }
