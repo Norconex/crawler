@@ -94,6 +94,16 @@ public class DocHandlerListDeserializer
             JsonParser p,
             DeserializationContext ctxt) {
 
+        // An explicitly empty list is written as an empty element pair
+        // (e.g. <handlers></handlers>), which the parser reports as an empty
+        // string rather than an object. There is nothing to read, and
+        // advancing here would consume the enclosing element's END_OBJECT.
+        // A self-closing element is instead reported as null (see
+        // XmlReadFeature#EMPTY_ELEMENT_AS_NULL) and never reaches this method.
+        if (p.currentToken() != null && p.currentToken().isScalarValue()) {
+            return List.of();
+        }
+
         List<DocHandler> handlers = new ArrayList<>();
         while (p.nextToken() != JsonToken.END_OBJECT) {
             var name = p.currentName();

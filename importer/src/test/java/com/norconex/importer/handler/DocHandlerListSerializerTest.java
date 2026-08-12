@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.norconex.commons.lang.bean.BeanMapper;
 import com.norconex.commons.lang.bean.BeanMapper.Format;
@@ -168,24 +169,73 @@ class DocHandlerListSerializerTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = Format.class, names = { "JSON", "YAML" })
+    @EnumSource(Format.class)
     void testEmptyHandlerList(Format format) {
         var config = new ImporterConfig().setHandlers(List.of());
         assertThat(writeThenRead(config, format).getHandlers()).isEmpty();
     }
 
     /**
-     * Per the configuration semantics, an empty list in XML is written
-     * self-closing ({@code <handlers/>}); an empty element pair means an empty
-     * string, which is not a list. Reading the documented form must yield an
-     * empty handler list.
+     * An explicitly empty list must stay empty, in either XML spelling. A
+     * self-closing element is reported as null by the parser
+     * (XmlReadFeature#EMPTY_ELEMENT_AS_NULL) while an empty element pair — what
+     * the writer actually produces — is reported as an empty string, so the two
+     * reach the deserializer by different routes.
+     */
+    @ParameterizedTest
+    @ValueSource(
+        strings = {
+                "<importer><handlers/></importer>",
+                "<importer><handlers></handlers></importer>"
+        }
+    )
+    void testEmptyHandlerListXml(String xml) {
+        var config = BeanMapper.DEFAULT.read(
+                ImporterConfig.class, new StringReader(xml), Format.XML);
+        assertThat(config.getHandlers()).isEmpty();
+    }
+
+    /**
+     * An empty then/else list goes through the same reader, nested one level
+     * down, where over-reading would swallow the enclosing element.
      */
     @Test
-    void testEmptyHandlerListXml() {
+    void testEmptyThenListXml() {
         var config = BeanMapper.DEFAULT.read(ImporterConfig.class,
-                new StringReader("<importer><handlers/></importer>"),
+                new StringReader("""
+                        <importer><handlers>
+                          <if>
+                            <condition class="BlankCondition">
+                              <fieldMatcher pattern="title"/>
+                            </condition>
+                            <then></then>
+                          </if>
+                          <handler class="DebugTransformer"/>
+                        </handlers></importer>"""),
                 Format.XML);
-        assertThat(config.getHandlers()).isEmpty();
+        assertThat(config.getHandlers()).hasSize(2);
+        assertThat(((com.norconex.importer.handler.condition.If) config
+                .getHandlers().get(0)).getThenHandlers()).isEmpty();
+    }
+
+    /**
+     * Omitting the option entirely is not the same as an empty list: the
+     * documented default (a single DefaultParser) must remain in place.
+     */
+    @ParameterizedTest
+    @EnumSource(Format.class)
+    void testOmittedHandlersKeepsDefault(Format format) {
+        var source = switch (format) {
+            case XML -> "<importer><tempDir>/tmp/x</tempDir></importer>";
+            case JSON -> "{\"tempDir\":\"/tmp/x\"}";
+            case YAML -> "tempDir: /tmp/x\n";
+        };
+        var config = BeanMapper.DEFAULT.read(
+                ImporterConfig.class, new StringReader(source), format);
+        assertThat(config.getHandlers()).hasSize(1);
+        assertThat(config.getHandlers().get(0))
+                .isInstanceOf(
+                        com.norconex.importer.handler.parser.impl.DefaultParser.class);
     }
 
     @Test
