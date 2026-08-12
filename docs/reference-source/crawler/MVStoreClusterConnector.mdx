@@ -9,65 +9,66 @@ propertyCoverage: all
 
 ## Summary
 
-Configuration schema for MV Store Cluster Connector.
+File-backed crawl state using H2's MVStore engine. The default connector.
 
 ## Notes
 
-:::warning[Missing Documentation]
-Notes are missing. Add implementation details, caveats, and examples.
-:::
+Keeps crawl state in a local MVStore file, which is what makes a crawl
+resumable and incremental without any external infrastructure. This is the
+default: a crawler that declares no cluster connector runs on this one.
+
+The cluster instance is cached, so several crawl sessions pointing at the same
+connector share the same file rather than opening it twice.
+
+Being file-backed makes it single-node by definition. To spread a crawl across
+machines, use [HazelcastClusterConnector](./HazelcastClusterConnector);
+to keep everything in memory and discard it at exit, see
+[MemoryClusterConnector](./MemoryClusterConnector). Storage tuning lives in
+[MVStoreClusterConnectorConfig](./MVStoreClusterConnectorConfig), and its
+defaults are fine for most crawls.
 
 ## Properties
 
 ### `autoCommitBufferSize`
 
-Maximum size of the write buffer in KB before an automatic commit is triggered.
-A larger buffer can improve write throughput at the cost of higher memory usage
-and a larger potential data loss window on an unclean shutdown. Default: `1024`.
+Size in KB of the write buffer before changes are committed automatically.
+Default is `1024` (1 MB).
 
 ### `autoCommitDelay`
 
-Maximum delay in milliseconds before uncommitted changes are automatically
-flushed to disk. Lower values reduce the data loss window on crash but increase
-I/O frequency. Default: `1000`.
+How long in milliseconds before buffered changes are committed regardless of
+buffer size. Default is `1000`. Set to `0` to commit on buffer size alone.
 
 ### `autoCompactFillRate`
 
-Minimum percentage of live data required in a storage chunk before the store
-considers that chunk worth compacting. Lower values tolerate more fragmentation
-before compaction triggers; higher values compact more aggressively. Default: `40`.
+Fill rate percentage (0–100) below which the store compacts itself. Default is
+`40`. Lower compacts less often and leaves a larger file.
 
 ### `cacheSize`
 
-Size of the read cache in MB. A larger cache improves read performance for
-frequently accessed data at the cost of heap memory. Default: `16`.
+Read cache size in MB. Default is `16`.
 
 ### `compress`
 
-Compression level applied to stored data pages. `0` = no compression,
-`1` = fast LZF compression, `2` = Deflate high compression (smallest files,
-highest CPU cost). Default: `0`.
+Compression level: `0` for none (the default), `1` for fast (LZF), `2` for high
+(Deflate).
 
 ### `pageSplitSize`
 
-Target page size in bytes. Pages that grow beyond this threshold are split
-during write operations. Smaller values reduce read amplification; larger values
-reduce page-management overhead. Default: `4096`.
+Page split size in bytes. Default is `4096`. Larger pages read long values
+faster in sequence, at the cost of wasted space for small entries.
 
 ## Examples
 
-<ReferenceExamples
-  examples={[
-    {
-      title: "Minimal Example",
-      description: "Uses an MVStore file-backed cluster connector — the default standalone connector requiring no external infrastructure.",
-      codeByLanguage: {
-        yaml: `# TODO: Add YAML example`,
-        json: `{
-  "TODO": "Add JSON example"
-}`,
-        xml: `<TODO>Add XML example</TODO>`,
-      },
-    },
-  ]}
+<ConfigBlock
+  yaml={`
+    clusterConnector:
+      class: MVStoreClusterConnector`}
+  json={{
+    "clusterConnector": {
+      "class": "MVStoreClusterConnector"
+    }
+  }}
+  xml={`
+    <clusterConnector class="MVStoreClusterConnector"/>`}
 />

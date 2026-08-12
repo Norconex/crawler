@@ -83,35 +83,37 @@ Table field name where to store the document content. Leave blank  if you do not
 
 ## Examples
 
-The following example uses an H2 database and creates the table and  fields as they are encountered, storing all new fields as `VARCHAR`,  making sure those new fields are no longer than 5000 characters.
+Writes documents into a PostgreSQL table, creating it on first use and sanitizing field names that SQL will not accept.
 
 <ConfigBlock
   json={{
-    "class": "SqlCommitter",
-    "driverPath": "/path/to/driver/h2.jar",
-    "driverClass": "org.h2.Driver",
-    "connectionUrl": "jdbc:h2:file:///path/to/db/h2",
-    "tableName": "test_table",
-    "createTableSQL": "CREATE TABLE {tableName} (\n{primaryKey} VARCHAR(32672) NOT NULL, \ncontent CLOB, \nPRIMARY KEY ( {primaryKey} ), \ntitle   VARCHAR(256),\nauthor  VARCHAR(256))",
-    "createFieldSQL": "",
-    "fixFieldValues": true
+    "committer": {
+      "class": "SqlCommitter",
+      "connectionUrl": "jdbc:postgresql://localhost:5432/crawl",
+      "driverClass": "org.postgresql.Driver",
+      "credentials": {
+        "username": "crawler",
+        "password": "changeme"
+      },
+      "tableName": "documents",
+      "primaryKey": "id",
+      "createTableSQL": "CREATE TABLE documents (id VARCHAR(2048) NOT NULL PRIMARY KEY, content CLOB)",
+      "createFieldSQL": "ALTER TABLE documents ADD {{field}} VARCHAR(8000)",
+      "fixFieldNames": true
+    }
   }}
   xml={`
-    <committer>
-      <class>SqlCommitter</class>
-      <driverPath>/path/to/driver/h2.jar</driverPath>
-      <driverClass>org.h2.Driver</driverClass>
-      <connectionUrl>jdbc:h2:file:///path/to/db/h2</connectionUrl>
-      <tableName>test_table</tableName>
-      <createTableSQL>
-        CREATE TABLE {tableName} (
-        {primaryKey} VARCHAR(32672) NOT NULL, 
-        content CLOB, 
-        PRIMARY KEY ( {primaryKey} ), 
-        title   VARCHAR(256),
-        author  VARCHAR(256))
-      </createTableSQL>
-      <createFieldSQL/>
-      <fixFieldValues>true</fixFieldValues>
+    <committer class="SqlCommitter">
+      <connectionUrl>jdbc:postgresql://localhost:5432/crawl</connectionUrl>
+      <driverClass>org.postgresql.Driver</driverClass>
+      <credentials>
+        <username>crawler</username>
+        <password>changeme</password>
+      </credentials>
+      <tableName>documents</tableName>
+      <primaryKey>id</primaryKey>
+      <createTableSQL>CREATE TABLE documents (id VARCHAR(2048) NOT NULL PRIMARY KEY, content CLOB)</createTableSQL>
+      <createFieldSQL>ALTER TABLE documents ADD {{field}} VARCHAR(8000)</createFieldSQL>
+      <fixFieldNames>true</fixFieldNames>
     </committer>`}
 />

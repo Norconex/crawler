@@ -13,86 +13,154 @@ Configuration for Tesseract OCR text extraction from images and image-containing
 
 ## Notes
 
-Configuration for Optical Character Recognition (OCR) using Tesseract. Enables text extraction from images and image-containing documents (such as scanned PDFs). Supports configuring the Tesseract path, language data, image preprocessing, content-type restrictions, file size limits, and various Tesseract-specific options.
+Turns images into text: scanned PDFs, photographed pages, screenshots, TIFF
+archives. OCR runs through [Tesseract](https://github.com/tesseract-ocr/tesseract),
+which is **not bundled** — install it on the machine running the crawler, along
+with the language data for the languages you expect, and OCR activates once
+`tesseractPath` points at it.
+
+By default every supported image format is attempted (TIFF, PNG, JPEG, GIF,
+BMP, and images embedded in documents such as PDF). OCR is slow next to text
+extraction, so restricting it with `contentTypeMatcher` and the file-size
+bounds is usually worth doing on a large crawl.
+
+Most of the remaining settings map straight onto
+[Tika's Tesseract parameters](https://cwiki.apache.org/confluence/display/tika/TikaOCR),
+and leaving them unset means "whatever Tesseract does by default".
+
+:::note[Full distribution only]
+OCR is one of the optional features left out of the Standard distribution. Use
+the Full ZIP or an official Docker image, and note that Tesseract itself still
+has to be installed separately.
+:::
 
 ## Properties
 
 ### applyRotation
 
-TODO: Add documentation for this property.
+Whether to correct the rotation of an image before reading it. Costs a
+preprocessing pass; pays for itself on scans that are not square to the page.
 
 ### colorSpace
 
-TODO: Add documentation for this property.
+Colour space applied during image preprocessing, such as `gray`. Fed to
+ImageMagick, so `imageMagickPath` must be set for it to have any effect.
 
 ### contentTypeMatcher
 
-Restricts processing to documents whose content type matches the specified pattern. When not set, the handler applies to all content types.
+Restricts OCR to documents whose content type matches — `application/pdf`,
+`image/tiff`, and so on. Leave it unset to attempt OCR on every supported
+image format.
 
 ### density
 
-TODO: Add documentation for this property.
+Image resolution in DPI used during preprocessing. Higher values give the
+engine more to work with on small text, at the cost of time and memory.
 
 ### depth
 
-TODO: Add documentation for this property.
+Colour depth in bits used during preprocessing.
 
 ### disabled
 
-TODO: Add documentation for this property.
+Turns OCR off entirely, regardless of the other settings. Default is `false`.
 
 ### enableImagePreprocessing
 
-TODO: Add documentation for this property.
+Whether to run images through ImageMagick before OCR, applying `colorSpace`,
+`density`, `depth`, `filter` and `resize`. Requires `imageMagickPath`.
 
 ### filter
 
-TODO: Add documentation for this property.
+ImageMagick filter used when resizing during preprocessing, such as `triangle`.
 
 ### imageMagickPath
 
-TODO: Add documentation for this property.
+Path to the ImageMagick installation. Required for any of the preprocessing
+options to apply.
 
 ### language
 
-TODO: Add documentation for this property.
+Languages Tesseract should expect, as three-letter ISO 639-2 codes joined with
+`+` — for example `eng+fra`. Each one must be installed in your Tesseract
+language data. Defaults to English.
 
 ### maxFileSizeToOcr
 
-TODO: Add documentation for this property.
+Largest file, in bytes, that will be sent to OCR. A useful guard against a
+single enormous scan stalling a crawl.
 
 ### minFileSizeToOcr
 
-TODO: Add documentation for this property.
+Smallest file, in bytes, that will be sent to OCR. Screens out icons and
+spacer images that cost a Tesseract invocation and yield nothing.
 
 ### pageSegMode
 
-TODO: Add documentation for this property.
+Tesseract's page segmentation mode, as its numeric code — how it should assume
+the page is laid out (a single column, a single line, a single word, and so
+on).
 
 ### pageSeparator
 
-TODO: Add documentation for this property.
+Text inserted between pages in the extracted output.
 
 ### preserveInterwordSpacing
 
-TODO: Add documentation for this property.
+Whether to keep the original spacing between words rather than normalising it.
 
 ### resize
 
-TODO: Add documentation for this property.
+Resize percentage applied during preprocessing.
 
 ### skipOcr
 
-TODO: Add documentation for this property.
+Skips OCR for documents that already carry extractable text, so only the
+image-only ones pay the cost.
 
 ### tessdataPath
 
-TODO: Add documentation for this property.
+Path to the Tesseract language data directory (`tessdata`), when it is not
+where Tesseract expects it.
 
 ### tesseractPath
 
-TODO: Add documentation for this property.
+Path to the Tesseract executable. **OCR stays inactive until this is set.**
 
 ### timeoutSeconds
 
-TODO: Add documentation for this property.
+How long Tesseract may spend on a single document before it is abandoned.
+
+## Examples
+
+Runs OCR on scanned PDFs and TIFFs in English and French, skipping anything
+outside a sensible size range.
+
+<ConfigBlock
+  json={{
+    "parseConfig": {
+      "ocrConfig": {
+        "tesseractPath": "/usr/bin/tesseract",
+        "language": "eng+fra",
+        "contentTypeMatcher": {
+          "method": "regex",
+          "pattern": "application/pdf|image/tiff"
+        },
+        "minFileSizeToOcr": 10000,
+        "maxFileSizeToOcr": 50000000,
+        "timeoutSeconds": 120
+      }
+    }
+  }}
+  xml={`
+    <parseConfig>
+      <ocrConfig>
+        <tesseractPath>/usr/bin/tesseract</tesseractPath>
+        <language>eng+fra</language>
+        <contentTypeMatcher method="regex">application/pdf|image/tiff</contentTypeMatcher>
+        <minFileSizeToOcr>10000</minFileSizeToOcr>
+        <maxFileSizeToOcr>50000000</maxFileSizeToOcr>
+        <timeoutSeconds>120</timeoutSeconds>
+      </ocrConfig>
+    </parseConfig>`}
+/>

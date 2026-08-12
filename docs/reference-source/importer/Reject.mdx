@@ -29,13 +29,17 @@ TODO: Add documentation for this property.
 
 ## Examples
 
-The following example rejected a document and logging out a custom message.
+Stops processing the document and drops it from the crawl. Usually the `then` branch of an [If](./If), as in "if the title is blank, reject".
 
 <ConfigBlock
   json={{
     "handler": {
       "class": "Reject",
-      "reason": "Rejected by condiction A"
+      "message": "No usable title"
     }
   }}
+  xml={`
+    <handler class="Reject">
+      <message>No usable title</message>
+    </handler>`}
 />

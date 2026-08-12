@@ -19,11 +19,11 @@ A flow control wrapper that executes `then` handlers when the condition evaluate
 
 ### condition
 
-TODO: Add documentation for this property.
+The condition deciding which branch runs — inverted, so `then` executes when it evaluates to **false**. Any condition component, or an `AllOf`/`AnyOf`/`NoneOf` grouping of several.
 
 ### else
 
-TODO: Add documentation for this property.
+The handler or list of handlers to apply when the condition evaluates to true. Optional.
 
 ### label
 
@@ -31,8 +31,44 @@ An optional, user-supplied label for this step in the importer pipeline. It has 
 
 ### name
 
-TODO: Add documentation for this property.
+The flow-control keyword identifying this step, `ifNot`. It is set for you; there is no reason to change it.
 
 ### then
 
 The handler or list of handlers to apply when the associated condition evaluates to true.
+
+## Examples
+
+Parses everything that is *not* HTML — the same routing as [If](./If), written
+from the other side.
+
+<ConfigBlock
+  json={{
+    "handlers": [
+      {
+        "ifNot": {
+          "condition": {
+            "class": "TextCondition",
+            "fieldMatcher": { "pattern": "Content-Type" },
+            "valueMatcher": { "pattern": "text/html" }
+          },
+          "then": [
+            { "handler": { "class": "DefaultParser" } }
+          ]
+        }
+      }
+    ]
+  }}
+  xml={`
+    <handlers>
+      <ifNot>
+        <condition class="TextCondition">
+          <fieldMatcher>Content-Type</fieldMatcher>
+          <valueMatcher>text/html</valueMatcher>
+        </condition>
+        <then>
+          <handler class="DefaultParser"/>
+        </then>
+      </ifNot>
+    </handlers>`}
+/>

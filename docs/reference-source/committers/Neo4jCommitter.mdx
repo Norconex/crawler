@@ -67,38 +67,33 @@ Required connection URI. E.g., `bolt://localhost:7687`.
 
 ## Examples
 
-The following example creates a graph of collected documents.
+Creates or updates one node per crawled document, keyed on its reference.
 
 <ConfigBlock
   json={{
-    "class": "Neo4jCommitter",
-    "uri": "bolt://localhost:7687",
-    "upsertCypher": "MERGE (a:Document { docId: $id }) SET a += { title: $title } SET a += { author: $author }",
-    "deleteCypher": "MATCH (a:Document { docId: $id }) DETACH DELETE a",
-    "credentials": {
-      "username": "neo4j",
-      "password": "AcwFJPHITfk6LrRp7HW7Ag6hvDZotXcvWt2WvDMcGIo=",
-      "passwordKey": {
-        "value": "key.txt",
-        "source": "FILE"
-      }
-    },
-    "multiValuesJoiner": "_"
+    "committer": {
+      "class": "Neo4jCommitter",
+      "uri": "bolt://localhost:7687",
+      "credentials": {
+        "username": "neo4j",
+        "password": "changeme"
+      },
+      "database": "neo4j",
+      "nodeIdProperty": "id",
+      "nodeContentProperty": "content",
+      "upsertCypher": "MERGE (d:Document {id: $id}) SET d.content = $content, d.title = $title"
+    }
   }}
   xml={`
-    <committer>
-      <class>Neo4jCommitter</class>
+    <committer class="Neo4jCommitter">
       <uri>bolt://localhost:7687</uri>
-      <upsertCypher>MERGE (a:Document { docId: $id }) SET a += { title: $title } SET a += { author: $author }</upsertCypher>
-      <deleteCypher>MATCH (a:Document { docId: $id }) DETACH DELETE a</deleteCypher>
       <credentials>
         <username>neo4j</username>
-        <password>AcwFJPHITfk6LrRp7HW7Ag6hvDZotXcvWt2WvDMcGIo=</password>
-        <passwordKey>
-          <value>key.txt</value>
-          <source>FILE</source>
-        </passwordKey>
+        <password>changeme</password>
       </credentials>
-      <multiValuesJoiner>_</multiValuesJoiner>
+      <database>neo4j</database>
+      <nodeIdProperty>id</nodeIdProperty>
+      <nodeContentProperty>content</nodeContentProperty>
+      <upsertCypher>MERGE (d:Document {id: $id}) SET d.content = $content, d.title = $title</upsertCypher>
     </committer>`}
 />

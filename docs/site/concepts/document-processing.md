@@ -24,12 +24,12 @@ document. Handlers are configured as an ordered list and executed sequentially.
 
 There are four kinds:
 
-| Kind            | What it does                                                                       |
-| --------------- | ---------------------------------------------------------------------------------- |
-| **Parser**      | Extracts text and metadata from raw content (PDF, DOCX, HTML, images via OCR, ...) |
-| **Transformer** | Modifies, enriches, or removes metadata fields and document content                |
-| **Splitter**    | Decomposes one document into multiple logical sub-documents                        |
-| **Condition**   | Conditionally executes a nested list of handlers, including `Reject`               |
+| Kind             | What it does                                                                       |
+| ---------------- | ---------------------------------------------------------------------------------- |
+| **Parser**       | Extracts text and metadata from raw content (PDF, DOCX, HTML, images via OCR, ...) |
+| **Transformer**  | Modifies, enriches, or removes metadata fields and document content                |
+| **Splitter**     | Decomposes one document into multiple logical sub-documents                        |
+| **Flow control** | Branches the pipeline with `if` or `ifNot`, running a `then` or `else` handler list |
 
 ### Pre- vs post-parse handlers
 
@@ -83,29 +83,43 @@ Useful for:
 
 ## Conditions and document rejection
 
-Conditions wrap a nested list of handlers and execute them only when a
-specified criterion is met. This is how the Importer controls branching and
-document rejection.
+Branching is done with the `if` and `ifNot` flow-control entries. Each takes a
+single `condition`, a `then` list of handlers to run when it holds, and an
+optional `else` list for when it does not. `ifNot` is the same thing with the
+condition inverted.
 
-To **discard a document** inside the Importer, place a `Reject` handler inside
-a condition body. `Reject` is a no-op handler whose only effect is to stop
-processing and drop the document from the crawl.
+To **discard a document** inside the Importer, put a `Reject` handler in the
+branch that should drop it. `Reject` stops processing and removes the document
+from the crawl, logging the optional `message` you give it.
 
 ```yaml
 handlers:
-  - condition:
-      class: TextCondition
-      fieldMatcher:
-        pattern: title
-      valueMatcher:
-        pattern: A Page To Exlude
-    handlers:
-      - class: Reject
+  - handler:
+      class: DefaultParser
+  - if:
+      condition:
+        class: TextCondition
+        fieldMatcher:
+          pattern: title
+        valueMatcher:
+          pattern: A Page To Exclude
+      then:
+        - handler:
+            class: Reject
+            message: Excluded by title
 ```
 
-Conditions can also be used without `Reject` to apply a handler only to a
-subset of documents — for example, running a specialized parser only on PDFs,
-or enriching metadata only for documents from a specific domain.
+Note the shape: `handlers` is a **list**, and every entry is an object with a
+single key — `handler`, `if`, or `ifNot`. `then` and `else` are lists of those
+same entries, so branches nest.
+
+The same branching applies a handler to a subset of documents without rejecting
+anything — a specialized parser only on PDFs, extra metadata only for one
+domain — with `else` covering the rest.
+
+Several conditions can be combined with the `allOf`, `anyOf` and `noneOf`
+groupings. See [Importer Flow Control](/docs/reference/importer-flow-control)
+for the full set.
 
 ## Configuration
 

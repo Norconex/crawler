@@ -9,36 +9,64 @@ propertyCoverage: all
 
 ## Summary
 
-Configuration schema for Playwright Screenshot Handler.
+Captures page screenshots through Playwright, as a whole viewport or a single
+element.
 
 ## Notes
 
-:::warning[Missing Documentation]
-Notes are missing. Add implementation details, caveats, and examples.
-:::
+Set as the `screenshotHandler` of a `PlaywrightFetcher`, this takes a
+screenshot of every page the browser renders. With a `cssSelector`, Playwright
+captures just that element itself — no full-page capture and crop, which is how
+the [WebDriver handler](./WebDriverScreenshotHandler) has to do it.
+
+Where the image goes, in what format, and under what directory layout are all
+in [ScreenshotHandlerConfig](./ScreenshotHandlerConfig), shared by both
+handlers. Storing to `DIRECTORY` and indexing the path is almost always
+preferable to putting an encoded image on the document.
 
 ## Properties
 
 ### `configuration`
 
-:::warning[Missing Documentation]
-Property `configuration` is missing documentation. Please update this section.
-:::
+Storage and capture options — targets, directory, format, CSS selector. See
+[ScreenshotHandlerConfig](./ScreenshotHandlerConfig).
 
 ## Examples
 
-<ReferenceExamples
-  examples={[
-    {
-      title: "Minimal Example",
-      description: "Captures and saves a screenshot of each crawled page using Playwright.",
-      codeByLanguage: {
-        yaml: `# TODO: Add YAML example`,
-        json: `{
-  "TODO": "Add JSON example"
-}`,
-        xml: `<TODO>Add XML example</TODO>`,
-      },
-    },
-  ]}
+<ConfigBlock
+  yaml={`
+    fetchers:
+      - class: PlaywrightFetcher
+        browser: CHROMIUM
+        screenshotHandler:
+          targets:
+            - DIRECTORY
+          targetDir: ./screenshots
+          cssSelector: "article"`}
+  json={{
+    "fetchers": [
+      {
+        "class": "PlaywrightFetcher",
+        "browser": "CHROMIUM",
+        "screenshotHandler": {
+          "targets": ["DIRECTORY"],
+          "targetDir": "./screenshots",
+          "cssSelector": "article"
+        }
+      }
+    ]
+  }}
+  xml={`
+    <fetchers>
+      <fetcher class="PlaywrightFetcher">
+        <browser>CHROMIUM</browser>
+        <screenshotHandler>
+          <targets>
+            <target>DIRECTORY</target>
+          </targets>
+          <targetDir>./screenshots</targetDir>
+          <cssSelector>article</cssSelector>
+        </screenshotHandler>
+      </fetcher>
+    </fetchers>`}
 />

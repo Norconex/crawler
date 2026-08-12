@@ -9,32 +9,46 @@ propertyCoverage: all
 
 ## Summary
 
-Allowed values for Playwright Browser.
+Supported browser engines for Playwright-based fetching.
 
 ## Notes
 
-:::warning[Missing Documentation]
-Notes are missing. Add implementation details, caveats, and examples.
-:::
+Selects the engine `PlaywrightFetcher` launches: `CHROMIUM` (the default),
+`FIREFOX`, or `WEBKIT`. These are [Playwright](https://playwright.dev/)'s own
+builds rather than the browsers installed on the machine, and Playwright
+downloads them the first time they are used, into `~/.cache/ms-playwright`.
+
+Two ways to avoid that download: the official `crawler-web-playwright` Docker
+image ships with Chromium already installed, and `channel` (for example
+`chrome` or `msedge`) tells Playwright to drive a system-installed browser
+instead of its bundled build. `executablePath` points at a specific binary.
+
+Playwright itself is not part of the standard distributions — it is left out
+for its size — so this fetcher needs either that image or a build that includes
+it. [WebDriverFetcher](./WebDriverBrowser) is the alternative engine, and it
+ships with every distribution.
 
 ## Properties
 
-
-
 ## Examples
 
-<ReferenceExamples
-  examples={[
-    {
-      title: "Minimal Example",
-      description: "Specifies the Playwright browser type to use for rendering web pages.",
-      codeByLanguage: {
-        yaml: `# TODO: Add YAML example`,
-        json: `{
-  "TODO": "Add JSON example"
-}`,
-        xml: `<TODO>Add XML example</TODO>`,
-      },
-    },
-  ]}
+<ConfigBlock
+  yaml={`
+    fetchers:
+      - class: PlaywrightFetcher
+        browser: CHROMIUM`}
+  json={{
+    "fetchers": [
+      {
+        "class": "PlaywrightFetcher",
+        "browser": "CHROMIUM"
+      }
+    ]
+  }}
+  xml={`
+    <fetchers>
+      <fetcher class="PlaywrightFetcher">
+        <browser>CHROMIUM</browser>
+      </fetcher>
+    </fetchers>`}
 />

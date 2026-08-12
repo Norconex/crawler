@@ -9,72 +9,91 @@ propertyCoverage: all
 
 ## Summary
 
-Configuration schema for Screenshot Handler Config.
+Where page screenshots are stored, in what format, and what part of the page is
+captured.
 
 ## Notes
 
-:::warning[Missing Documentation]
-Notes are missing. Add implementation details, caveats, and examples.
-:::
+Shared by both screenshot handlers —
+[WebDriverScreenshotHandler](./WebDriverScreenshotHandler) and
+[PlaywrightScreenshotHandler](./PlaywrightScreenshotHandler) — so a
+configuration written for one works for the other.
+
+A screenshot can be written to disk, stored on the document as a field, or
+both, and `targets` decides which. Storing images in a field puts the encoded
+image into the document that goes to your committer, which most indexes are not
+happy to receive: prefer `DIRECTORY`, and keep the path in a field with
+`targetDirField` when you need to find the file again later.
+
+By default screenshots land in `./screenshots`, in dated subdirectories, as PNG.
 
 ## Properties
 
 ### `cssSelector`
 
-:::warning[Missing Documentation]
-Property `cssSelector` is missing documentation. Please update this section.
-:::
+Capture only the element matching this CSS selector instead of the whole page.
+Leave blank for the full page.
 
 ### `imageFormat`
 
-:::warning[Missing Documentation]
-Property `imageFormat` is missing documentation. Please update this section.
-:::
+Image format to write, as an ImageIO format name (`png` by default, `jpg` and
+`gif` also work). PNG keeps text crisp; JPEG produces smaller files for
+photographic pages.
 
 ### `targetDir`
 
-:::warning[Missing Documentation]
-Property `targetDir` is missing documentation. Please update this section.
-:::
+Directory screenshots are written to when `targets` includes `DIRECTORY`.
+Default is `./screenshots`.
 
 ### `targetDirField`
 
-:::warning[Missing Documentation]
-Property `targetDirField` is missing documentation. Please update this section.
-:::
+Document field that receives the path of the file written to `targetDir`.
+Default is `document.screenshot-path`. This is how a committed document points
+at its screenshot without carrying the image itself.
 
 ### `targetDirStructure`
 
-:::warning[Missing Documentation]
-Property `targetDirStructure` is missing documentation. Please update this section.
-:::
+How subdirectories under `targetDir` are laid out: `DATETIME` (the default,
+`2026/08/11/13/34/12/`), `DATE` (`2026/08/11/`), or `URL2PATH` — one directory
+per URL segment, which keeps a site's structure visible on disk.
 
 ### `targetMetaField`
 
-:::warning[Missing Documentation]
-Property `targetMetaField` is missing documentation. Please update this section.
-:::
+Document field that receives the image itself, Base64-encoded, when `targets`
+includes `METADATA`. Default is `document.screenshot`.
 
 ### `targets`
 
-:::warning[Missing Documentation]
-Property `targets` is missing documentation. Please update this section.
-:::
+Where to store the screenshot: `DIRECTORY` (the default), `METADATA`, or both.
 
 ## Examples
 
-<ReferenceExamples
-  examples={[
-    {
-      title: "Minimal Example",
-      description: "Configures screenshot capture to save PNG images of each crawled page to a directory.",
-      codeByLanguage: {
-        yaml: `# TODO: Add YAML example`,
-        json: `{
-  "TODO": "Add JSON example"
-}`,
-        xml: `<TODO>Add XML example</TODO>`,
-      },
-    },
-  ]}
+<ConfigBlock
+  yaml={`
+    screenshotHandler:
+      targets:
+        - DIRECTORY
+      targetDir: ./screenshots
+      targetDirStructure: URL2PATH
+      imageFormat: png
+      cssSelector: "main"`}
+  json={{
+    "screenshotHandler": {
+      "targets": ["DIRECTORY"],
+      "targetDir": "./screenshots",
+      "targetDirStructure": "URL2PATH",
+      "imageFormat": "png",
+      "cssSelector": "main"
+    }
+  }}
+  xml={`
+    <screenshotHandler>
+      <targets>
+        <target>DIRECTORY</target>
+      </targets>
+      <targetDir>./screenshots</targetDir>
+      <targetDirStructure>URL2PATH</targetDirStructure>
+      <imageFormat>png</imageFormat>
+      <cssSelector>main</cssSelector>
+    </screenshotHandler>`}
 />

@@ -39,39 +39,150 @@ A common pattern is:
 2. branch into `then` and `else` handler blocks
 3. continue normal importer processing
 
+## Configuration Shape
+
+`handlers` is a **list**, and every entry in it is an object with a single key:
+
+| Key      | Value                                                       |
+| -------- | ----------------------------------------------------------- |
+| `handler` | An ordinary handler — a parser, transformer, splitter, or `Reject` |
+| `if`      | A `condition` plus a `then` list and an optional `else` list |
+| `ifNot`   | The same, with the condition inverted                        |
+
+`then` and `else` are lists of those same entries, so branches nest as deeply
+as needed. In XML the entries become elements of the same names —
+`<handler>`, `<if>`, `<ifNot>` — inside `<handlers>`.
+
+A `condition` is either a single condition identified by its `class`, or one of
+the `allOf` / `anyOf` / `noneOf` groupings, each holding a list of conditions.
+
 ## Example
+
+Documents created between ten years and one year ago are split as CSV;
+everything else is dropped from the crawl.
 
 ```json
 {
-  "handlers": {
-    "if": {
-      "condition": {
-        "class": "DateCondition",
-        "fieldMatcher": {
-          "pattern": "date_created"
+  "handlers": [
+    {
+      "if": {
+        "condition": {
+          "class": "DateCondition",
+          "fieldMatcher": {
+            "pattern": "date_created"
+          },
+          "valueMatcher": {
+            "operator": "ge",
+            "date": "NOW-10Y"
+          },
+          "valueMatcherRangeEnd": {
+            "operator": "lt",
+            "date": "NOW-1Y"
+          }
         },
-        "valueMatcherStart": {
-          "operator": ">=",
-          "date": "NOW-10Y"
-        },
-        "valueMatcherEnd": {
-          "operator": "<",
-          "date": "NOW-1Y"
-        }
-      },
-      "then": {
-        "handler": {
-          "class": "CsvSplitter",
-          "separatorCharacter": ",",
-          "referenceColumn": "id"
-        }
-      },
-      "else": {
-        "handler": {
-          "class": "Reject"
-        }
+        "then": [
+          {
+            "handler": {
+              "class": "CsvSplitter",
+              "separatorCharacter": ",",
+              "referenceColumn": "id"
+            }
+          }
+        ],
+        "else": [
+          {
+            "handler": {
+              "class": "Reject",
+              "message": "Outside the retention window"
+            }
+          }
+        ]
       }
     }
-  }
+  ]
 }
 ```
+
+The same configuration in XML:
+
+```xml
+<handlers>
+  <if>
+    <condition class="DateCondition">
+      <fieldMatcher>date_created</fieldMatcher>
+      <valueMatcher operator="ge" date="NOW-10Y"/>
+      <valueMatcherRangeEnd operator="lt" date="NOW-1Y"/>
+    </condition>
+    <then>
+      <handler class="CsvSplitter" separatorCharacter="," referenceColumn="id"/>
+    </then>
+    <else>
+      <handler class="Reject" message="Outside the retention window"/>
+    </else>
+  </if>
+</handlers>
+```
+
+## Combining Conditions
+
+`allOf`, `anyOf` and `noneOf` each take a list of conditions in place of a
+single one. Here a document is dropped only when it is *both* a PDF *and*
+untitled:
+
+```json
+{
+  "handlers": [
+    {
+      "if": {
+        "condition": {
+          "allOf": [
+            {
+              "class": "TextCondition",
+              "fieldMatcher": { "pattern": "Content-Type" },
+              "valueMatcher": { "pattern": "application/pdf" }
+            },
+            {
+              "class": "BlankCondition",
+              "fieldMatcher": { "pattern": "title" }
+            }
+          ]
+        },
+        "then": [
+          {
+            "handler": {
+              "class": "Reject",
+              "message": "Untitled PDF"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
+```
+
+In XML the group wraps repeated `<condition>` elements:
+
+```xml
+<handlers>
+  <if>
+    <condition>
+      <allOf>
+        <condition class="TextCondition">
+          <fieldMatcher pattern="Content-Type"/>
+          <valueMatcher pattern="application/pdf"/>
+        </condition>
+        <condition class="BlankCondition">
+          <fieldMatcher pattern="title"/>
+        </condition>
+      </allOf>
+    </condition>
+    <then>
+      <handler class="Reject" message="Untitled PDF"/>
+    </then>
+  </if>
+</handlers>
+```
+
+Groups nest, and so does `if` itself — an `if` inside a `then` or `else` list
+is often clearer than a deeply nested group.

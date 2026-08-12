@@ -9,72 +9,94 @@ propertyCoverage: all
 
 ## Summary
 
-Configuration schema for Web Driver Screenshot Handler.
+Captures page screenshots through Selenium WebDriver, as a whole page or a
+single element.
 
 ## Notes
 
-:::warning[Missing Documentation]
-Notes are missing. Add implementation details, caveats, and examples.
-:::
+Set as the `screenshotHandler` of a `WebDriverFetcher`, this takes a screenshot
+of every page the browser renders. Without a `cssSelector` it captures what the
+browser shows; with one, it captures the full page and crops to the matching
+element — Selenium has no native element capture, so the cropping happens in
+the crawler.
+
+Screenshots go to a directory, to a document field, or both, and the same
+options are documented once in
+[ScreenshotHandlerConfig](./ScreenshotHandlerConfig). Writing images into a
+field means the encoded image travels to your committer, which is rarely what
+you want: keep the file on disk and index its path instead.
+
+The Playwright equivalent is
+[PlaywrightScreenshotHandler](./PlaywrightScreenshotHandler), which captures
+elements natively.
 
 ## Properties
 
 ### `cssSelector`
 
-:::warning[Missing Documentation]
-Property `cssSelector` is missing documentation. Please update this section.
-:::
+Capture only the element matching this CSS selector. The page is captured in
+full and then cropped to it. Leave blank for the whole page.
 
 ### `imageFormat`
 
-:::warning[Missing Documentation]
-Property `imageFormat` is missing documentation. Please update this section.
-:::
+Image format to write (`png` by default).
 
 ### `targetDir`
 
-:::warning[Missing Documentation]
-Property `targetDir` is missing documentation. Please update this section.
-:::
+Directory screenshots are written to. Default is `./screenshots`.
 
 ### `targetDirField`
 
-:::warning[Missing Documentation]
-Property `targetDirField` is missing documentation. Please update this section.
-:::
+Document field that receives the written file's path. Default is
+`document.screenshot-path`.
 
 ### `targetDirStructure`
 
-:::warning[Missing Documentation]
-Property `targetDirStructure` is missing documentation. Please update this section.
-:::
+Subdirectory layout under `targetDir`: `DATETIME` (default), `DATE`, or
+`URL2PATH`.
 
 ### `targetMetaField`
 
-:::warning[Missing Documentation]
-Property `targetMetaField` is missing documentation. Please update this section.
-:::
+Document field that receives the Base64-encoded image when `targets` includes
+`METADATA`. Default is `document.screenshot`.
 
 ### `targets`
 
-:::warning[Missing Documentation]
-Property `targets` is missing documentation. Please update this section.
-:::
+Where the screenshot is stored: `DIRECTORY` (default), `METADATA`, or both.
 
 ## Examples
 
-<ReferenceExamples
-  examples={[
-    {
-      title: "Minimal Example",
-      description: "Captures and saves a screenshot of each crawled page to a specified directory.",
-      codeByLanguage: {
-        yaml: `# TODO: Add YAML example`,
-        json: `{
-  "TODO": "Add JSON example"
-}`,
-        xml: `<TODO>Add XML example</TODO>`,
-      },
-    },
-  ]}
+<ConfigBlock
+  yaml={`
+    fetchers:
+      - class: WebDriverFetcher
+        browser: CHROME
+        screenshotHandler:
+          targets:
+            - DIRECTORY
+          targetDir: ./screenshots`}
+  json={{
+    "fetchers": [
+      {
+        "class": "WebDriverFetcher",
+        "browser": "CHROME",
+        "screenshotHandler": {
+          "targets": ["DIRECTORY"],
+          "targetDir": "./screenshots"
+        }
+      }
+    ]
+  }}
+  xml={`
+    <fetchers>
+      <fetcher class="WebDriverFetcher">
+        <browser>CHROME</browser>
+        <screenshotHandler>
+          <targets>
+            <target>DIRECTORY</target>
+          </targets>
+          <targetDir>./screenshots</targetDir>
+        </screenshotHandler>
+      </fetcher>
+    </fetchers>`}
 />

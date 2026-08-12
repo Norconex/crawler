@@ -19,11 +19,11 @@ A flow control wrapper that executes `then` handlers when the condition evaluate
 
 ### condition
 
-TODO: Add documentation for this property.
+The condition deciding which branch runs. Any condition component — `TextCondition`, `DateCondition`, `BlankCondition`, `ScriptCondition`, or one of the `AllOf`/`AnyOf`/`NoneOf` groupings for combining several.
 
 ### else
 
-TODO: Add documentation for this property.
+The handler or list of handlers to apply when the condition evaluates to false. Optional — leave it out and documents failing the condition simply carry on to the next step.
 
 ### label
 
@@ -31,8 +31,49 @@ An optional, user-supplied label for this step in the importer pipeline. It has 
 
 ### name
 
-TODO: Add documentation for this property.
+The flow-control keyword identifying this step, `if`. It is set for you; there is no reason to change it.
 
 ### then
 
 The handler or list of handlers to apply when the associated condition evaluates to true.
+
+## Examples
+
+Rejects HTML documents and parses everything else.
+
+<ConfigBlock
+  json={{
+    "handlers": [
+      {
+        "if": {
+          "condition": {
+            "class": "TextCondition",
+            "fieldMatcher": { "pattern": "Content-Type" },
+            "valueMatcher": { "pattern": "text/html" }
+          },
+          "then": [
+            { "handler": { "class": "Reject" } }
+          ],
+          "else": [
+            { "handler": { "class": "DefaultParser" } }
+          ]
+        }
+      }
+    ]
+  }}
+  xml={`
+    <handlers>
+      <if>
+        <condition class="TextCondition">
+          <fieldMatcher>Content-Type</fieldMatcher>
+          <valueMatcher>text/html</valueMatcher>
+        </condition>
+        <then>
+          <handler class="Reject"/>
+        </then>
+        <else>
+          <handler class="DefaultParser"/>
+        </else>
+      </if>
+    </handlers>`}
+/>

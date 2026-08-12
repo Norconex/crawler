@@ -27,4 +27,28 @@ An optional, user-supplied label for this step in the importer pipeline. It has 
 
 ### matchAnyBlank
 
-TODO: Add documentation for this property.
+Whether one blank value is enough. By default (`false`) every value of every
+matched field must be blank for the condition to hold; set it to `true` and any
+single blank value satisfies it.
+
+Note that a field matcher matching nothing at all also counts as blank.
+
+## Examples
+
+Matches documents where both `title` and `dc:title` are blank or missing.
+
+<ConfigBlock
+  json={{
+    "condition": {
+      "class": "BlankCondition",
+      "fieldMatcher": {
+        "method": "regex",
+        "pattern": "(title|dc:title)"
+      }
+    }
+  }}
+  xml={`
+    <condition class="BlankCondition">
+      <fieldMatcher method="regex">(title|dc:title)</fieldMatcher>
+    </condition>`}
+/>

@@ -44,11 +44,15 @@ Specify handlers for imported documents in their original format or applied befo
 
 ### maxMemoryInstance
 
-TODO: Add documentation for this property.
+Maximum bytes a single document may cache in memory before it spills to `tempDir`. Default is `100000000` (100 MB). Raising it trades memory for fewer disk writes on large documents; lowering it protects a small heap when documents are big.
+
+Only applies when the Importer runs on its own — from the command line, or embedded via `Importer#importDocument(ImporterRequest)`. Documents arriving from a crawl already carry their own cache settings.
 
 ### maxMemoryPool
 
-TODO: Add documentation for this property.
+Maximum bytes shared by every document being processed by Importer instances in the same JVM. Default is `1000000000` (1 GB). This is the ceiling `maxMemoryInstance` allocations draw from.
+
+Same scope as `maxMemoryInstance`: standalone or embedded Importer use only.
 
 ### responseProcessors
 
@@ -56,41 +60,44 @@ One or more optional custom classes that processes an Importer response to modif
 
 ### tempDir
 
-TODO: Add documentation for this property.
+Where documents too large for the memory cache are written while they are processed. Defaults to the system temporary directory. Point it at a fast local disk with room for your largest documents.
+
+Same scope as the memory settings: standalone or embedded Importer use only — a crawl supplies its own working directory.
 
 ## Examples
 
-The following example demonstrates a flexible handler configuration that processes data based on its content type and metadata.
+`handlers` is a list, and every entry in it is an object with a single key:
+`handler` for an ordinary handler, or `if` / `ifNot` for a branch. `then` and
+`else` hold lists of those same entries. See
+[Importer Flow Control](../importer-flow-control) for the full picture.
 
-First, an `if` condition checks the `Content-Type` field. If the content is HTML, it is rejected via the `Reject` handler. Otherwise, the `DefaultParser` is applied to parse the non-HTML data.
-
-Following parsing, a second `if` condition evaluates the `date_created` field using a `DateCondition`. If the date falls within the specified range, the content is committed to an Elasticsearch index named `new`. Otherwise it goes to the `archive` index.
+The following pipeline parses each document, drops the ones that came out
+without a title, and tags the rest according to how recent they are.
 
 <ConfigBlock
   json={{
     "handlers": [
       {
+        "handler": {
+          "class": "DefaultParser"
+        }
+      },
+      {
         "if": {
           "condition": {
-            "class": "FieldCondition",
+            "class": "BlankCondition",
             "fieldMatcher": {
-              "pattern": "Content-Type"
-            },
-            "valueMatcher": {
-              "operator": "==",
-              "value": "text/html"
+              "pattern": "title"
             }
           },
-          "then": {
-            "handler": {
-              "class": "Reject"
+          "then": [
+            {
+              "handler": {
+                "class": "Reject",
+                "message": "No title after parsing"
+              }
             }
-          },
-          "else": {
-            "handler": {
-              "class": "DefaultParser"
-            }
-          }
+          ]
         }
       },
       {
@@ -100,66 +107,51 @@ Following parsing, a second `if` condition evaluates the `date_created` field us
             "fieldMatcher": {
               "pattern": "date_created"
             },
-            "valueMatcherStart": {
-              "operator": ">=",
-              "date": "NOW-10Y"
-            },
-            "valueMatcherEnd": {
-              "operator": "<",
+            "valueMatcher": {
+              "operator": "ge",
               "date": "NOW-1Y"
             }
           },
-          "then": {
-            "handler": {
-              "class": "ElasticsearchCommitter",
-              "indexName": "new"
+          "then": [
+            {
+              "handler": {
+                "class": "ConstantTransformer",
+                "constants": [
+                  { "name": "freshness", "values": ["recent"] }
+                ]
+              }
             }
-          },
-          "else": {
-            "handler": {
-              "class": "ElasticsearchCommitter",
-              "indexName": "archive"
+          ],
+          "else": [
+            {
+              "handler": {
+                "class": "ConstantTransformer",
+                "constants": [
+                  { "name": "freshness", "values": ["archive"] }
+                ]
+              }
             }
-          }
+          ]
         }
       }
     ]
   }}
 />
 
-The following example uses a `DateCondition` to either split the document with `CsvSplitter` or reject it.
+Memory limits and the temporary directory only apply when the Importer runs on
+its own — a crawl supplies its own values.
 
 <ConfigBlock
   json={{
-    "handlers": {
-      "if": {
-        "condition": {
-          "class": "DateCondition",
-          "fieldMatcher": {
-            "pattern": "date_created"
-          },
-          "valueMatcherStart": {
-            "operator": ">=",
-            "date": "NOW-10Y"
-          },
-          "valueMatcherEnd": {
-            "operator": "<",
-            "date": "NOW-1Y"
-          }
-        },
-        "then": {
-          "handler": {
-            "class": "CsvSplitter",
-            "separatorCharacter": ",",
-            "referenceColumn": "id"
-          }
-        },
-        "else": {
-          "handler": {
-            "class": "Reject"
-          }
+    "maxMemoryInstance": 200000000,
+    "maxMemoryPool": 2000000000,
+    "tempDir": "/var/tmp/importer",
+    "handlers": [
+      {
+        "handler": {
+          "class": "DefaultParser"
         }
       }
-    }
+    ]
   }}
 />

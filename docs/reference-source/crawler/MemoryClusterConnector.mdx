@@ -9,32 +9,36 @@ propertyCoverage: all
 
 ## Summary
 
-Configuration schema for Memory Cluster Connector.
+Crawl state held in memory only, with nothing written to disk.
 
 ## Notes
 
-:::warning[Missing Documentation]
-Notes are missing. Add implementation details, caveats, and examples.
-:::
+Keeps the whole crawl state in memory, with no file and no external
+infrastructure. Fast to start, nothing to clean up, and **nothing survives the
+JVM exiting** — the next run starts from scratch.
+
+That makes it a good fit for tests, one-off crawls, and embedded runs where a
+state file would be in the way. It is the wrong fit for anything you intend to
+resume or crawl incrementally across runs; use
+[MVStoreClusterConnector](./MVStoreClusterConnector), the default, for that.
+
+Within a single JVM the cluster is cached, so several crawl sessions using this
+connector do share state — incremental crawling works across sessions, just not
+across restarts.
 
 ## Properties
 
-
-
 ## Examples
 
-<ReferenceExamples
-  examples={[
-    {
-      title: "Minimal Example",
-      description: "Uses an in-memory (non-persistent) cluster connector — useful for testing or ephemeral crawl sessions.",
-      codeByLanguage: {
-        yaml: `# TODO: Add YAML example`,
-        json: `{
-  "TODO": "Add JSON example"
-}`,
-        xml: `<TODO>Add XML example</TODO>`,
-      },
-    },
-  ]}
+<ConfigBlock
+  yaml={`
+    clusterConnector:
+      class: MemoryClusterConnector`}
+  json={{
+    "clusterConnector": {
+      "class": "MemoryClusterConnector"
+    }
+  }}
+  xml={`
+    <clusterConnector class="MemoryClusterConnector"/>`}
 />

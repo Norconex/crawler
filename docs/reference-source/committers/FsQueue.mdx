@@ -13,22 +13,66 @@ A local file system queue for storing committer requests as zip files.
 
 ## Notes
 
-A local file system queue that stores committer requests as zip files before they are sent to the target committer. Supports configurable batch sizes, per-folder file limits, leftover commit handling on startup, and behavior on commit failure.
+Every committer batches its work through a queue, and this is the default one:
+documents are written to disk as zip files and handed to the committer a batch
+at a time. Batching is what keeps a crawl from opening one connection per
+document, and the on-disk queue is what lets a batch survive a crash.
+
+Larger batches mean fewer round trips to the target system and more memory and
+disk held between commits. Where the ceiling sits depends on the target — a
+search engine bulk API is usually happy with hundreds, a database less so.
 
 ## Properties
 
 ### batchSize
 
-TODO: Add documentation for this property.
+Number of documents queued on disk before the batch is sent. Default is `20`.
 
 ### commitLeftoversOnInit
 
-TODO: Add documentation for this property.
+Whether to commit files still sitting in the queue from a previous session
+before starting. Leftovers usually mean the last run ended abnormally. Default
+is `false`.
 
 ### maxPerFolder
 
-TODO: Add documentation for this property.
+Maximum number of files placed in a single queue folder. Default is `500`.
+Keeping this below `batchSize` lets you run large batches without putting tens
+of thousands of files in one directory, which some file systems handle poorly.
 
 ### onCommitFailure
 
-TODO: Add documentation for this property.
+What to do when a batch fails: how many times to retry, how long to wait
+between attempts, whether to split the batch to isolate the offending
+documents, and whether to carry on through non-critical errors. See
+[OnCommitFailure](./OnCommitFailure).
+
+## Examples
+
+Batches documents 100 at a time, retrying a failed batch twice and splitting it
+to find the document at fault.
+
+<ConfigBlock
+  json={{
+    "queue": {
+      "class": "FsQueue",
+      "batchSize": 100,
+      "maxPerFolder": 500,
+      "onCommitFailure": {
+        "maxRetries": 2,
+        "retryDelay": 5000,
+        "splitBatch": "HALF"
+      }
+    }
+  }}
+  xml={`
+    <queue class="FsQueue">
+      <batchSize>100</batchSize>
+      <maxPerFolder>500</maxPerFolder>
+      <onCommitFailure>
+        <maxRetries>2</maxRetries>
+        <retryDelay>5000</retryDelay>
+        <splitBatch>HALF</splitBatch>
+      </onCommitFailure>
+    </queue>`}
+/>

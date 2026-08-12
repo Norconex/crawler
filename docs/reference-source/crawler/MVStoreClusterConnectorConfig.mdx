@@ -9,66 +9,75 @@ propertyCoverage: all
 
 ## Summary
 
-Configuration schema for MV Store Cluster Connector Config.
+Storage tuning for the MVStore cluster connector.
 
 ## Notes
 
-:::warning[Missing Documentation]
-Notes are missing. Add implementation details, caveats, and examples.
-:::
+Controls how the embedded MVStore database writes crawl state to disk. Every
+setting has a working default, and a crawl runs correctly without touching any
+of them — reach for these only when profiling points at the store itself, on
+crawls large enough for the difference to be measurable.
+
+The trade-offs pull against each other: larger buffers and caches spend memory
+to reduce I/O, compression spends CPU to reduce disk, and more aggressive
+compaction spends both to keep the file small. Change one at a time.
 
 ## Properties
 
 ### `autoCommitBufferSize`
 
-:::warning[Missing Documentation]
-Property `autoCommitBufferSize` is missing documentation. Please update this section.
-:::
+Size in KB of the write buffer before changes are committed automatically.
+Default is `1024` (1 MB). A larger buffer means fewer, bigger writes.
 
 ### `autoCommitDelay`
 
-:::warning[Missing Documentation]
-Property `autoCommitDelay` is missing documentation. Please update this section.
-:::
+How long in milliseconds before buffered changes are committed regardless of
+buffer size. Default is `1000` (1 second). Set to `0` to commit on buffer size
+alone.
 
 ### `autoCompactFillRate`
 
-:::warning[Missing Documentation]
-Property `autoCompactFillRate` is missing documentation. Please update this section.
-:::
+Fill rate percentage (0–100) below which the store compacts itself. Default is
+`40`. A lower value compacts less often, leaving a larger file; a higher value
+compacts more often, spending I/O to keep it small.
 
 ### `cacheSize`
 
-:::warning[Missing Documentation]
-Property `cacheSize` is missing documentation. Please update this section.
-:::
+Read cache size in MB. Default is `16`. Worth raising on crawls whose state no
+longer fits comfortably in the default cache.
 
 ### `compress`
 
-:::warning[Missing Documentation]
-Property `compress` is missing documentation. Please update this section.
-:::
+Compression level: `0` for none (the default), `1` for fast (LZF), `2` for high
+(Deflate). Compression trades CPU for disk space, and mostly pays off when
+document metadata is large and repetitive.
 
 ### `pageSplitSize`
 
-:::warning[Missing Documentation]
-Property `pageSplitSize` is missing documentation. Please update this section.
-:::
+Page split size in bytes. Default is `4096`. Larger pages can read long values
+faster in sequence, at the cost of wasted space for small entries.
 
 ## Examples
 
-<ReferenceExamples
-  examples={[
-    {
-      title: "Minimal Example",
-      description: "Configures the MVStore cluster connector with custom buffer size and compression settings.",
-      codeByLanguage: {
-        yaml: `# TODO: Add YAML example`,
-        json: `{
-  "TODO": "Add JSON example"
-}`,
-        xml: `<TODO>Add XML example</TODO>`,
-      },
-    },
-  ]}
+<ConfigBlock
+  yaml={`
+    clusterConnector:
+      class: MVStoreClusterConnector
+      configuration:
+        cacheSize: 64
+        compress: 1`}
+  json={{
+    "clusterConnector": {
+      "class": "MVStoreClusterConnector",
+      "configuration": {
+        "cacheSize": 64,
+        "compress": 1
+      }
+    }
+  }}
+  xml={`
+    <clusterConnector class="MVStoreClusterConnector">
+      <cacheSize>64</cacheSize>
+      <compress>1</compress>
+    </clusterConnector>`}
 />

@@ -9,32 +9,46 @@ propertyCoverage: all
 
 ## Summary
 
-Allowed values for Web Driver Browser.
+Supported browser types for WebDriver-based fetching.
 
 ## Notes
 
-:::warning[Missing Documentation]
-Notes are missing. Add implementation details, caveats, and examples.
-:::
+Selects the browser `WebDriverFetcher` drives through Selenium WebDriver, which
+also determines the driver it creates: `CHROME`, `FIREFOX` (the default),
+`EDGE`, `SAFARI`, `OPERA`, or `CUSTOM` for a browser you wire up yourself.
+
+The browser and its matching driver have to exist somewhere the crawler can
+reach — installed locally, or on a remote WebDriver endpoint such as a
+Selenium Grid node or a browser container. Neither is bundled with the crawler.
+Use `browserPath` to point at a browser the crawler cannot find on its own, and
+`driverPath` for its driver.
+
+Support for JavaScript-rendered pages is not exclusive to this fetcher.
+`PlaywrightFetcher` drives its own browsers through [Playwright](https://playwright.dev/)
+and takes a [PlaywrightBrowser](./PlaywrightBrowser) instead — a different
+engine and a different set of values, for the same purpose.
 
 ## Properties
 
-
-
 ## Examples
 
-<ReferenceExamples
-  examples={[
-    {
-      title: "Minimal Example",
-      description: "Specifies the WebDriver browser type to use for rendering web pages.",
-      codeByLanguage: {
-        yaml: `# TODO: Add YAML example`,
-        json: `{
-  "TODO": "Add JSON example"
-}`,
-        xml: `<TODO>Add XML example</TODO>`,
-      },
-    },
-  ]}
+<ConfigBlock
+  yaml={`
+    fetchers:
+      - class: WebDriverFetcher
+        browser: CHROME`}
+  json={{
+    "fetchers": [
+      {
+        "class": "WebDriverFetcher",
+        "browser": "CHROME"
+      }
+    ]
+  }}
+  xml={`
+    <fetchers>
+      <fetcher class="WebDriverFetcher">
+        <browser>CHROME</browser>
+      </fetcher>
+    </fetchers>`}
 />
