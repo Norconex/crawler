@@ -12,7 +12,7 @@ stages instead of thirty.
 
 The flow is shown at four levels of zoom:
 
-1. [The crawl session](#the-crawl-session) — what one run of the crawler does
+1. [The crawl session](#the-crawl-session) — the whole arc, start references to orphans
 2. [The queue pipeline](#the-queue-pipeline) — how a reference earns its place in the queue
 3. [The document pipeline](#the-document-pipeline) — fetching, filtering, and importing
 4. [The committer pipeline](#the-committer-pipeline) — what happens on the way out
@@ -30,9 +30,13 @@ shown is the order they are registered in `WebDocPipelines` and `FsPipelines`.
 
 ## The crawl session
 
-A session is one run of `crawl-web.sh start` or `crawl-fs.sh start`. It queues
-the start references, works the queue until it is empty, and then decides what
-to do about documents it saw last time but not this time.
+A session queues the start references, works the queue until it is empty, and
+then decides what to do about documents it saw last time but not this time.
+
+The arc below is the session, not necessarily a single execution. If the crawler
+is stopped or interrupted part-way, the next `crawl-web.sh start` (or
+`crawl-fs.sh start`) resumes the same session and carries on from where it
+stopped — see [Crawl Sessions and Runs](./sessions.md).
 
 ```mermaid
 flowchart TB
@@ -70,6 +74,9 @@ Reads `startReferences` and pushes each one through the
 [queue pipeline](#the-queue-pipeline). This step deliberately runs on a **single node** even
 in a cluster — the queue has to exist before anyone can work it.
 
+Skipped when a session is being resumed: the queue is restored from the ledger
+instead, so a resumed session never re-reads `startReferences`.
+
 ### Crawl documents
 
 The main loop: pull an entry from the queue, run it through the
@@ -81,9 +88,10 @@ standalone and a clustered run.
 
 ### Orphan handling
 
-An **orphan** is a document present in the previous crawl but not reached in
-this one — typically because nothing links to it any more. What happens next is
-set by `orphansStrategy`:
+An **orphan** is a document present in the previous crawl session but not reached
+in this one — typically because nothing links to it any more. This stage runs
+when the session reaches its end, so a run that stops early never gets here.
+What happens next is set by `orphansStrategy`:
 
 | Strategy | Effect |
 | --- | --- |
@@ -91,7 +99,7 @@ set by `orphansStrategy`:
 | `DELETE` | Requeue them, then send a delete to every committer. |
 | `PROCESS` | Requeue them and crawl them again, in case they are still live. |
 
-Orphan requeueing is skipped entirely on an incremental run configured with
+Orphan requeueing is skipped entirely on an incremental session configured with
 `changeDiscovery: SOURCE_DELTA`, because in that mode the absence of a
 reference does not prove the document is gone.
 
@@ -262,11 +270,11 @@ flowchart TB
 
 ### Recrawlable resolver
 
-_Web crawler only._ On a repeat run, asks the `recrawlableResolver` whether this
+_Web crawler only._ On an incremental session, asks the `recrawlableResolver` whether this
 document is due to be fetched again — from sitemap `changefreq`/`lastmod`, or
 from the minimum frequencies you configure. Documents that are not due are
 dropped here, before any request is made. Rejects as `REJECTED_PREMATURE`. See
-[Crawl Sessions](./sessions.md#controlling-re-crawl-eligibility-web-crawler-only).
+[Crawl Sessions and Runs](./sessions.md#controlling-re-crawl-eligibility-web-crawler-only).
 
 ### Delay resolver
 
@@ -298,7 +306,7 @@ copy is rejected and the canonical one is queued instead. Runs after both the
 ### Metadata checksum
 
 _Once only._ Computes a checksum from the metadata using the configured
-`metadataChecksummer`. On an incremental run, an unchanged checksum means the
+`metadataChecksummer`. On an incremental session, an unchanged checksum means the
 document is skipped as `REJECTED_UNMODIFIED`.
 
 ### Metadata dedup
@@ -427,7 +435,7 @@ flowchart TB
 ### Document checksum
 
 Computes a checksum over the imported content using `documentChecksummer`. On an
-incremental run this is the last and most reliable chance to notice the document
+incremental session this is the last and most reliable chance to notice the document
 has not actually changed, since it is based on parsed content rather than
 headers. Rejects as `REJECTED_UNMODIFIED`.
 

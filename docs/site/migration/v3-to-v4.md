@@ -187,8 +187,10 @@ Unchanged element names: `<workDir>`, `<numThreads>`, `<maxDepth>`,
 
 :::caution[`maxDocuments` semantics changed]
 In v3, `maxDocuments` capped the number of documents processed overall. In v4 it
-caps the number processed **within a crawl session** — if the crawler did not
-reach completion, the next session resumes where the last one ended.
+caps the number processed **within a crawl run** — reaching the cap ends the run
+but leaves the crawl session open, and the next run resumes where the last one
+ended with a fresh allowance of the same size. See
+[Crawl Sessions and Runs](../concepts/sessions.md#limiting-documents-per-run).
 :::
 
 Several elements kept their name but changed shape. Two common patterns:

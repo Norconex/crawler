@@ -30,7 +30,9 @@ pipeline components for customer-specific requirements.
 
 ## Core concepts at a glance
 
-- **Crawl session** — a named, resumable run with persistent state
+- **Crawl session** — one complete pass over everything the crawler is configured to reach
+- **Crawl run** — one execution of the crawler; an interrupted session resumes across several runs
+- **Incremental crawling** — from the second session onward, only what changed is committed
 - **Pipeline** — every document flows through: Crawl → Process → Commit
 - **Committers** — pluggable output targets (Elasticsearch, Solr, Kafka, SQL, Neo4j, ...)
 

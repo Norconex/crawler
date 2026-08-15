@@ -176,4 +176,4 @@ require this extra step.
 
 - Use the [Visual Configurator](https://configurator.norconex.com) to build your config visually
 - Read [Concepts: Crawl Pipeline](../concepts/crawl-pipeline) to understand how documents are processed
-- Read [Concepts: Sessions](../concepts/sessions) to understand resume, deduplication, recrawl policy, and external run scheduling
+- Read [Concepts: Sessions and Runs](../concepts/sessions) to understand resume, deduplication, recrawl policy, and external scheduling

@@ -15,7 +15,7 @@ Understanding these ideas will help you configure and extend the crawler effecti
 | ----------------------------------------------------------- | -------------------------------------------------------- |
 | [Crawl Pipeline](./crawl-pipeline.md)                       | How documents move from source to destination            |
 | [Crawler Flow](./crawl-flow.md)                             | The same journey stage by stage, in interactive diagrams |
-| [Sessions](./sessions.md)                                   | Resumable crawl state, deduplication, and recrawl policy |
+| [Sessions and Runs](./sessions.md)                          | Resuming, deduplication, recrawl policy, and scheduling   |
 | [Configuration Semantics](./configuration-semantics.md)     | Defaults, null/empty behavior, variables, and fragments  |
 | [Document Processing](./document-processing.md)             | The Import module: parsing, enrichment, metadata         |
 | [Extending the Crawler](./extending.md)                     | Custom components, SPI, event listeners                  |
