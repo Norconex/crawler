@@ -65,7 +65,8 @@ import lombok.extern.slf4j.Slf4j;
  * Replace "xyz" to any value/object/variable being returned.
  * </p>
  *
- * <table border="1" cellspacing="0" cellpadding="3">
+ * <table border="1">
+ *   <caption>Supported scripting engines</caption>
  *   <tr>
  *     <th>Engine Name</th>
  *     <th>Language Version</th>

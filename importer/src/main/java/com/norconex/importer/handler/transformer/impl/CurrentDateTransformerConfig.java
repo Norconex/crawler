@@ -67,7 +67,7 @@ public class CurrentDateTransformerConfig extends BaseDocHandlerConfig {
 
     /**
      * The target field. Defaults
-     * to {@value CurrentDateTransformerConfig.DEFAULT_FIELD}.
+     * to {@value CurrentDateTransformerConfig#DEFAULT_FIELD}.
      * @param toField target field
      * @return target field
      */

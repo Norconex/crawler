@@ -64,7 +64,9 @@ import lombok.Data;
  * <p><b>Since 2.5.0</b>, when used as a pre-parse handler,
  * this class attempts to detect the content character
  * encoding unless the character encoding
- * was specified using {@link #setSourceCharset(String)}. Since document
+ * was specified using
+ * {@link DomSplitterConfig#setSourceCharset(java.nio.charset.Charset)}.
+ * Since document
  * parsing converts content to UTF-8, UTF-8 is always assumed when
  * used as a post-parse handler.
  * </p>

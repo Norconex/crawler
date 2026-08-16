@@ -50,15 +50,18 @@ import lombok.ToString;
  * consider text found in &lt;H1&gt; tags more importantly than other
  * text in HTML documents.</p>
  *
- * <p>If {@link #isDetectHeading()} returns <code>true</code>, this handler
+ * <p>If {@link TitleGeneratorTransformerConfig#isDetectHeading()} returns
+ * <code>true</code>, this handler
  * will check if the content starts with a stand-alone, single-sentence line
  * (which is assumed to be the actual title).
  * That is, a line of text with only one sentence in it, followed by one or
  * more new line characters. To help
  * eliminate cases where such sentence are inappropriate, you can specify a
  * minimum and maximum number of characters that first line should have
- * with {@link #setDetectHeadingMinLength(int)} and
- * {@link #setDetectHeadingMaxLength(int)} (e.g. to ignore "Page 1" text and
+ * with {@link TitleGeneratorTransformerConfig#setDetectHeadingMinLength(int)}
+ * and
+ * {@link TitleGeneratorTransformerConfig#setDetectHeadingMaxLength(int)}
+ * (e.g. to ignore "Page 1" text and
  * the like).</p>
  *
  * <p>Unless a target field name is provided, the default field name
@@ -77,10 +80,12 @@ import lombok.ToString;
  *
  * <p>The generated title length is limited to 150 characters by default.
  * You can change that limit by using
- * {@link #setTitleMaxLength(int)}. Text larger than the max limit will be
+ * {@link TitleGeneratorTransformerConfig#setTitleMaxLength(int)}. Text
+ * larger than the max limit will be
  * truncated and three dots will be added in square brackets ([...]).
  * To remove the limit,
- * use -1 (or constant {@link #UNLIMITED_TITLE_LENGTH}).</p>
+ * use -1 (or constant
+ * {@link TitleGeneratorTransformerConfig#UNLIMITED_TITLE_LENGTH}).</p>
  *
  * <p>This class should be used as a post-parsing handler only
  * (or otherwise on unformatted text).</p>
@@ -96,7 +101,8 @@ import lombok.ToString;
  * <h2>Max read size</h2>
  * <p>This tagger will only analyze up to the first
  * 10,000 characters. You can change this maximum
- * with {@link #setMaxReadSize(int)}. Given this class is not
+ * with {@link TitleGeneratorTransformerConfig#setMaxReadSize(int)}. Given
+ * this class is not
  * optimized for large content analysis, setting a huge maximum number
  * of characters could cause serious performance issues on large
  * large files.</p>

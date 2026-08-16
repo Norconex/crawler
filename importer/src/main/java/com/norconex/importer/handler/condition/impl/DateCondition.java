@@ -103,7 +103,7 @@ import lombok.extern.slf4j.Slf4j;
  * <p>
  * In cases where you want to specify the time zone for values
  * without one, you can do so with
- * the {@link #setDocZoneId(ZoneId)} method.
+ * the {@link DateConditionConfig#setDocZoneId(ZoneId)} method.
  * Explicitly setting a document time zone that way has no effect
  * if the date already defines its own zone.
  * The default time zone when none is specified is UTC.

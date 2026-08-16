@@ -268,8 +268,8 @@ public final class ConcurrentUtil {
     }
 
     /**
-     * Combine a list of CompletableFuture<T> into a single
-     * CompletableFuture<List<T>>.
+     * Combine a list of {@code CompletableFuture<T>} into a single
+     * {@code CompletableFuture<List<T>>}.
      * @param futures list of completable future
      * @param <T> type of future return values
      * @return single completable future

@@ -40,7 +40,7 @@ public class SplitOperation {
 
     /**
      * Whether the separator value is a regular expression.
-     * @param regex <code>true</code> if a regular expression.
+     * @param separatorRegex <code>true</code> if a regular expression.
      * @return <code>true</code> if a regular expression.
      */
     private boolean separatorRegex;

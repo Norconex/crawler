@@ -30,9 +30,7 @@ import lombok.Data;
  * A condition based on a text pattern matching a document content
  * (default), or matching specific field(s).
  * When used on very large content, it is possible the pattern matching will
- * be done in chunks, sometimes not achieving expected results.  Consider
- * creating your own condition from {@link AbstractCharStreamCondition}
- * if this is a concern.
+ * be done in chunks, sometimes not achieving expected results.
  * </p>
  *
  * @see <a href="https://crawler.norconex.com/docs/reference/importer/TextCondition">

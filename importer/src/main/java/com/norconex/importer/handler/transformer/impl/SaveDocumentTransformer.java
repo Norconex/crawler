@@ -40,7 +40,7 @@ import lombok.extern.slf4j.Slf4j;
  * <p>
  * Saves a copy of the document at its current processing state in
  * the specified directory. If no directory is specified, the default is
- * {@value SaveDocumentTransformer#DEFAULT_SAVE_DIR_PATH}.
+ * {@value SaveDocumentTransformerConfig#DEFAULT_SAVE_DIR_PATH}.
  * It is recommended to use this tagger as a pre-parse handler if you
  * want to save the original file.
  * </p>

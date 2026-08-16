@@ -46,7 +46,7 @@ import lombok.Data;
  * If a target field with the same name already exists for a document,
  * the count value will be added to the end of the existing value list.
  * It is possible to change this default behavior
- * with {@link #setOnSet(PropertySetter)}.
+ * with {@link CountMatchesTransformerConfig#setOnSet(PropertySetter)}.
  * </p>
  *
  * <p>Can be used as a pre-parse tagger on text document only when matching

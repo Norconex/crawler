@@ -258,9 +258,9 @@ public class CrawlerConfig {
      * Differs from {@link #deferredShutdownDuration} in that additions to
      * the crawler queue will resume the normal processing.
      * A non-zero value can be useful if the crawler queue can be populated
-     * by an external process. Default is zero (does not wait).
-     * {@value #DEFAULT_IDLE_TIMEOUT}. A {@code null}
-     * value is equivalent to zero.
+     * by an external process. Defaults to {@link #DEFAULT_IDLE_TIMEOUT}
+     * (5 seconds). A {@code null} or zero
+     * value disables the wait.
      * The smallest considered unit is seconds (milliseconds are rounded up).
      */
     private Duration idleTimeout = DEFAULT_IDLE_TIMEOUT;
@@ -268,7 +268,8 @@ public class CrawlerConfig {
     /**
      * Minimum amount of time to wait between each logging of crawling
      * progress. Minimum value is 1 second.
-     * Default value is {@value #DEFAULT_MIN_PROGRESS_LOGGING_INTERVAL}.
+     * Defaults to {@link #DEFAULT_MIN_PROGRESS_LOGGING_INTERVAL}
+     * (30 seconds).
      * A {@code null} value or a value below 1 second disables progress
      * logging.
      */

@@ -37,21 +37,23 @@ import lombok.Getter;
  *   <li>Launch crawler.</li>
  *   <li>Invoke <b>beforeSession</b>.</li>
  *   <li>Initialize crawl session.</li>
- *   <li>For each command:</li>
- *   <ul>
- *     <li>Invoke <b>beforeCommand</b>.</li>
- *     <li>Execute command.</li>
- *     <li> For each document:</li>
+ *   <li>For each command:
  *     <ul>
- *       <li>Invoke <b>beforeDocumentProcessing</b>.</li>
- *       <li>Process document (fetch, parse, transform, etc.)</li>
- *       <li>Invoke <b>afterDocumentProcessing</b>.</li>
- *       <li>Invoke <b>beforeDocumentFinalizing</b>.</li>
- *       <li>Finalize document (upsert/delete, close resources, etc.)</li>
- *       <li>Invoke <b>afterDocumentFinalizing</b>.</li>
+ *       <li>Invoke <b>beforeCommand</b>.</li>
+ *       <li>Execute command.</li>
+ *       <li>For each document:
+ *         <ul>
+ *           <li>Invoke <b>beforeDocumentProcessing</b>.</li>
+ *           <li>Process document (fetch, parse, transform, etc.)</li>
+ *           <li>Invoke <b>afterDocumentProcessing</b>.</li>
+ *           <li>Invoke <b>beforeDocumentFinalizing</b>.</li>
+ *           <li>Finalize document (upsert/delete, close resources, etc.)</li>
+ *           <li>Invoke <b>afterDocumentFinalizing</b>.</li>
+ *         </ul>
+ *       </li>
+ *       <li>Invoke <b>afterCommand</b></li>
  *     </ul>
- *     <li>Invoke <b>afterCommand</b></li>
- *   </ul>
+ *   </li>
  *   <li>Invoke <b>afterSession</b></li>
  * </ul>
  */

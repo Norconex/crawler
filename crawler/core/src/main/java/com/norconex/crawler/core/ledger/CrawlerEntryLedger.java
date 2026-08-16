@@ -38,7 +38,7 @@ import lombok.extern.slf4j.Slf4j;
  * for document processing. Acts as a facade over a few processing
  * state-specific data stores. Includes persisting of information
  * necessary for incremental crawls and resumes.
- * <p>
+ * </p>
  * <p>
  * The processing of a document has the following stages:
  * </p>
@@ -52,7 +52,7 @@ import lombok.extern.slf4j.Slf4j;
  * </ul>
  * <p>
  *   Once a crawl completes, processed references become "cached" on the
- *   next run and are used to establish deltas and save processing.</li>
+ *   next run and are used to establish deltas and save processing.
  * </p>
  */
 @Slf4j

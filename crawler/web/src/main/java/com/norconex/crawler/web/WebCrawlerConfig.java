@@ -488,9 +488,9 @@ public class WebCrawlerConfig extends CrawlerConfig {
     private DelayResolver delayResolver = new GenericDelayResolver();
 
     /**
-     * The canonical link detector. To disable canonical link detection,
-     * use {@link #setIgnoreCanonicalLinks(boolean)}.
+     * The canonical link detector.
      * Defaults to {@link GenericCanonicalLinkDetector}.
+     * Set to {@code null} to disable canonical link detection.
      */
     private CanonicalLinkDetector canonicalLinkDetector =
             new GenericCanonicalLinkDetector();
@@ -512,7 +512,6 @@ public class WebCrawlerConfig extends CrawlerConfig {
      * The provider of robots.txt rules for a site (if applicable).
      * Defaults to {@link StandardRobotsTxtProvider}.
      * Set to {@code null} to disable.
-     * @see #setIgnoreRobotsTxt(boolean)
      */
     private RobotsTxtProvider robotsTxtProvider =
             new StandardRobotsTxtProvider();
@@ -521,7 +520,6 @@ public class WebCrawlerConfig extends CrawlerConfig {
      * The provider of robots metadata rules for a page (if applicable).
      * Defaults to {@link StandardRobotsMetaProvider}.
      * Set to {@code null} to disable.
-     * @see #setIgnoreRobotsMeta(boolean)
      */
     private RobotsMetaProvider robotsMetaProvider =
             new StandardRobotsMetaProvider();

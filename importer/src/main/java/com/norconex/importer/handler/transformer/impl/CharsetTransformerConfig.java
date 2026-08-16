@@ -56,7 +56,6 @@ import lombok.experimental.Accessors;
  * class will handle ALL character encoding conversions properly.
  * </p>
  *
- * @see CharsetTagger
  * @see <a href="https://crawler.norconex.com/docs/reference/importer/CharsetTransformer">
  *      CharsetTransformer configuration reference</a>
  */

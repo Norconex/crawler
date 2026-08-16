@@ -26,7 +26,7 @@ import lombok.experimental.Accessors;
  * {@link HdfsFetcherConfig#setAuthMethod(HdfsAuthMethod)} is set to
  * {@link HdfsAuthMethod#KERBEROS}.
  * </p>
- * <h3>Typical usage</h3>
+ * <h2>Typical usage</h2>
  * <p>
  * At a minimum, you need a valid Kerberos configuration file
  * ({@code krb5.conf}) and either a keytab file or access to the system

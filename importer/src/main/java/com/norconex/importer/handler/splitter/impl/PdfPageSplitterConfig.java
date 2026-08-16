@@ -69,8 +69,9 @@ public class PdfPageSplitterConfig extends BaseDocumentSplitterConfig {
      * @param contentTypeMatcher content type matcher
      * @return this
      */
-    public PdfPageSplitterConfig setContentTypeMatcher(TextMatcher matcher) {
-        contentTypeMatcher.copyFrom(matcher);
+    public PdfPageSplitterConfig
+            setContentTypeMatcher(TextMatcher contentTypeMatcher) {
+        this.contentTypeMatcher.copyFrom(contentTypeMatcher);
         return this;
     }
 }

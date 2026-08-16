@@ -40,8 +40,9 @@ import lombok.Data;
  * <p>
  * This class should only be used as a pre-parsing handler, on image files.
  * It may also be appropriate to disable parsing of those images if you
- * want to keep the transformed version intact. This can be done with
- * {@link ParseConfig}, obtained via the {@link ImporterConfig}.
+ * want to keep the transformed version intact. This can be done by
+ * configuring {@link com.norconex.importer.handler.parser.impl.DefaultParser}
+ * as a handler in the {@link ImporterConfig}.
  * </p>
  *
  * <h2>Content-types</h2>
@@ -59,13 +60,12 @@ import lombok.Data;
  * {@link DimensionConverter}.
  * </p>
  *
- * <h4>Usage example:</h4>
+ * <h3>Usage example:</h3>
  * <p>
  * The above example converts images to PNG while scaling it to a maximum
  * dimension of 400 pixels wide and 250 pixel high.
  * </p>
  *
- * @see ExternalHandler
  * @see <a href="https://crawler.norconex.com/docs/reference/importer/ImageTransformer">
  *      ImageTransformer configuration reference</a>
  */

@@ -55,8 +55,8 @@ import lombok.experimental.Accessors;
  * {@link #setSqlMerge(String)} to target a different database dialect.
  * </p>
  *
- * <p>Effective defaults by mode:</p>
  * <table border="1">
+ *   <caption>Effective defaults by mode</caption>
  *   <tr><th>Setting</th><th>Standalone</th><th>Clustered</th></tr>
  *   <tr><td>backupCount</td><td>0</td><td>1</td></tr>
  *   <tr><td>maxPoolSize</td><td>10</td><td>20</td></tr>

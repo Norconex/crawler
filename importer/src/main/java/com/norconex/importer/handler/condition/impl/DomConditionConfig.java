@@ -83,7 +83,7 @@ import lombok.experimental.Accessors;
  * <h2>Character encoding</h2>
  * <p>When used as a pre-parse handler, this condition uses the detected
  * character encoding unless the character encoding
- * was specified using {@link #setSourceCharset(String)}. Since document
+ * was specified using {@link #setSourceCharset(Charset)}. Since document
  * parsing should always converts content to UTF-8, UTF-8 is always
  * assumed when used as a post-parse handler.
  * </p>

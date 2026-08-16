@@ -270,7 +270,7 @@ public class ExternalTransformerConfig extends BaseDocHandlerConfig {
 
     /**
      * Sets metadata extraction patterns. See class documentation.
-     * @param patterns extraction pattern
+     * @param extractionPatterns extraction pattern
      * @return this instance
      */
     public ExternalTransformerConfig setExtractionPatterns(

@@ -42,7 +42,8 @@ import lombok.experimental.FieldNameConstants;
  * By default, ALL values for all fields matched by your field matcher
  * expression must be blank for this condition to be <code>true</code>.
  * You can change the logic to have ANY values to be blank for the condition
- * to be <code>true</code> with {@link #setMatchAnyBlank(boolean)}.
+ * to be <code>true</code> with
+ * {@link BlankConditionConfig#setMatchAnyBlank(boolean)}.
  * </p>
  * <p>
  * If no fields are matched, the conditions is also considered empty

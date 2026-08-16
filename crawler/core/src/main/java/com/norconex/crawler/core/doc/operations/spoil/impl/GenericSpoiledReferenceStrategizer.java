@@ -35,7 +35,8 @@ import lombok.ToString;
  * The mappings defined by default are as follow:
  * </p>
  *
- * <table border="1" style="width:300px;" summary="Default mappings">
+ * <table border="1" style="width:300px;">
+ *   <caption>Default mappings</caption>
  *   <tr><td><b>Crawl state</b></td><td><b>Strategy</b></td></tr>
  *   <tr><td>NOT_FOUND</td><td>DELETE</td></tr>
  *   <tr><td>BAD_STATUS</td><td>GRACE_ONCE</td></tr>

@@ -60,7 +60,8 @@ import lombok.extern.slf4j.Slf4j;
  * (it only reads it). It also do not store the "content" as a field.
  * </p>
  * <p>
- * When not specified with {@link #setFile(Path)}, a file called
+ * When not specified with {@link FieldReportTransformerConfig#setFile(Path)},
+ * a file called
  * "field-report.csv" will be created in the working directory.
  * </p>
  *

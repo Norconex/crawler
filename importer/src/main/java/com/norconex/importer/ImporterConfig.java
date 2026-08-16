@@ -36,10 +36,10 @@ import lombok.Data;
 import lombok.experimental.Accessors;
 
 /**
- * Importer configuration. Refer to {@link ParseConfig} for parse-specific
+ * Importer configuration. Refer to {@link DefaultParser} for parse-specific
  * configuration documentation.
  *
- * @see ParseConfig
+ * @see DefaultParser
  * @see <a href="https://crawler.norconex.com/docs/reference/importer/ImporterConfig">
  *      ImporterConfig configuration reference</a>
  */

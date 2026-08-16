@@ -46,7 +46,8 @@ import lombok.Data;
  * </p>
  * <p>
  * The matching is case-insensitive. If you need alternate ways to detect URLs,
- * you can use a combination of {@link RegexTagger}, {@link ReplaceTagger}, or
+ * you can use a combination of {@link RegexTransformer},
+ * {@link ReplaceTransformer}, or
  * create your own implementation.
  * </p>
  *

@@ -34,7 +34,7 @@ import lombok.Data;
  * If a target field with the same name already exists for a document,
  * values will be added to the end of the existing value list.
  * It is possible to change this default behavior
- * with {@link #setOnSet(PropertySetter)}.
+ * with {@link ConstantTransformerConfig#setOnSet(PropertySetter)}.
  * </p>
  * <p>Can be used both as a pre-parse or post-parse handler.</p>
  *

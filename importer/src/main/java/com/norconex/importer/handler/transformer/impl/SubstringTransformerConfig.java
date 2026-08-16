@@ -54,14 +54,14 @@ public class SubstringTransformerConfig extends BaseDocHandlerConfig {
     /**
      * The beginning index (inclusive).
      * A negative value is treated the same as zero.
-     * @param beginIndex beginning index
+     * @param begin beginning index
      * @return beginning index
      */
     private long begin = 0;
     /**
      * The end index (exclusive).
      * A negative value is treated as the content end.
-     * @param endIndex end index
+     * @param end end index
      * @return the end index
      */
     private long end = -1;

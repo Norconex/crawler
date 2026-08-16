@@ -63,7 +63,7 @@ import lombok.experimental.Accessors;
  * </p>
  * <p>It is possible to control what gets extracted
  * exactly for matching purposes thanks to the "extract" argument of the
- * new method {@link #setExtract(String)}. Possible values are:
+ * new method {@link DomConditionConfig#setExtract(String)}. Possible values are:
  * </p>
  * {@link com.norconex.importer.util.DomUtil#getElementValue(org.jsoup.nodes.Element,java.lang.String)}
  * <p>
@@ -91,7 +91,9 @@ import lombok.experimental.Accessors;
  * <h2>Character encoding</h2>
  * <p>When used as a pre-parse handler, this condition uses the detected
  * character encoding unless the character encoding
- * was specified using {@link #setSourceCharset(String)}. Since document
+ * was specified using
+ * {@link DomConditionConfig#setSourceCharset(java.nio.charset.Charset)}.
+ * Since document
  * parsing should always converts content to UTF-8, UTF-8 is always
  * assumed when used as a post-parse handler.
  * </p>

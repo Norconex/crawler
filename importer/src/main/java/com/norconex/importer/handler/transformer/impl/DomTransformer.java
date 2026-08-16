@@ -79,14 +79,16 @@ import lombok.Data;
  * <p>When used as a pre-parse handler,
  * this class attempts to detect the content character
  * encoding unless the character encoding
- * was specified using {@link #setSourceCharset(String)}. Since document
+ * was specified using
+ * {@link DomTransformerConfig#setSourceCharset(java.nio.charset.Charset)}.
+ * Since document
  * parsing converts content to UTF-8, UTF-8 is always assumed when
  * used as a post-parse handler.
  * </p>
  *
  * <p>You can control what gets extracted
  * exactly thanks to the "extract" argument of the new method
- * {@link DOMExtractDetails#setExtract(String)}. Possible values are:</p>
+ * {@link DomOperation#setExtract(String)}. Possible values are:</p>
  * <ul>
  *   <li><b>text</b>: Default option when extract is blank. The text of
  *       the element, including combined children.</li>
@@ -145,14 +147,14 @@ import lombok.Data;
  * with, specifying "xml" should be a good option.
  * </p>
  *
- * <h2>Content deletion from fields</h2>
+ * <h2>Content deletion</h2>
  * <p>
- * As of 3.0.0, you can specify whether to delete any elements
- * matched by the selector. You can use with a "toField" or on its own.
- * Some options are ignored by deletions, such as
- * "extract" or "defaultValue".  Because taggers cannot modify the document
- * content, deletion only applies to metadata fields. Use {@link DOMDeleteTransformer}
- * to modify the document content.
+ * You can specify whether to delete any elements
+ * matched by the selector with {@link DomOperation#setDelete(boolean)}.
+ * You can use it with a "toField" or on its own. Some options are ignored
+ * by deletions, such as "extract" or "defaultValue". Deletion applies to
+ * whatever the operation targets: the document content when reading it
+ * directly, or a metadata field's value when using "fromField".
  * </p>
  *
  * <p>
@@ -166,7 +168,6 @@ import lombok.Data;
  * ... the above example will store "Joe" in a "firstName" field and "Dalton"
  * in a "lastName" field.
  * </p>
- * @see DOMDeleteTransformer
  * @see <a href="https://crawler.norconex.com/docs/reference/importer/DomTransformer">
  *      DomTransformer configuration reference</a>
  */

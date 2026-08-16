@@ -26,7 +26,7 @@ import lombok.experimental.Accessors;
  * {@link HttpAuthMethod#KERBEROS}, this configuration provides
  * the necessary Kerberos settings.
  * </p>
- * <h3>Typical usage</h3>
+ * <h2>Typical usage</h2>
  * <p>
  * At a minimum, you need a valid Kerberos configuration file
  * ({@code krb5.conf}) and either a keytab file or access to

@@ -103,8 +103,8 @@ public class OcrConfig {
      * @param contentTypeMatcher content type matcher
      * @return this
      */
-    public OcrConfig setContentTypeMatcher(TextMatcher matcher) {
-        contentTypeMatcher.copyFrom(matcher);
+    public OcrConfig setContentTypeMatcher(TextMatcher contentTypeMatcher) {
+        this.contentTypeMatcher.copyFrom(contentTypeMatcher);
         return this;
     }
 

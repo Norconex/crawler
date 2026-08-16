@@ -60,7 +60,7 @@ import lombok.ToString;
  * the modified content.
  * </p>
  *
- * <h4>Usage examples:</h4>
+ * <h3>Usage examples:</h3>
  * <p>
  * The following examples replace all occurrences of "Alice" with "Roger"
  * in a document content.

@@ -55,7 +55,7 @@ import lombok.experimental.Accessors;
  * <p><b>Since 2.5.0</b>, when used as a pre-parse handler,
  * this class attempts to detect the content character
  * encoding unless the character encoding
- * was specified using {@link #setSourceCharset(String)}. Since document
+ * was specified using {@link #setSourceCharset(Charset)}. Since document
  * parsing converts content to UTF-8, UTF-8 is always assumed when
  * used as a post-parse handler.
  * </p>
@@ -132,8 +132,9 @@ public class DomSplitterConfig extends BaseDocumentSplitterConfig {
      * @param contentTypeMatcher content type matcher
      * @return this
      */
-    public DomSplitterConfig setContentTypeMatcher(TextMatcher matcher) {
-        contentTypeMatcher.copyFrom(matcher);
+    public DomSplitterConfig
+            setContentTypeMatcher(TextMatcher contentTypeMatcher) {
+        this.contentTypeMatcher.copyFrom(contentTypeMatcher);
         return this;
     }
 }

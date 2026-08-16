@@ -38,6 +38,7 @@ import lombok.extern.slf4j.Slf4j;
  * class.
  * </p>
  * <table>
+ *   <caption>DocRecord property to metadata field mapping</caption>
  *   <tr>
  *     <th style="text-align:left; padding-right: 20px;">DocRecord property</th>
  *     <th style="text-align:left;">Metadata field</th>

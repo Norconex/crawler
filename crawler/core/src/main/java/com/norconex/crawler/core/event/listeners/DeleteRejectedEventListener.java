@@ -63,7 +63,7 @@ import lombok.extern.slf4j.Slf4j;
  * we can't assume there is any metadata attached with rejected
  * references. Be aware this can cause issues if you are using rules in your
  * committer (e.g., to route requests) based on metadata.
- * <p>
+ * </p>
  */
 @EqualsAndHashCode
 @ToString

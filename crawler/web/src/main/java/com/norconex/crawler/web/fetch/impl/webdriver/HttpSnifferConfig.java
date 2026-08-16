@@ -55,8 +55,8 @@ public class HttpSnifferConfig {
     private final Map<String, String> requestHeaders = new HashMap<>();
     /**
      * Maximum byte size before a request/response content is considered too
-     * large. Can be specified using notations, e.g., 25MB. Default is
-     * {@value #DEFAULT_MAX_BUFFER_SIZE}.
+     * large. Can be specified using notations, e.g., 25MB. Defaults to
+     * {@link #DEFAULT_MAX_BUFFER_SIZE} (10 MB).
      */
     private int maxBufferSize = DEFAULT_MAX_BUFFER_SIZE;
 

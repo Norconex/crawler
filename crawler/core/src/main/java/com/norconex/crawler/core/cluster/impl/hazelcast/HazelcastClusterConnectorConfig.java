@@ -24,7 +24,8 @@ import lombok.experimental.Accessors;
 public class HazelcastClusterConnectorConfig {
 
     /**
-     * The configurer responsible for building the Hazelcast {@link Config}.
+     * The configurer responsible for building the Hazelcast
+     * {@link com.hazelcast.config.Config}.
      * Defaults to {@link JdbcHazelcastConfigurer}, which uses JDBC persistence
      * with an embedded H2 database in standalone mode and requires an external
      * JDBC URL in clustered mode.

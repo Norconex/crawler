@@ -60,7 +60,7 @@ import lombok.Data;
  * If only a single source field is specified or found, it will be copied
  * to the target field and its multi-values will still be merged to a single one
  * if configured to do so.  In such cases, this class can become an alternative
- * to using {@link ForceSingleValueTagger} with a "mergeWith" action.
+ * to using {@link ForceSingleValueTransformer} with a "mergeWith" action.
  * </p>
  *
  * <p>Can be used both as a pre-parse or post-parse handler.</p>
