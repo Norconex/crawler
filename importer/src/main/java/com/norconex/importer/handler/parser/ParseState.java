@@ -26,7 +26,6 @@ package com.norconex.importer.handler.parser;
  * Pre-parsed documents can be in binary format while post-parsed
  * onces are in text-format (unless parsing was explicitely disabled).
  * </p>
- *
  */
 public enum ParseState {
 

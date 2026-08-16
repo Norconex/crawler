@@ -49,38 +49,10 @@ import lombok.experimental.Accessors;
  * strings on document content, or both as a pre-parse or post-parse handler
  * when the "fieldMatcher" is used.</p>
  *
- * {@nx.xml.usage
- *  <handler class="com.norconex.importer.handler.tagger.impl.CountMatchesTagger"
- *      toField="(target field)"
- *      maxReadSize="(max characters to read at once)"
- *      {@nx.include com.norconex.importer.handler.tagger.AbstractCharStreamTagger#attributes}>
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- *   <fieldMatcher {@nx.include com.norconex.commons.lang.text.TextMatcher#matchAttributes}>
- *     (optional expression for fields used to count matches)
- *   </fieldMatcher>
- *
- *   <countMatcher {@nx.include com.norconex.commons.lang.text.TextMatcher#matchAttributes}>
- *     (expression used to count matches)
- *   </countMatcher>
- *
- *  </handler>
- * }
- *
- * {@nx.xml.example
- *  <handler class="CountMatchesTagger" toField="urlSegmentCount">
- *    <fieldMatcher>document.reference</fieldMatcher>
- *    <countMatcher method="regex">/[^/]+</countMatcher>
- *  </handler>
- * }
- * <p>
- * The above will count the number of segments in a URL.
- * </p>
- *
  * @see Pattern
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/CountMatchesTransformer">
+ *      CountMatchesTransformer configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
 public class CountMatchesTransformerConfig extends BaseDocHandlerConfig {

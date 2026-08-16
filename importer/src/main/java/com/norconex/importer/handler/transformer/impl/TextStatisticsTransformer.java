@@ -102,30 +102,9 @@ import lombok.Data;
  *
  * <p>Can be used both as a pre-parse (text-only) or post-parse handler.</p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.tagger.impl.TextStatisticsTagger"
- *     {@nx.include com.norconex.importer.handler.tagger.AbstractCharStreamTagger#attributes}>
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- *   <fieldMatcher {@nx.include com.norconex.commons.lang.text.TextMatcher#matchAttributes}>
- *     (optional expression matching source fields to analyze instead of content)
- *   </fieldMatcher>
- *
- * </handler>
- * }
- *
- * {@nx.xml.example
- * <handler class="TextStatisticsTagger">
- *   <fieldMatcher>statistics</fieldMatcher>
- * </handler>
- * }
- * <p>
- * The above create statistics from the value of a field called "statistics".
- * </p>
- *
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/TextStatisticsTransformer">
+ *      TextStatisticsTransformer configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 public class TextStatisticsTransformer
         implements ConfigurableDocHandler<TextStatisticsTransformerConfig> {

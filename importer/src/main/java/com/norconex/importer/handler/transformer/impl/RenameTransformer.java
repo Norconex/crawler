@@ -44,36 +44,9 @@ import lombok.Data;
  *
  * <p>Can be used both as a pre-parse or post-parse handler.</p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.tagger.impl.RenameTagger">
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- *   <!-- multiple rename tags allowed -->
- *   <rename
- *       toField="(to field)"
- *       {@nx.include com.norconex.commons.lang.map.PropertySetter#attributes}>
- *     <fieldMatcher {@nx.include com.norconex.commons.lang.text.TextMatcher#attributes}>
- *       (one or more matching fields to rename)
- *     </fieldMatcher>
- *   </rename>
- *
- * </handler>
- * }
- *
- * {@nx.xml.example
- * <handler class="RenameTagger">
- *   <rename toField="title" onSet="replace">
- *     <fieldMatcher>dc.title</fieldMatcher>
- *   </rename>
- * </handler>
- * }
- * <p>
- * The above example renames a "dc.title" field to "title", overwriting
- * any existing values in "title".
- * </p>
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/RenameTransformer">
+ *      RenameTransformer configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 public class RenameTransformer
         implements ConfigurableDocHandler<RenameTransformerConfig> {

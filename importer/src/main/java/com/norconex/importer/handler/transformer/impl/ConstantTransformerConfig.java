@@ -40,30 +40,9 @@ import lombok.experimental.Accessors;
  * </p>
  * <p>Can be used both as a pre-parse or post-parse handler.</p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.tagger.impl.ConstantTagger"
- *     {@nx.include com.norconex.commons.lang.map.PropertySetter#attributes}>
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- *   <!-- multiple constant tags allowed -->
- *   <constant name="CONSTANT_NAME">Constant Value</constant>
- *
- * </handler>
- * }
- *
- * {@nx.xml.example
- *  <handler class="ConstantTagger">
- *    <constant name="source">web</constant>
- *  </handler>
- * }
- * <p>
- * The above example adds a constant to incoming documents to identify they
- * were web documents.
- * </p>
- *
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/ConstantTransformer">
+ *      ConstantTransformer configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
 public class ConstantTransformerConfig extends BaseDocHandlerConfig {

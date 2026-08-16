@@ -104,70 +104,11 @@ import lombok.experimental.Accessors;
  * specify the time zone using the <code>conditionZoneId</code> option.
  * </p>
  *
- * {@nx.include com.norconex.commons.lang.Operator#operators}
+ * {@link com.norconex.commons.lang.Operator}
  *
- * {@nx.xml.usage
- * <condition class="com.norconex.importer.handler.condition.impl.DateCondition"
- *     format="(document field date format)"
- *     docZoneId="(force a time zone on evaluated fields)"
- *     conditionZoneId="(time zone of condition dates when not specified)">
- *
- *
- *     <fieldMatcher {@nx.include com.norconex.commons.lang.text.TextMatcher#matchAttributes}>
- *       (expression matching date fields to evaluate)
- *     </fieldMatcher>
- *
- *     <!-- Use one or two (for ranges) conditions where:
- *
- *       Possible operators are:
- *
- *         gt -> greater than
- *         ge -> greater equal
- *         lt -> lower than
- *         le -> lower equal
- *         eq -> equals
- *
- *       Condition date value format are either one of:
- *
- *         yyyy-MM-dd                -> date (e.g. 2015-05-31)
- *         yyyy-MM-ddThh:mm:ss[.SSS] -> date and time with optional
- *                                      milliseconds (e.g. 2015-05-31T22:44:15)
- *         TODAY[-+]9[YMDhms][*]     -> the string "TODAY" (at 0:00:00) minus
- *                                      or plus a number of years, months, days,
- *                                      hours, minutes, or seconds
- *                                      (e.g. 1 week ago: TODAY-7d).
- *                                      * means TODAY can change from one
- *                                      invocation to another to adjust to a
- *                                      change of current day
- *         NOW[-+]9[YMDhms][*]       -> the string "NOW" (at current time) minus
- *                                      or plus a number of years, months, days,
- *                                      hours, minutes, or seconds
- *                                      (e.g. 1 week ago: NOW-7d).
- *                                      * means NOW changes from one invocation
- *                                      to another to adjust to the current time.
- *    -->
- *
- *     <valueMatcher operator="[gt|ge|lt|le|eq]" date="(a date)" />
- *
- * </condition>
- * }
- *
- * {@nx.xml.example
- * <condition class="DateCondition"
- *     format="yyyy-MM-dd'T'HH:mm:ssZ"
- *     conditionZoneId="America/New_York">
- *   <fieldMatcher>publish_date</fieldMatcher>
- *   <valueMatcher operator="ge" date="TODAY-7" />
- *   <valueMatcher operator="lt" date="TODAY" />
- * </condition>
- * }
- * <p>
- * The above example will only keep documents from the last
- * seven days, not including today.
- * </p>
- *
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/DateCondition">
+ *      DateCondition configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
 public class DateConditionConfig extends BaseConditionConfig {

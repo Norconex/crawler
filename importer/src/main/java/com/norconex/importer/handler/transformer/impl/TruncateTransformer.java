@@ -60,32 +60,6 @@ import lombok.extern.slf4j.Slf4j;
  * Can be used both as a pre-parse or post-parse handler.
  * </p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.tagger.impl.TruncateTagger"
- *     maxLength="(maximum length)"
- *     toField="(optional target field where to store the truncated value)"
- *     {@nx.include com.norconex.commons.lang.map.PropertySetter#attributes}
- *     appendHash="[false|true]"
- *     suffix="(value to append after truncation. Goes before hash if one.)">
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- *   <fieldMatcher {@nx.include com.norconex.commons.lang.text.TextMatcher#matchAttributes}>
- *     (one or more matching fields to have their values truncated)
- *   </fieldMatcher>
-
- * </handler>
- * }
- *
- * {@nx.xml.example
- * <handler class="TruncateTagger"
- *     maxLength="50"
- *     appendHash="true"
- *     suffix="!">
- *   <fieldMatcher>myField</fieldMatcher>
- * </handler>
- * }
- *
  * <p>
  * Assuming this "myField" value...
  * </p>
@@ -95,8 +69,9 @@ import lombok.extern.slf4j.Slf4j;
  * </p>
  * <pre>    Please truncate me before you start thi!0996700004</pre>
  *
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/TruncateTransformer">
+ *      TruncateTransformer configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 @Slf4j
 public class TruncateTransformer

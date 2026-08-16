@@ -61,28 +61,9 @@ import lombok.Data;
  * (e.g., "fr" for French, "fr_CA" for Canadian French). When no locale is
  * specified, the default is "en_US" (US English).</p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.tagger.impl.CurrentDateTagger"
- *     toField="(target field)"
- *     format="(date format)"
- *     locale="(locale)"
- *     {@nx.include com.norconex.commons.lang.map.PropertySetter#attributes}>
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- * </handler>
- * }
- *
- * {@nx.xml.example
- * <handler class="CurrentDateTagger"
- *      toField="crawl_date" format="yyyy-MM-dd HH:mm" />
- * }
- * <p>
- * The above will store the current date along with hours and minutes
- * in a "crawl_date" field.
- * </p>
- *
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/CurrentDateTransformer">
+ *      CurrentDateTransformer configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 public class CurrentDateTransformer
         implements ConfigurableDocHandler<CurrentDateTransformerConfig> {

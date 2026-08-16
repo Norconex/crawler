@@ -43,29 +43,9 @@ import lombok.experimental.Accessors;
  * (<code>true</code>).
  * </p>
  *
- * {@nx.xml.usage
- * <condition
- *     class="com.norconex.importer.handler.condition.impl.BlankCondition"
- *     matchAnyBlank="[false|true]">
- *   <fieldMatcher {@nx.include com.norconex.commons.lang.text.TextMatcher#matchAttributes}>
- *     (Optional expression matching fields we want to test if blank,
- *      instead of using the document content.)
- *   </fieldMatcher>
- * </condition>
- * }
- *
- * {@nx.xml.example
- * <condition class="BlankCondition">
- *   <fieldMatcher method="regex">(title|dc:title)</fieldMatcher>
- * </condition>
- * }
- * <p>
- * The above example condition will return <code>true</code> if both
- * "title" or "dc:title" are blank.
- * </p>
- * <p>
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/BlankCondition">
+ *      BlankCondition configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
 public class BlankConditionConfig extends BaseConditionConfig {

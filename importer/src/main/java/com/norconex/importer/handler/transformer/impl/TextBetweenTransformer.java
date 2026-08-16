@@ -58,45 +58,9 @@ import lombok.Data;
  * or a post-parsing handler.
  * </p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.tagger.impl.TextBetweenTagger"
- *     {@nx.include com.norconex.importer.handler.tagger.AbstractStringTagger#attributes}>
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- *   <!-- multiple textBetween tags allowed -->
- *   <textBetween
- *       toField="(target field name)"
- *       inclusive="[false|true]"
- *       {@nx.include com.norconex.commons.lang.map.PropertySetter#attributes}>
- *     <fieldMatcher {@nx.include com.norconex.commons.lang.text.TextMatcher#matchAttributes}>
- *       (optional expression matching fields to perform extraction on)
- *     </fieldMatcher>
- *     <startMatcher {@nx.include com.norconex.commons.lang.text.TextMatcher#matchAttributes}>
- *       (expression matching "left" delimiter)
- *     </startMatcher>
- *     <endMatcher {@nx.include com.norconex.commons.lang.text.TextMatcher#matchAttributes}>
- *       (expression matching "right" delimiter)
- *     </endMatcher>
- *   </textBetween>
- * </handler>
- * }
- *
- * {@nx.xml.example
- * <handler class="TextBetweenTransformer">
- *   <textBetween toField="content">
- *     <startMatcher>OPEN</startMatcher>
- *     <endMatcher>CLOSE</endMatcher>
- *   </textBetween>
- * </handler>
- * }
- * <p>
- * The above example extract the content between "OPEN" and
- * "CLOSE" strings, excluding these strings, and store it in a "content"
- * field.
- * </p>
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/TextBetweenTransformer">
+ *      TextBetweenTransformer configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 public class TextBetweenTransformer
         implements ConfigurableDocHandler<TextBetweenTransformerConfig> {

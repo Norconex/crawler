@@ -62,44 +62,10 @@ import lombok.experimental.Accessors;
  * or a post-parsing handler.
  * </p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.tagger.impl.RegexTagger"
- *     {@nx.include com.norconex.importer.handler.tagger.AbstractStringTagger#attributes}>
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- *   <fieldMatcher {@nx.include com.norconex.commons.lang.text.TextMatcher#matchAttributes}>
- *     (optional expression matching source fields on which to perform extraction)
- *   </fieldMatcher>
- *
- *   <!-- multiple pattern tags allowed -->
- *   <pattern
- *       {@nx.include com.norconex.commons.lang.text.RegexFieldValueExtractor#attributes}>
- *     (regular expression)
- *   </pattern>
- * </handler>
- * }
- *
- * {@nx.xml.example
- * <handler class="RegexTagger" >
- *   <pattern toField="emails">
- *     [A-Za-z0-9+_.-]+?@[a-zA-Z0-9.-]+
- *   </pattern>
- *   <pattern fieldGroup="1" valueGroup="2"><![CDATA[
- *     <tr><td class="label">(.*?)</td><td class="value">(.*?)</td></tr>
- *   ]]></pattern>
- * </handler>
- * }
- * <p>
- * The first pattern in the above example extracts what look like email
- * addresses in to an "email" field (simplified regex). The second pattern
- * extracts field names and values from "label" and "value" cells on
- * a given HTML table.
- * </p>
- *
  * @see RegexFieldValueExtractor
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/RegexTransformer">
+ *      RegexTransformer configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
 public class RegexTransformerConfig extends BaseDocHandlerConfig

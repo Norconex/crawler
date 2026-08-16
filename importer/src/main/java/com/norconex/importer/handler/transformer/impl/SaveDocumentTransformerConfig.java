@@ -37,38 +37,9 @@ import lombok.experimental.Accessors;
  * (the default).
  * </p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.tagger.impl.SaveDocumentTagger">
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- *   <saveDir>(target directory path where to save documents)</saveDir>
- *   <maxPathLength>
- *     (maximum file path length; defaults to -1, i.e., unlimited)
- *   </maxPathLength>
- *   <dirSplitPattern>
- *     (regular expression matching the separator(s) used to split the document
- *      reference in sub-directories)
- *   </dirSplitPattern>
- *   <escape>[false|true]</escape>
- *   <pathToField>
- *     (optional field name where to store the saved file path)
- *   </pathToField>
- *   <defaultFileName>
- *     (file name to use if a file path already exists as a directory).
- *   </defaultFileName>
- * </handler>
- * }
- *
- * {@nx.xml.example
- * <handler class="SaveDocumentTagger">
- *   <saveDir>/save/files/here/</saveDir>
- *   <pathToField>file.path</pathToField>
- *   <defaultFileName>index.html</defaultFileName>
- * </handler>
- * }
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/SaveDocumentTransformer">
+ *      SaveDocumentTransformer configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
 public class SaveDocumentTransformerConfig extends BaseDocHandlerConfig {

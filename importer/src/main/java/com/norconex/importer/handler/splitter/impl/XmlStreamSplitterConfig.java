@@ -73,23 +73,9 @@ import lombok.experimental.Accessors;
  * documents this splitter applies to.
  * </p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.splitter.impl.XMLStreamSplitter"
- *     path="(XML path)">
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- * </handler>
- * }
- *
- * {@nx.xml.example
- * <handler class="XMLStreamSplitter" path="/animals/species/animal" />
- * }
- *
- * <p>
- * The above example will create one document per animals, based on the
- * sample XML given above.
- * </p>
- *
  * @see DomSplitter
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/XmlStreamSplitter">
+ *      XmlStreamSplitter configuration reference</a>
  */
 @SuppressWarnings("javadoc")
 @Data

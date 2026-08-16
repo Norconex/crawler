@@ -101,31 +101,8 @@ import lombok.ToString;
  * of characters could cause serious performance issues on large
  * large files.</p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.tagger.impl.TitleGeneratorTagger"
- *     {@nx.include com.norconex.importer.handler.tagger.AbstractStringTagger#attributes}
- *     fromField="(field of text to use/default uses document content)"
- *     toField="(target field where to store generated title)"
- *     {@nx.include com.norconex.commons.lang.map.PropertySetter#attributes}
- *     titleMaxLength="(max num of chars for generated title)"
- *     detectHeading="[false|true]"
- *     detectHeadingMinLength="(min length a heading title can have)"
- *     detectHeadingMaxLength="(max length a heading title can have)">
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- * </handler>
- * }
- *
- * {@nx.xml.example
- * <handler class="TitleGeneratorTagger"
- *     toField="title" titleMaxLength="200" detectHeading="true" />
- * }
- * <p>
- * The above will check if the first line looks like a title and if not,
- * it will store the first sentence, up to 200 characters, in a field called
- * title.
- * </p>
- *
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/TitleGeneratorTransformer">
+ *      TitleGeneratorTransformer configuration reference</a>
  */
 @SuppressWarnings("javadoc")
 @Data

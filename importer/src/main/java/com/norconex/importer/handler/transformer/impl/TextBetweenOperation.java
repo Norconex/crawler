@@ -22,7 +22,6 @@ import lombok.experimental.Accessors;
 
 @Data
 @Accessors(chain = true)
-@SuppressWarnings("javadoc")
 public class TextBetweenOperation {
     private final TextMatcher fieldMatcher = new TextMatcher();
     private final TextMatcher startMatcher = new TextMatcher();

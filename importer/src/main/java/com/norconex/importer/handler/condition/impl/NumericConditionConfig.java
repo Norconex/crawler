@@ -50,34 +50,10 @@ import lombok.experimental.Accessors;
  *   </li>
  * </ul>
  *
- * {@nx.include com.norconex.commons.lang.Operator#operators}
+ * {@link com.norconex.commons.lang.Operator}
  *
- * {@nx.xml.usage
- * <condition class="com.norconex.importer.handler.condition.impl.NumericCondition">
- *
- *   <fieldMatcher>
- *     (expression matching one or more numeric fields)
- *   </fieldMatcher>
- *
- *   <!-- Use two value matchers if you want to define a range. -->
- *   <valueMatcher operator="[gt|ge|lt|le|eq]" number="(number)" />
- * </condition>
- * }
- *
- * {@nx.xml.example
- * <condition class="NumericCondition">
- *   <fieldMatcher>age</fieldMatcher>
- *   <valueMatcher operator="ge" number="20" />
- *   <valueMatcher operator="lt" number="30" />
- *  </condition>
- * }
- * <p>
- * Let's say you are importing customer profile documents
- * and you have a field called "age" and you need to only consider documents
- * for customers in their twenties (greater or equal to
- * 20, but lower than 30). The above example would achieve that.
- * </p>
- *
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/NumericCondition">
+ *      NumericCondition configuration reference</a>
  */
 @Data
 @Accessors(chain = true)

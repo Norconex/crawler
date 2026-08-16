@@ -38,33 +38,6 @@ import lombok.experimental.Accessors;
  * <p>This class can be used as a pre-parsing (text content-types only)
  * or post-parsing handlers.</p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.transformer.impl.StripBetweenTransformer"
- *     {@nx.include com.norconex.importer.handler.transformer.AbstractStringTransformer#attributes}>
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- *   <!-- multiple stripBetween tags allowed -->
- *   <stripBetween
- *       inclusive="[false|true]">
- *     <startMatcher {@nx.include com.norconex.commons.lang.text.TextMatcher#matchAttributes}>
- *       (expression matching "left" delimiter)
- *     </startMatcher>
- *     <endMatcher {@nx.include com.norconex.commons.lang.text.TextMatcher#matchAttributes}>
- *       (expression matching "right" delimiter)
- *     </endMatcher>
- *   </stripBetween>
- * </handler>
- * }
- *
- * {@nx.xml.example
- * <handler class="StripBetweenTransformer">
- *   <stripBetween inclusive="true">
- *     <startMatcher><![CDATA[<!-- SIDENAV_START -->]]></startMatcher>
- *     <endMatcher><![CDATA[<!-- SIDENAV_END -->]]></endMatcher>
- *   </stripBetween>
- * </handler>
- * }
  * <p>
  * The following will strip all text between (and including) these two
  * HTML comments:
@@ -72,8 +45,9 @@ import lombok.experimental.Accessors;
  * <code>&lt;!-- SIDENAV_END --&gt;</code>.
  * </p>
  *
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/StripBetweenTransformer">
+ *      StripBetweenTransformer configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
 public class StripBetweenTransformerConfig extends BaseDocHandlerConfig

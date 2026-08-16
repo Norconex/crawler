@@ -77,35 +77,9 @@ import lombok.extern.slf4j.Slf4j;
  * </ul>
  * <p>Field names are referenced in a case insensitive manner.</p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.tagger.impl.CharacterCaseTagger"
- *     type="[upper|lower|words|wordsFully|sentences|sentencesFully|string|stringFully|swap]"
- *     applyTo="[value|field|both]">
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- *   <fieldMatcher {@nx.include com.norconex.commons.lang.text.TextMatcher#matchAttributes}>
- *     (expression to narrow by matching fields)
- *   </fieldMatcher>
- * </handler>
- * }
- *
- * {@nx.xml.example
- * <!-- Converts title to lowercase -->
- * <handler class="CharacterCaseTagger" type="lower" applyTo="field">
- *   <fieldMatcher>title</fieldMatcher>
- * </handler>
- * <!-- Make first title character uppercase -->
- * <handler class="CharacterCaseTagger" type="string" applyTo="value">
- *   <fieldMatcher>title</fieldMatcher>
- * </handler>
- * }
- * <p>
- * The above examples first convert a title to lower case except for the
- * first character.
- * </p>
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/CharacterCaseTransformer">
+ *      CharacterCaseTransformer configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Slf4j
 @Data
 public class CharacterCaseTransformer

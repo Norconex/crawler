@@ -159,34 +159,9 @@ import lombok.extern.slf4j.Slf4j;
  * the default behavior is to try match all languages currently supported.
  * </p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.tagger.impl.LanguageTagger"
- *     keepProbabilities="(false|true)"
- *     toField="(custom target field to store the language)"
- *     fallbackLanguage="(default language when detection failed)"
- *     {@nx.include com.norconex.importer.handler.tagger.AbstractStringTagger#attributes}>
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- *   <languages>
- *     (CSV list of language tag candidates. Defaults to the above list.)
- *   </languages>
- *
- * </handler>
- * }
- *
- * {@nx.xml.example
- * <handler class="LanguageTagger" fallbackLanguage="en" >
- *   <languages>en, fr</languages>
- * </handler>
- * }
- * <p>
- * The above example detects whether pages are English or French, falling back
- * to English if detection failed.
- * </p>
- *
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/LanguageTransformer">
+ *      LanguageTransformer configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 @Slf4j
 public class LanguageTransformer

@@ -19,7 +19,6 @@ import com.norconex.importer.handler.BaseDocHandlerConfig;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
-@SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
 public class BaseDocumentSplitterConfig extends BaseDocHandlerConfig {

@@ -40,18 +40,6 @@ import lombok.Data;
  * {@link ReplaceTransformer} instead.
  * </p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.transformer.impl.ReduceConsecutivesTransformer"
- *     ignoreCase="[false|true]"
- *     {@nx.include com.norconex.importer.handler.transformer.AbstractStringTransformer#attributes}>
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- *   <!-- multiple reduce tags allowed -->
- *   <reduce>(character or string to strip)</reduce>
- *
- * </handler>
- * }
  * <p>
  * In addition to regular characters, you can specify these special characters
  * in your XML:
@@ -62,18 +50,11 @@ import lombok.Data;
  *   <li>\t (tab)</li>
  *   <li>\s (space)</li>
  * </ul>
- * {@nx.xml.example
- * <handler class="ReduceConsecutivesTransformer">
- *   <reduce>\s</reduce>
- * </handler>
- * }
- * <p>
- * The above example reduces multiple spaces into a single one.
- * </p>
  *
  * @see ReplaceTransformer
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/CollapseRepeatingTransformer">
+ *      CollapseRepeatingTransformer configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 public class CollapseRepeatingTransformer
         implements ConfigurableDocHandler<CollapseRepeatingTransformerConfig> {

@@ -60,60 +60,14 @@ import lombok.ToString;
  * the modified content.
  * </p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.transformer.impl.ScriptTransformer"
- *     engineName="(script engine name)"
- *     {@nx.include com.norconex.importer.handler.transformer.AbstractStringTransformer#attributes}>
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- *   <script>(your script)</script>
- *
- * </handler>
- * }
- *
  * <h4>Usage examples:</h4>
  * <p>
  * The following examples replace all occurrences of "Alice" with "Roger"
  * in a document content.
  * </p>
- * <h5>JavaScript:</h5>
- * {@nx.xml
- * <handler class="ScriptTransformer" engineName="JavaScript">
- *   <script><![CDATA[
- *       returnValue = content.replace(/Alice/g, 'Roger');
- *   ]]></script>
- * </handler>
- * }
- *
- * <h5>Lua:</h5>
- * {@nx.xml
- * <handler class="ScriptTransformer" engineName="lua">
- *   <script><![CDATA[
- *       returnValue = content:gsub('Alice', 'Roger');
- *   ]]></script>
- * </handler>
- * }
- *
- * <h5>Python:</h5>
- * {@nx.xml
- * <handler class="ScriptTransformer" engineName="python">
- *   <script><![CDATA[
- *       returnValue = content.replace('Alice', 'Roger')
- *   ]]></script>
- * </handler>
- * }
- *
- * <h5>Velocity:</h5>
- * {@nx.xml
- * <handler class="ScriptTransformer" engineName="velocity">
- *   <script><![CDATA[
- *       #set($returnValue = $content.replace('Alice', 'Roger'))
- *   ]]></script>
- * </handler>
- * }
- *
  * @see ScriptRunner
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/ScriptTransformer">
+ *      ScriptTransformer configuration reference</a>
  */
 @SuppressWarnings("javadoc")
 @Data

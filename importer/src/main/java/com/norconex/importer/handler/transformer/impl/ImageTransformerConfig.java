@@ -51,31 +51,6 @@ import lombok.experimental.Accessors;
  * {@link DimensionConverter}.
  * </p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.transformer.impl.ImageTransformer"
- *      targetFormat="(jpg, png, gif, bmp, wbmp, or other supported format)">
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- *   <scale
- *       stretch="[false|true]"
- *       factor="(decimal value ratio factor, default is 1)"
- *       dimension="(target dimension, in pixels, format: [width]x[height])" />
- *
- *   <rotate degrees="(-360 to 360)"/>
- *
- *   <crop
- *       x="(top-left x-axis, default 0)"
- *       y="(top-left y-axis, default 0)"
- *       dimension="(crop dimension, in pixels, format: [width]x[height])"/>
- * </handler>
- * }
- *
- * {@nx.xml.example
- * <handler class="ImageTransformer" targetFormat="png">
- *   <scale dimension="400x250" />
- * </handler>
- * }
  * <h4>Usage example:</h4>
  * <p>
  * The above example converts images to PNG while scaling it to a maximum
@@ -83,6 +58,8 @@ import lombok.experimental.Accessors;
  * </p>
  *
  * @see ExternalHandler
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/ImageTransformer">
+ *      ImageTransformer configuration reference</a>
  */
 @SuppressWarnings("javadoc")
 @Data

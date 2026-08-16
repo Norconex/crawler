@@ -43,7 +43,6 @@ public final class CommonMatchers {
 
     /**
      * <p>ATOM, RDF, RSS, and strict XML content types:</p>
-     * {@nx.block #xmlFeedContentTypes
      * <ul>
      *   <li>application/atom+xml</li>
      *   <li>application/rdf+xml</li>
@@ -51,7 +50,6 @@ public final class CommonMatchers {
      *   <li>application/xml</li>
      *   <li>text/xml</li>
      * </ul>
-     * }
      */
     public static final Set<String> XML_FEED_CONTENT_TYPES =
             Collections.unmodifiableSet(
@@ -63,13 +61,11 @@ public final class CommonMatchers {
 
     /**
      * <p>HTML/XHTML content types:</p>
-     * {@nx.block #htmlContentTypes
      * <ul>
      *   <li>application/vnd.wap.xhtml+xml</li>
      *   <li>application/xhtml+xml</li>
      *   <li>text/html</li>
      * </ul>
-     * }
      */
     public static final Set<String> HTML_CONTENT_TYPES = Set.of(
             "application/vnd.wap.xhtml+xml",
@@ -78,7 +74,6 @@ public final class CommonMatchers {
 
     /**
      * <p>HTML, XHTML, and XML-based content types:</p>
-     * {@nx.block #xmlContentTypes
      * <ul>
      *   <li>application/atom+xml</li>
      *   <li>application/mathml+xml</li>
@@ -89,7 +84,6 @@ public final class CommonMatchers {
      *   <li>image/svg+xml</li>
      *   <li>text/xml</li>
      * </ul>
-     * }
      */
     public static final Set<String> XML_CONTENT_TYPES =
             Collections.unmodifiableSet(
@@ -102,7 +96,6 @@ public final class CommonMatchers {
 
     /**
      * <p>Content types representing a document object model:</p>
-     * {@nx.block #domContentTypes
      * <ul>
      *   <li>application/atom+xml</li>
      *   <li>application/mathml+xml</li>
@@ -116,7 +109,6 @@ public final class CommonMatchers {
      *   <li>text/html</li>
      *   <li>text/xml</li>
      * </ul>
-     * }
      */
     public static final Set<String> DOM_CONTENT_TYPES =
             Collections.unmodifiableSet(
@@ -128,7 +120,6 @@ public final class CommonMatchers {
 
     /**
      * <p>Content types for natively supported Java ImageIO images.</p>
-     * {@nx.block #imageIOStandardContentTypes
      * <ul>
      *   <li>image/bmp</li>
      *   <li>image/gif</li>
@@ -137,7 +128,6 @@ public final class CommonMatchers {
      *   <li>image/vnd.wap.wbmp</li>
      *   <li>image/x-windows-bmp</li>
      * </ul>
-     * }
      */
     public static final Set<String> IMAGE_IO_CONTENT_TYPES = Set.of(
             "image/bmp",
@@ -156,7 +146,7 @@ public final class CommonMatchers {
      * documents that are HTML, XHTML, or XML-based.
      * The value has to be any of these to trigger a match (case-insensitive):
      * </p>
-     * {@nx.include com.norconex.importer.handler.CommonMatchers#domContentTypes}
+     * {@link com.norconex.importer.handler.CommonMatchers#DOM_CONTENT_TYPES}
      * @return text matcher
      */
     public static TextMatcher domContentTypes() {
@@ -170,7 +160,7 @@ public final class CommonMatchers {
      * this matcher will also match base XML content types.
      * The value has to be any of these to trigger a match (case-insensitive):
      * </p>
-     * {@nx.include com.norconex.importer.handler.CommonMatchers#xmlFeedContentTypes}
+     * {@link com.norconex.importer.handler.CommonMatchers#XML_FEED_CONTENT_TYPES}
      * @return text matcher
      */
     public static TextMatcher xmlFeedContentTypes() {
@@ -182,7 +172,7 @@ public final class CommonMatchers {
      * Matcher for common content-types defining an HTML or XHTML document.
      * The value has to be any of these to trigger a match (case-insensitive):
      * </p>
-     * {@nx.include com.norconex.importer.handler.CommonMatchers#htmlContentTypes}
+     * {@link com.norconex.importer.handler.CommonMatchers#HTML_CONTENT_TYPES}
      * @return text matcher
      */
     public static TextMatcher htmlContentTypes() {
@@ -194,7 +184,7 @@ public final class CommonMatchers {
      * Common content-types defining an XML document.
      * The value has to be any of these to trigger a match (case-insensitive):
      * </p>
-     * {@nx.include com.norconex.importer.handler.CommonMatchers#xmlContentTypes}
+     * {@link com.norconex.importer.handler.CommonMatchers#XML_CONTENT_TYPES}
      * @return text matcher
      */
     public static TextMatcher xmlContentTypes() {
@@ -207,7 +197,7 @@ public final class CommonMatchers {
      * implementations: JPEG, PNG, GIF, BMP, WBMP.
      * The value has to be any of these to trigger a match (case-insensitive):
      * </p>
-     * {@nx.include com.norconex.importer.handler.CommonMatchers#imageIOStandardContentTypes}
+     * {@link com.norconex.importer.handler.CommonMatchers#IMAGE_IO_CONTENT_TYPES}
      * @return text matcher
      */
     public static TextMatcher imageIOStandardContentTypes() {

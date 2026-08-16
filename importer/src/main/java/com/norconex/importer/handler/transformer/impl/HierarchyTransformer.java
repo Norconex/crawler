@@ -69,35 +69,10 @@ import lombok.EqualsAndHashCode;
  * <p>
  * Can be used both as a pre-parse or post-parse handler.
  * </p>
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.tagger.impl.HierarchyTagger">
  *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- *   <!-- multiple hierarchy tags allowed -->
- *   <hierarchy fromField="(from field)"
- *       toField="(optional to field)"
- *       fromSeparator="(original separator)"
- *       toSeparator="(optional new separator)"
- *       {@nx.include com.norconex.commons.lang.map.PropertySetter#attributes}
- *       regex="[false|true]"
- *       keepEmptySegments="[false|true]" />
- * </handler>
- * }
- *
- * {@nx.xml.example
- *  <handler class="HierarchyTagger">
- *      <hierarchy fromField="vegetable" toField="vegetableHierarchy"
- *                 fromSeparator="/"/>
- *  </handler>
- * }
- * <p>
- * The above will expand a slash-separated vegetable hierarchy found in a
- * "vegetable" field into a "vegetableHierarchy" field.
- * </p>
- *
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/HierarchyTransformer">
+ *      HierarchyTransformer configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 public class HierarchyTransformer
         implements ConfigurableDocHandler<HierarchyTransformerConfig> {

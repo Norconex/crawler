@@ -75,7 +75,6 @@ public class DocHandlerContext {
      * @param condition a condition
      * @return condition
      */
-    @SuppressWarnings("javadoc")
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Condition condition;

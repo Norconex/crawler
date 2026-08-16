@@ -41,20 +41,9 @@ import lombok.Data;
  * the original content is no longer available by then.
  * </p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.transformer.impl.BinaryContentTransformer">
- *   <fieldName>
- *     (Name of the metadata field to store the Base64-encoded content in.
- *      Default is "binaryContent".)
- *   </fieldName>
- * </handler>
- * }
- *
- * {@nx.xml.example
- * <handler class="BinaryContentTransformer"/>
- * }
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/BinaryContentTransformer">
+ *      BinaryContentTransformer configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 public class BinaryContentTransformer
         implements ConfigurableDocHandler<BinaryContentTransformerConfig> {

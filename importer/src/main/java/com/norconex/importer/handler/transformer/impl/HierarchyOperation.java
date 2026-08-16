@@ -21,7 +21,6 @@ import lombok.experimental.Accessors;
 
 @Data
 @Accessors(chain = true)
-@SuppressWarnings("javadoc")
 public class HierarchyOperation {
 
     private String fromField;

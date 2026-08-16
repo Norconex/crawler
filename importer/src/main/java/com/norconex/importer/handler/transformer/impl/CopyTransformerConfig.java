@@ -40,35 +40,14 @@ import lombok.experimental.Accessors;
  *
  * <p>Can be used both as a pre-parse or post-parse handler.</p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.tagger.impl.CopyTagger">
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- *   <!-- multiple copy tags allowed -->
- *   <copy toField="(to field)"
- *       {@nx.include com.norconex.commons.lang.map.PropertySetter#attributes}>
- *     <fieldMatcher {@nx.include com.norconex.commons.lang.text.TextMatcher#matchAttributes}>
- *       (one or more matching fields to copy)
- *     </fieldMatcher>
- *   </copy>
- * </handler>
- * }
- *
- * {@nx.xml.example
- * <handler class="CopyTagger">
- *   <copy toField="author" onSet="append">
- *     <fieldMatcher method="regex">(creator|publisher)</fieldMatcher>
- *   </copy>
- * </handler>
- * }
  * <p>
  * Copies the value of a "creator" and "publisher" fields into an "author"
  * field, adding to any existing values in the "author" field.
  * </p>
  *
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/CopyTransformer">
+ *      CopyTransformer configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
 public class CopyTransformerConfig extends BaseDocHandlerConfig {

@@ -155,32 +155,6 @@ import lombok.Data;
  * to modify the document content.
  * </p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.tagger.impl.DOMTagger"
- *         fromField="(optional source field)"
- *         parser="[html|xml]"
- *         sourceCharset="(character encoding)">
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- *   <!-- multiple "dom" tags allowed -->
- *   <dom selector="(selector syntax)"
- *       toField="(target field)"
- *       extract="[text|html|outerHtml|ownText|data|tagName|val|className|cssSelector|attr(attributeKey)]"
- *       matchBlanks="[false|true]"
- *       defaultValue="(optional value to use when no match)"
- *       delete="[false|true]"
- *       {@nx.include com.norconex.commons.lang.map.PropertySetter#attributes}/>
- *
- * </handler>
- * }
- *
- * {@nx.xml.example
- * <handler class="DOMTagger">
- *   <dom selector="div.firstName" toField="firstName" />
- *   <dom selector="div.lastName"  toField="lastName" />
- * </handler>
- * }
  * <p>
  * Given this HTML snippet...
  * </p>
@@ -193,6 +167,8 @@ import lombok.Data;
  * in a "lastName" field.
  * </p>
  * @see DOMDeleteTransformer
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/DomTransformer">
+ *      DomTransformer configuration reference</a>
  */
 @SuppressWarnings("javadoc")
 @Data

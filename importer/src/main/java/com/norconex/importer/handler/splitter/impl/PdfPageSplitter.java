@@ -47,13 +47,6 @@ import lombok.Data;
  * <code>document.pdf.numberOfPages</code>.  A filtering example:
  * </p>
  *
- * {@nx.xml.example
- * <filter class="com.norconex.importer.handler.filter.impl.EmptyFilter"
- *         onMatch="exclude">
- *   <fieldMatcher matchWhole="true">document.pdf.pageNumber</fieldMatcher>
- * </filter>
- * }
- *
  * <p>
  * By default this splitter restricts its use to
  * <code>document.contentType</code> matching <code>application/pdf</code>.
@@ -61,28 +54,9 @@ import lombok.Data;
  *
  * <p>Should be used as a pre-parse handler.</p>
  *
- * {@nx.xml.usage
- *  <handler class="com.norconex.importer.handler.splitter.impl.PdfPageSplitter">
- *    {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
-
- *    <referencePagePrefix>
- *      (String to put before the page number is appended to the document
- *      reference. Default is "#".)
- *    </referencePagePrefix>
- *
- *  </handler>
- * }
- *
- * {@nx.xml.example
- * <handler class="PdfPageSplitter">
- *   <referencePagePrefix>#page</referencePagePrefix>
- * </handler>
- * }
- * <p>The above example will split PDFs and will append the page number
- * to the original PDF reference as "#page1", "#page2", etc.
- * </p>
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/PdfPageSplitter">
+ *      PdfPageSplitter configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 public class PdfPageSplitter
         extends AbstractDocumentSplitter<PdfPageSplitterConfig> {

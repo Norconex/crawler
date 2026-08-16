@@ -65,7 +65,7 @@ import lombok.experimental.Accessors;
  * exactly for matching purposes thanks to the "extract" argument of the
  * new method {@link #setExtract(String)}. Possible values are:
  * </p>
- * {@nx.include com.norconex.importer.util.DomUtil#extract}
+ * {@link com.norconex.importer.util.DomUtil#getElementValue(org.jsoup.nodes.Element,java.lang.String)}
  * <p>
  * Should be used as a pre-parse handler.
  * </p>
@@ -88,8 +88,6 @@ import lombok.experimental.Accessors;
  * with HTML or XML-like markup tags.
  * </p>
  *
- * {@nx.include com.norconex.importer.handler.condition.AbstractCharStreamCondition#charEncoding}
- *
  * <h2>Character encoding</h2>
  * <p>When used as a pre-parse handler, this condition uses the detected
  * character encoding unless the character encoding
@@ -109,36 +107,8 @@ import lombok.experimental.Accessors;
  * with, specifying "xml" is a good option.
  * </p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.condition.impl.DomCondition"
- *     {@nx.include com.norconex.importer.handler.condition.AbstractCharStreamCondition#attributes}
- *     selector="(selector syntax)"
- *     parser="[html|xml]"
- *     extract="[text|html|outerHtml|ownText|data|tagName|val|className|cssSelector|attr(attributeKey)]">
- *
- *   <fieldMatcher {@nx.include com.norconex.commons.lang.text.TextMatcher#matchAttributes}>
- *     (Optional expression matching one or more fields where the DOM text is located.)
- *   </fieldMatcher>
- *   <valueMatcher {@nx.include com.norconex.commons.lang.text.TextMatcher#matchAttributes}>
- *     (Optional expression matching selector extracted value.)
- *   </valueMatcher>
- *   <contentTypeMatcher {@nx.include com.norconex.commons.lang.text.TextMatcher#matchAttributes}>
- *     (Optional expression overwriting the content types this condition applies to.)
- *   </contentTypeMatcher>
- * </handler>
- * }
- *
- * {@nx.xml.example
- * <!-- Matches an HTML page that has one or more GIF images in it: -->
- * <condition class="DomCondition" selector="img[src$=.gif]" onMatch="exclude"/>
- *
- * <!-- Matches an HTML page that has a paragraph tag with a class called
- *      "disclaimer" and a value containing "skip me": -->
- * <condition class="DomCondition" selector="p.disclaimer" onMatch="exclude">
- *   <valueMatcher method="regex">\bskip me\b</valueMatcher>
- * </condition>
- * }
- *
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/DomCondition">
+ *      DomCondition configuration reference</a>
  */
 @SuppressWarnings("javadoc")
 @Data

@@ -31,33 +31,9 @@ import lombok.experimental.Accessors;
  * <p>This class can be used as a pre-parsing (text content-types only)
  * or post-parsing handlers.</p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.transformer.impl.StripAfterTransformer"
- *     inclusive="[false|true]"
- *     {@nx.include com.norconex.importer.handler.transformer.AbstractStringTransformer#attributes}>
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- *   <stripAfterMatcher {@nx.include com.norconex.commons.lang.text.TextMatcher#matchAttributes}>>
- *     (expression matching text from which to strip)
- *   </stripAfterMatcher>
- *
- * </handler>
- * }
- *
- * {@nx.xml.example
- * <handler class="StripAfterTransformer" inclusive="true">
- *   <stripAfterMatcher><![CDATA[<!-- FOOTER -->]]></stripAfterMatcher>
- * </handler>
- * }
- * <p>
- * The above example will strip all text starting with the following HTML
- * comment and everything after it:
- * <code>&lt;!-- FOOTER --&gt;</code>.
- * </p>
- *
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/StripAfterTransformer">
+ *      StripAfterTransformer configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
 public class StripAfterTransformerConfig extends BaseDocHandlerConfig

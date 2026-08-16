@@ -40,30 +40,10 @@ import lombok.extern.slf4j.Slf4j;
  *
  * <p>Can be used both as a pre-parse or post-parse handler.</p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.tagger.impl.KeepOnlyTagger">
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- *   <fieldMatcher {@nx.include com.norconex.commons.lang.text.TextMatcher#matchAttributes}>
- *     (one or more matching fields to keep)
- *   </fieldMatcher>
- *  </handler>
- * }
- *
- * {@nx.xml.example
- * <handler class="KeepOnlyTagger">
- *   <fieldMatcher method="regex">(title|description)</fieldMatcher>
- * </handler>
- * }
- * <p>
- * The above example keeps only the title and description fields from all
- * extracted fields.
- * </p>
- *
  * @see Pattern
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/KeepOnlyTransformer">
+ *      KeepOnlyTransformer configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 @Slf4j
 public class KeepOnlyTransformer

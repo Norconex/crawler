@@ -33,26 +33,8 @@ import lombok.experimental.Accessors;
  * if this is a concern.
  * </p>
  *
- * {@nx.xml.usage
- * <condition class="com.norconex.importer.handler.condition.impl.TextCondition"
- *     {@nx.include com.norconex.importer.handler.condition.AbstractStringCondition#attributes}>
- *
- *   <fieldMatcher {@nx.include com.norconex.commons.lang.text.TextMatcher#matchAttributes}>
- *     (Optional expression of field to match. Omit to use document content.)
- *   </fieldMatcher>
- *   <valueMatcher {@nx.include com.norconex.commons.lang.text.TextMatcher#matchAttributes}>
- *     (expression of value to match)
- *   </valueMatcher>
- *
- * </condition>
- * }
- *
- * {@nx.xml.example
- *  <condition class="TextCondition">
- *    <valueMatcher>apple</valueMatcher>
- *  </condition>
- * }
- *
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/TextCondition">
+ *      TextCondition configuration reference</a>
  */
 @SuppressWarnings("javadoc")
 @Data

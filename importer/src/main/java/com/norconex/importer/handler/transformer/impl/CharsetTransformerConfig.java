@@ -56,26 +56,9 @@ import lombok.experimental.Accessors;
  * class will handle ALL character encoding conversions properly.
  * </p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.transformer.impl.CharsetTransformer"
- *     sourceCharset="(character encoding)"
- *     targetCharset="(character encoding)">
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- * </handler>
- * }
- *
- *
- * {@nx.xml.example
- * <handler class="CharsetTransformer"
- *     sourceCharset="ISO-8859-1" targetCharset="UTF-8">
- * </handler>
- * }
- * <p>
- * The above example converts the content of a document from "ISO-8859-1"
- * to "UTF-8".
- * </p>
- *
  * @see CharsetTagger
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/CharsetTransformer">
+ *      CharsetTransformer configuration reference</a>
  */
 @SuppressWarnings("javadoc")
 @Data

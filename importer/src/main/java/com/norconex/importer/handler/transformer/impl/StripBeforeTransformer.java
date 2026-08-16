@@ -31,32 +31,9 @@ import lombok.extern.slf4j.Slf4j;
  * <p>This class can be used as a pre-parsing (text content-types only)
  * or post-parsing handlers.</p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.transformer.impl.StripBeforeTransformer"
- *     inclusive="[false|true]"
- *     {@nx.include com.norconex.importer.handler.transformer.AbstractStringTransformer#attributes}>
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- *   <stripBeforeMatcher {@nx.include com.norconex.commons.lang.text.TextMatcher#matchAttributes}>>
- *     (expression matching text up to which to strip)
- *   </stripBeforeMatcher>
- * </handler>
- * }
- *
- * {@nx.xml.example
- * <handler class="StripBeforeTransformer" inclusive="true">
- *   <stripBeforeMatcher><![CDATA[<!-- HEADER_END -->]]></stripBeforeMatcher>
- * </handler>
- * }
- *
- * <p>
- * The above example will strip all text up to and including this HTML comment:
- * <code>&lt;!-- HEADER_END --&gt;</code>.
- * </p>
- *
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/StripBeforeTransformer">
+ *      StripBeforeTransformer configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 @Slf4j
 public class StripBeforeTransformer

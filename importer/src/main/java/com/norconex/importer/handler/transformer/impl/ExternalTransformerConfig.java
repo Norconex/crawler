@@ -184,55 +184,8 @@ import lombok.experimental.Accessors;
  * defined for the current process.
  * </p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.transformer.impl.ExternalTransformer">
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- *   <command>
- *     c:\Apps\myapp.exe ${INPUT} ${OUTPUT} ${INPUT_META} ${OUTPUT_META} ${REFERENCE}
- *   </command>
- *
- *   <metadata
- *       inputFormat="[json|xml|properties]"
- *       outputFormat="[json|xml|properties]"
- *       {@nx.include com.norconex.commons.lang.map.PropertySetter#attributes}>
- *     <!-- Pattern only used when no output format is specified.
- *          Repeat as needed. -->
- *     <pattern {@nx.include com.norconex.commons.lang.text.RegexFieldValueExtractor#attributes}>
- *       (regular expression)
- *     </pattern>
- *   </metadata>
- *
- *   <environment>
- *     <!-- repeat variable tag as needed -->
- *     <variable name="(environment variable name)">
- *       (environment variable value)
- *     </variable>
- *   </environment>
- *
- *   <tempDir>
- *     (Optional directory where to store temporary files used
- *      for transformation.)
- *   </tempDir>
- *
- * </handler>
- * }
- *
- * {@nx.xml.example
- * <handler class="ExternalTransformer">
- *   <command>/path/transform/app ${INPUT} ${OUTPUT}</command>
- *   <metadata>
- *     <pattern field="docnumber" valueGroup="1">DocNo:(\d+)</pattern>
- *   </metadata>
- * </handler>
- * }
- * <p>
- * The above example invokes an external application that accepts two
- * files as arguments: the first one being the file to transform, the second
- * one being holding the transformation result. It also extract a document
- * number from STDOUT, found as "DocNo:1234" and storing it as "docnumber".
- * </p>
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/ExternalTransformer">
+ *      ExternalTransformer configuration reference</a>
  */
 @SuppressWarnings("javadoc")
 @Data

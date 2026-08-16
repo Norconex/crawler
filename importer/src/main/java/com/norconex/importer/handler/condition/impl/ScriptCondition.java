@@ -62,59 +62,10 @@ import lombok.extern.slf4j.Slf4j;
  * whether the document was matched or not.
  * </p>
  *
- * {@nx.xml.usage
- * <condition class="com.norconex.importer.handler.condition.impl.ScriptCondition"
- *   {@nx.include com.norconex.importer.handler.condition.AbstractStringCondition#attributes}
- *       engineName="(script engine name)">
- *   <script>(your script)</script>
- * </condition>
- * }
- *
- * <h4>Usage examples:</h4>
- *
- * <h5>JavaScript:</h5>
- * {@nx.xml
- * <condition class="ScriptCondition" engineName="JavaScript>
- *   <script><![CDATA[
- *     returnValue = metadata.getString('fruit') == 'apple'
- *             || content.indexOf('Apple') > -1;
- *   ]]></script>
- * </condition>
- * }
- *
- * <h5>Lua:</h5>
- * {@nx.xml
- * <condition class="ScriptCondition" engineName="lua">
- *   <script><![CDATA[
- *     returnValue = metadata:getString('fruit') == 'apple'
- *             or content:find('Apple') ~= nil;
- *   ]]></script>
- * </condition>
- * }
- *
- * <h5>Python:</h5>
- * {@nx.xml
- * <condition class="ScriptCondition" engineName="python">
- *   <script><![CDATA[
- *     returnValue = metadata.getString('fruit') == 'apple' \
- *             or content.__contains__('Apple');
- *   ]]></script>
- * </condition>
- * }
- *
- * <h5>Velocity:</h5>
- * {@nx.xml
- * <condition class="ScriptCondition" engineName="velocity">
- *   <script><![CDATA[
- *     #set($returnValue = $metadata.getString("fruit") == "apple"
- *             || $content.contains("Apple"))
- *   ]]></script>
- * </condition>
- * }
- *
  * @see ScriptRunner
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/ScriptCondition">
+ *      ScriptCondition configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @ToString
 @EqualsAndHashCode
 @Slf4j

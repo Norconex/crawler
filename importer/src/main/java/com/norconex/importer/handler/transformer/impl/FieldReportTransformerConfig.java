@@ -45,30 +45,9 @@ import lombok.experimental.Accessors;
  *
  * <p>Can be used both as a pre-parse or post-parse handler.</p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.tagger.impl.FieldReportTagger"
- *     maxSamples="(max number of sample values)"
- *     withHeaders="[false|true]"
- *     withOccurences="[false|true]"
- *     truncateSamplesAt="(number of characters to truncate long samples)"
- *     file="(path to a local file)" >
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- * </handler>
- * }
- *
- * {@nx.xml.example
- * <handler class="FieldReportTagger"
- *     maxSamples="1" file="C:\reports\field-report.csv" />
- * }
- * <p>
- * The above example logs all discovered fields into a "field-report.csv" file,
- * along with only 1 example value.
- * </p>
- *
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/FieldReportTransformer">
+ *      FieldReportTransformer configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
 public class FieldReportTransformerConfig extends BaseDocHandlerConfig {

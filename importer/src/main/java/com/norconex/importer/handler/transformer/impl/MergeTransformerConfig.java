@@ -65,37 +65,13 @@ import lombok.experimental.Accessors;
  *
  * <p>Can be used both as a pre-parse or post-parse handler.</p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.tagger.impl.MergeTagger">
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- *   <!-- multiple merge tags allowed -->
- *   <merge toField="(name of target field for merged values)"
- *       deleteFromFields="[false|true]"
- *       singleValue="[false|true]"
- *       singleValueSeparator="(text joining multiple-values)">
- *     <fieldMatcher {@nx.include com.norconex.commons.lang.text.TextMatcher#matchAttributes}>
- *       (one or more matching fields to merge)
- *     </fieldMatcher>
- *   </merge>
- *
- * </handler>
- * }
- * {@nx.xml.example
- * <handler class="MergeTagger">
- *   <merge toField="title" deleteFromFields="true"
- *       singleValue="true" singleValueSeparator="," >
- *     <fieldMatcher method="regex">(title|dc.title|dc:title|doctitle)</fieldMatcher>
- *   </merge>
- * </handler>
- * }
- *
  * <p>
  * The following merges several title fields into one, joining multiple
  * occurrences with a coma, and deleting original fields.
  * </p>
  *
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/MergeTransformer">
+ *      MergeTransformer configuration reference</a>
  */
 @SuppressWarnings("javadoc")
 @Data

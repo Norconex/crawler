@@ -39,36 +39,9 @@ import lombok.experimental.Accessors;
  * Importer configuration. Refer to {@link ParseConfig} for parse-specific
  * configuration documentation.
  *
- * {@nx.xml.usage
- * <importer>
- *   <maxMemoryPool>
- *     (total memory shared by multiple importer instances in the same JVM)
- *   </maxMemoryPool>
- *   <maxMemoryInstance>
- *     (total memory allocated for processing individual files, before
- *      they are persisted to disk, to avoid memory issues)
- *   </maxMemoryInstance>
- *   <tempDir>(Optionally overwrite the default temp directory)</tempDir>
- *   <preParseHandlers>
- *     (any combination of taggers, transformers, splitters, filters,
- *      and XML conditions)
- *   </preParseHandlers>
- *
- *   {@nx.include com.norconex.importer.parser.ParseConfig@nx.xml.usage}
- *
- *   <postParseHandlers>
- *     (any combination of taggers, transformers, splitters, filters,
- *      and XML conditions)
- *   </postParseHandlers>
- *   <responseProcessors>
- *     <responseProcessor class="...">
- *       (optional class that can manipulate the importer response)
- *     </responseProcessor>
- *   </responseProcessors>
- * </importer>
- * }
- *
  * @see ParseConfig
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/ImporterConfig">
+ *      ImporterConfig configuration reference</a>
  */
 @SuppressWarnings("javadoc")
 @Data

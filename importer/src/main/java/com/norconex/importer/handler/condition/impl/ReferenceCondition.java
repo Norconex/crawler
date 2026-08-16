@@ -30,25 +30,9 @@ import lombok.ToString;
  * </p>
  * <p>Can be used both as a pre-parse or post-parse handler.</p>
  *
- * {@nx.xml.usage
- * <condition class="com.norconex.importer.handler.condition.impl.ReferenceCondition">
- *   <valueMatcher {@nx.include com.norconex.commons.lang.text.TextMatcher#matchAttributes}>
- *     (expression of reference value to match)
- *   </valueMatcher>
- * </condition>
- * }
- *
- * {@nx.xml.example
- * <condition class="ReferenceCondition">
- *   <valueMatcher method="regex">.*&#47;login/.*</valueMatcher>
- * </condition>
- * }
- * <p>
- * The above example reject documents having "/login/" in their reference.
- * </p>
- *
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/ReferenceCondition">
+ *      ReferenceCondition configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @EqualsAndHashCode
 @ToString
 public class ReferenceCondition

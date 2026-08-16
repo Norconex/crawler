@@ -37,31 +37,10 @@ import lombok.experimental.Accessors;
  * If you do not specify any action, the default behavior is to merge all
  * occurrences, joining values with a comma.
  * </p>
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.tagger.impl.ForceSingleValueTagger"
- *     action="[keepFirst|keepLast|mergeWith:separator]">
  *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- *   <fieldMatcher {@nx.include com.norconex.commons.lang.text.TextMatcher#matchAttributes}>
- *       (one or more matching fields to force having a single value)
- *   </fieldMatcher>
- *
- * </handler>
- * }
- *
- * {@nx.xml.example
- * <handler class="ForceSingleValueTagger" action="keepFirst">
- *   <fieldMatcher>title</fieldMatcher>
- * </handler>
- * }
- * <p>
- * For documents where multiple title fields are found, the above only
- * keeps the first title value captured.
- * </p>
- *
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/ForceSingleValueTransformer">
+ *      ForceSingleValueTransformer configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
 public class ForceSingleValueTransformerConfig extends BaseDocHandlerConfig {

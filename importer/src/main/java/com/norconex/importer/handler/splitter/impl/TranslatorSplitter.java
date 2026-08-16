@@ -99,53 +99,9 @@ import lombok.ToString;
  * document will always remain the original document, while the children
  * will always be the translations.</p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.splitter.impl.TranslatorSplitter"
- *     api="(microsoft|google|lingo24|moses|yandex)">
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- *   <ignoreContent>(false|true)</ignoreContent>
- *   <ignoreNonTranslatedFields>(false|true)</ignoreNonTranslatedFields>
- *   <fieldsToTranslate>(coma-separated list of fields)</fieldsToTranslate>
- *   <sourceLanguageField>(field containing language)</sourceLanguageField>
- *   <sourceLanguage>(language when no source language field)</sourceLanguage>
- *   <targetLanguages>(coma-separated list of languages)</targetLanguages>
- *
- *   <!-- Microsoft -->
- *   <clientId>...</clientId>
- *   <clientSecret>...</clientSecret>
- *
- *   <!-- Google -->
- *   <apiKey>...</apiKey>
- *
- *   <!-- Lingo24 -->
- *   <userKey>...</userKey>
- *
- *   <!-- Moses -->
- *   <smtPath>...</smtPath>
- *   <scriptPath>...</scriptPath>
- *
- *   <!-- Yandex -->
- *   <apiKey>...</apiKey>
- *
- * </handler>
- * }
- *
- * {@nx.xml.example
- * <handler class="TranslatorSplitter" api="google">
- *     <sourceLanguageField>langField</sourceLanguageField>
- *     <targetLanguages>fr</targetLanguages>
- *     <apiKey>...MYKEYHERE...</apiKey>
- * </handler>
- * }
- *
- * <p>
- * The above example uses the Google translation API to translate documents into
- * French, taking the source document language from a field called "langField".
- * </p>
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/TranslatorSplitter">
+ *      TranslatorSplitter configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 public class TranslatorSplitter
         extends AbstractDocumentSplitter<TranslatorSplitterConfig> {

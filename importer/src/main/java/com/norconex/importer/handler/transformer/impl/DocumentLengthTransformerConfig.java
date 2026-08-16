@@ -41,25 +41,13 @@ import lombok.experimental.Accessors;
  *
  * <p>Can be used both as a pre-parse or post-parse handler.</p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.tagger.impl.DocumentLengthTagger"
- *     toField="(mandatory target field)"
- *     {@nx.include com.norconex.commons.lang.map.PropertySetter#attributes}>
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- * </handler>
- * }
- *
- * {@nx.xml.example
- * <handler class="DocumentLengthTagger" toField="docSize" />
- * }
- *
  * <p>
  * The following stores the document lenght into a "docSize" field.
  * </p>
+ *
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/DocumentLengthTransformer">
+ *      DocumentLengthTransformer configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
 public class DocumentLengthTransformerConfig extends BaseDocHandlerConfig {

@@ -49,24 +49,9 @@ import lombok.Data;
  * This class can be used as a pre-parsing (text content-types only)
  * or post-parsing handlers.</p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.transformer.impl.SubstringTransformer"
- *     {@nx.include com.norconex.importer.handler.transformer.AbstractCharStreamTransformer#attributes}
- *     begin="(number)" end="(number)">
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- * </handler>
- * }
- *
- * {@nx.xml.example
- * <handler class="SubstringTransformer" end="10000"/>
- * }
- * <p>
- * The above example truncates long text to be 10,000 characters maximum.
- * </p>
- *
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/SubstringTransformer">
+ *      SubstringTransformer configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 public class SubstringTransformer
         implements ConfigurableDocHandler<SubstringTransformerConfig> {

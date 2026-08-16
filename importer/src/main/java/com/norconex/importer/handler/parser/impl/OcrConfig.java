@@ -60,51 +60,8 @@ import lombok.experimental.FieldNameConstants;
  * <a href="https://cwiki.apache.org/confluence/display/tika/TikaOCR">here</a>.
  * </p>
  *
- * {@nx.xml.usage
- * <ocr diabled="[false|true]">
- *   <tesseractPath>(path to Tesseract OCR software executable)</tesseractPath>
- *   <tessdataPath>(path to Tesseract OCR data)</tessdataPath>
- *   <contentTypes>
- *     <!-- "matcher" is repeatable -->
- *     <matcher {@nx.include com.norconex.commons.lang.text.TextMatcher#matchAttributes}>
- *       (expression matching one or more content types on which to apply OCR)
- *     </matcher>
- *   </contentTypes>
- *
- *   <!-- Tesseract configuration parameters: -->
- *   <applyRotation></applyRotation>
- *   <colorSpace></colorSpace>
- *   <density></density>
- *   <depth></depth>
- *   <enableImagePreprocessing></enableImagePreprocessing>
- *   <filter></filter>
- *   <imageMagickPath></imageMagickPath>
- *   <language></language>
- *   <maxFileSizeToOcr></maxFileSizeToOcr>
- *   <minFileSizeToOcr></minFileSizeToOcr>
- *   <pageSegMode></pageSegMode>
- *   <pageSeparator></pageSeparator>
- *   <preserveInterwordSpacing></preserveInterwordSpacing>
- *   <resize></resize>
- *   <timeoutSeconds></timeoutSeconds>
- * </ocr>
- * }
- *
- * {@nx.xml.example
- * <ocr>
- *   <tesseractPath>/app/ocr/tesseract.exe</tesseractPath>
- *   <contentTypes>
- *      <matcher>application/pdf</matcher>
- *   </contentTypes>
- *   <params>
- *     <param name="language">eng,fra</param>
- *   </params>
- * </ocr>
- * }
- * <p>
- * The above example uses Tesseract to convert English and French images in
- * PDF into text.
- * </p>
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/OcrConfig">
+ *      OcrConfig configuration reference</a>
  */
 @SuppressWarnings("javadoc")
 @Data

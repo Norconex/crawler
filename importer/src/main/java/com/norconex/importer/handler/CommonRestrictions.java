@@ -36,7 +36,7 @@ public final class CommonRestrictions {
      * Common content-types defining an XML feed (RSS, Atom).
      * The field has to contain one of these for the restriction to apply:
      * </p>
-     * {@nx.include com.norconex.importer.handler.CommonMatchers#xmlFeedContentTypes}
+     * {@link com.norconex.importer.handler.CommonMatchers#XML_FEED_CONTENT_TYPES}
      * @param field name of Properties field
      * @return list of restrictions
      */
@@ -51,7 +51,7 @@ public final class CommonRestrictions {
      * are HTML, XHTML, or XML-based.
      * The field has to contain one of these for the restriction to apply:
      * </p>
-     * {@nx.include com.norconex.importer.handler.CommonMatchers#domContentTypes}
+     * {@link com.norconex.importer.handler.CommonMatchers#DOM_CONTENT_TYPES}
      * @param field name of Properties field
      * @return list of restrictions
      */
@@ -64,7 +64,7 @@ public final class CommonRestrictions {
      * Default content-types defining an HTML or XHTML document.
      * The field has to contain one of these for the restriction to apply:
      * </p>
-     * {@nx.include com.norconex.importer.handler.CommonMatchers#htmlContentTypes}
+     * {@link com.norconex.importer.handler.CommonMatchers#HTML_CONTENT_TYPES}
      * @param field name of Properties field
      * @return list of restrictions
      */
@@ -77,7 +77,7 @@ public final class CommonRestrictions {
      * Common content-types defining an XML document.
      * The field has to contain one of these for the restriction to apply:
      * </p>
-     * {@nx.include com.norconex.importer.handler.CommonMatchers#xmlContentTypes}
+     * {@link com.norconex.importer.handler.CommonMatchers#XML_CONTENT_TYPES}
      * @param field name of Properties field
      * @return list of restrictions
      */
@@ -91,7 +91,7 @@ public final class CommonRestrictions {
      * implementations: JPEG, PNG, GIF, BMP, WBMP.
      * The field has to contain one of these for the restriction to apply:
      * </p>
-     * {@nx.include com.norconex.importer.handler.CommonMatchers#imageIOStandardContentTypes}
+     * {@link com.norconex.importer.handler.CommonMatchers#IMAGE_IO_CONTENT_TYPES}
      * @param field name of Properties field
      * @return list of restrictions
          */

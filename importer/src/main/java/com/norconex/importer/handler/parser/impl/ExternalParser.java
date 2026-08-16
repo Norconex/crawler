@@ -47,61 +47,13 @@ import lombok.ToString;
  * already occurred, consider using {@link ExternalTransformer} instead.
  * </p>
  *
- * {@nx.xml.usage
- * <parser contentType="(content type this parser is associated to)"
- *     class="com.norconex.importer.parser.impl.ExternalParser" >
- *
- *   <command>
- *     c:\Apps\myapp.exe ${INPUT} ${OUTPUT} ${INPUT_META} ${OUTPUT_META} ${REFERENCE}
- *   </command>
- *
- *   <metadata
- *       inputFormat="[json|xml|properties]"
- *       outputFormat="[json|xml|properties]"
- *       {@nx.include com.norconex.commons.lang.map.PropertySetter#attributes}>
- *     <!-- pattern only used when no output format is specified -->
- *     <pattern {@nx.include com.norconex.commons.lang.text.RegexFieldValueExtractor#attributes}>
- *       (regular expression)
- *     </pattern>
- *     <!-- repeat pattern tag as needed -->
- *   </metadata>
- *
- *   <environment>
- *     <variable name="(environment variable name)">
- *       (environment variable value)
- *     </variable>
- *     <!-- repeat variable tag as needed -->
- *   </environment>
- *
- * </parser>
- * }
- *
- *
- * {@nx.xml.example
- * <parser contentType="text/plain"
- *     class="com.norconex.importer.parser.impl.ExternalParser" >
- *   <command>/path/transform/app ${INPUT} ${OUTPUT}</command>
- *   <metadata>
- *     <pattern field="docnumber" valueGroup="1">DocNo:(\d+)</pattern>
- *   </metadata>
- * </parser>
- * }
- *
- * <p>
- * The above example invokes an external application processing for
- * simple text files that accepts two files as arguments:
- * the first one being the file to
- * transform, the second one being holding the transformation result.
- * It also extract a document number from STDOUT, found as "DocNo:1234"
- * and storing it as "docnumber".
- * </p>
- *
  * @see ExternalHandler
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/ExternalParser">
+ *      ExternalParser configuration reference</a>
  */
 
 //TODO document it is the same as ExternalTransformer, but sets parse state
 // to POST.
-@SuppressWarnings("javadoc")
 @Data
 public class ExternalParser
         implements ConfigurableDocHandler<ExternalTransformerConfig> {

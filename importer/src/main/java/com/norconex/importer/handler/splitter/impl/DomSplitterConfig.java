@@ -70,25 +70,9 @@ import lombok.experimental.Accessors;
  * with, specifying "xml" should be a good option.
  * </p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.splitter.impl.DOMSplitter"
- *     selector="(selector syntax)"
- *     parser="[html|xml]"
- *     sourceCharset="(character encoding)" >
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- * </handler>
- * }
- *
- * {@nx.xml.example
- * <handler class="DOMSplitter" selector="div.contact" />
- * }
- *
- * <p>
- * The above example splits contacts found in an HTML document, each one being
- * stored within a div with a class named "contact".
- * </p>
- *
  * @see XmlStreamSplitter
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/DomSplitter">
+ *      DomSplitter configuration reference</a>
  */
 @SuppressWarnings("javadoc")
 @Data

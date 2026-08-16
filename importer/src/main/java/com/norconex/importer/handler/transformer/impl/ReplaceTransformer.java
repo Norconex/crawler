@@ -39,37 +39,9 @@ import lombok.Data;
  * <p>This class can be used as a pre-parsing (text content-types only)
  * or post-parsing handlers.</p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.transformer.impl.ReplaceTransformer"
- *     {@nx.include com.norconex.importer.handler.transformer.AbstractStringTransformer#attributes}>
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- *   <!-- multiple replace tags allowed -->
- *   <replace>
- *     <valueMatcher {@nx.include com.norconex.commons.lang.text.TextMatcher#attributes}>
- *       (one or more source values to replace)
- *     </valueMatcher>
- *     <toValue>(replacement value)</toValue>
- *   </replace>
- *
- *  </handler>
- * }
- *
- * {@nx.xml.example
- * <handler class="ReplaceTransformer">
- *   <replace>
- *     <valueMatcher replaceAll="true">junk food</valueMatcher>
- *     <toValue>healthy food</toValue>
- *   </replace>
- * </handler>
- * }
- * <p>
- * The above example reduces all occurrences of "junk food" with "healthy food".
- * </p>
- *
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/ReplaceTransformer">
+ *      ReplaceTransformer configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 public class ReplaceTransformer
         implements ConfigurableDocHandler<ReplaceTransformerConfig> {

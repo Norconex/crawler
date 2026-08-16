@@ -52,26 +52,9 @@ import lombok.extern.slf4j.Slf4j;
  *
  * <p>Can be used both as a pre-parse or post-parse handler.</p>
  *
- * {@nx.xml.usage
- *  <handler class="com.norconex.importer.handler.tagger.impl.DebugTagger"
- *          logFields="(CSV list of fields to log)"
- *          logContent="[false|true]"
- *          logLevel="[ERROR|WARN|INFO|DEBUG|TRACE]"
- *          prefix="(optional log prefix to further help you locate it)" >
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- *  </handler>
- * }
- * {@nx.xml.example
- *  <handler class="DebugTagger" logFields="title,author" logLevel="INFO" />
- * }
- * <p>
- * The above logs the value of any "title" and "author" document metadata
- * fields.
- * </p>
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/DebugTransformer">
+ *      DebugTransformer configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 
 @Data
 @Slf4j

@@ -52,39 +52,9 @@ import lombok.Data;
  * {@link PropertySetter}.
  * </p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.tagger.impl.SplitTagger"
- *     {@nx.include com.norconex.importer.handler.tagger.AbstractCharStreamTagger#attributes}>
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- *   <!-- multiple split tags allowed -->
- *   <split
- *       toField="targetFieldName"
- *       {@nx.include com.norconex.commons.lang.map.PropertySetter#attributes}>
- *     <fieldMatcher {@nx.include com.norconex.commons.lang.text.TextMatcher#matchAttributes}>
- *       (one or more matching fields to split)
- *     </fieldMatcher>
- *     <separator regex="[false|true]">(separator value)</separator>
- *   </split>
- *
- * </handler>
- * }
- *
- * {@nx.xml.example
- * <handler class="SplitTagger">
- *   <split>
- *     <fieldMatcher>myField</fieldMatcher>
- *     <separator regex="true">\s*,\s*</separator>
- *   </split>
- * </handler>
- * }
- * <p>
- * The above example splits a single value field holding a comma-separated
- * list into multiple values.
- * </p>
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/SplitTransformer">
+ *      SplitTransformer configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 public class SplitTransformer
         implements ConfigurableDocHandler<SplitTransformerConfig> {

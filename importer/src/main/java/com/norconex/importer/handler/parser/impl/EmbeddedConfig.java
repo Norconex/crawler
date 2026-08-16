@@ -27,7 +27,6 @@ import lombok.Data;
 import lombok.experimental.Accessors;
 
 /**
- * {@nx.block #doc
  * <p>
  * For documents containing embedded documents (e.g. zip files), the default
  * behavior of this treat them as a single document, merging all
@@ -48,46 +47,10 @@ import lombok.experimental.Accessors;
  * {@link ImporterResponse} will contain nested documents, which in turn,
  * might contain some (tree-like structure).
  * </p>
- * }
  *
- * {@nx.xml.usage
- * <embedded>
- *     <splitEmbeddedOf>
- *       <!-- "matcher" is repeatable -->
- *       <matcher>
- *         (content type matcher of files to split, having their
- *          embedded documents extracted and treated as individual
- *          documents instead)
- *       </matcher>
- *     </splitEmbeddedOf>
- *     <skipEmmbbededOf>
- *       <matcher>
- *         (content type matcher of files you do not want to have their
- *          embedded files parsed)
- *       </matcher>
- *     </skipEmmbbededOf>
- *     <skipEmmbbeded>
- *       <matcher>
- *         (content type matcher of embedded files you do not want parsed)
- *       </matcher>
- *     </skipEmmbbeded>
- * </embedded>
- * }
- *
- * {@nx.xml.example
- * <embedded>
- *   <splitEmbeddedOf>
- *     <matcher>application/zip</matcher>
- *   </splitEmbeddedOf>
- * </embedded>
- * }
- *
- * <p>
- * The above example will treat all documents contained with a Zip file
- * as individual documents, each to be processed separately.
- * </p>
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/EmbeddedConfig">
+ *      EmbeddedConfig configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
 public class EmbeddedConfig implements Serializable { //{

@@ -149,7 +149,6 @@ public class CharsetDetector {
      *   </li>
      * </ul>
      *
-     *
      * @param input the input stream to detect encoding on
      * @return the detected charset (never {@code null}).
      */
@@ -202,7 +201,6 @@ public class CharsetDetector {
      *     (UTF-8 by default).
      *   </li>
      * </ul>
-     *
      *
      * @param input the input stream to detect encoding on
      * @return the detected charset (never {@code null}).

@@ -65,37 +65,15 @@ import lombok.experimental.FieldNameConstants;
  * date.
  * </p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.tagger.impl.DateFormatTagger"
- *     fromField="(from field)" toField="(to field)"
- *     fromLocale="(locale)"    toLocale="(locale)"
- *     toFormat="(date format)"
- *     keepBadDates="(false|true)"
- *     {@nx.include com.norconex.commons.lang.map.PropertySetter#attributes}>
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- *   <!-- multiple "fromFormat" tags allowed (only one needs to match) -->
- *   <fromFormat>(date format)</fromFormat>
- * </handler>
- * }
- *
- * {@nx.xml.example
- *  <handler class="DateFormatTagger"
- *          fromField="Last-Modified"
- *          toField="solr_date"
- *          toFormat="yyyy-MM-dd'T'HH:mm:ss.SSS'Z'" >
- *      <fromFormat>EEE, dd MMM yyyy HH:mm:ss zzz</fromFormat>
- *      <fromFormat>EPOCH</fromFormat>
- *  </handler>
- * }
  * <p>
  * The following converts a date that is sometimes obtained from the
  * HTTP header "Last-Modified" and sometimes is an EPOCH date,
  * into an Apache Solr date format:
  * </p>
+ *
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/DateFormatTransformer">
+ *      DateFormatTransformer configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
 @FieldNameConstants

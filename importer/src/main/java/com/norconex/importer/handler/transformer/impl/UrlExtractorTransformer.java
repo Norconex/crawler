@@ -70,35 +70,8 @@ import lombok.Data;
  * <p>This class is typically e used as a post-parsing handler only
  * (to ensure we are dealing with text).</p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.tagger.impl.URLExtractorTagger"
- *     toField="(target field where to store extracted URLs)"
- *     maxReadSize="(max characters to read at once)"
- *     {@nx.include com.norconex.importer.handler.tagger.AbstractCharStreamTagger#attributes}
- *     {@nx.include com.norconex.commons.lang.map.PropertySetter#attributes}>
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- *   <fieldMatcher {@nx.include com.norconex.commons.lang.text.TextMatcher#matchAttributes}>
- *     (Optional field of text to use. Default uses document content.)
- *   </fieldMatcher>
- *
- * </handler>
- * }
- *
- * {@nx.xml.example
- * <handler class="URLExtractorTagger" toField="documentURLs">
- *   <restrictTo>
- *     <fieldMatcher>document.contentType</fieldMatcher>
- *     <valueMatcher>application/pdf</valueMatcher>
- *   </restrictTo>
- * </handler>
- * }
- * <p>
- * The above example is used as a post-parse handler. It detects URLs
- * in parsed PDFs and store those URLs in a field call "documentURLs".
- * </p>
- *
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/UrlExtractorTransformer">
+ *      UrlExtractorTransformer configuration reference</a>
  */
 @SuppressWarnings("javadoc")
 @Data

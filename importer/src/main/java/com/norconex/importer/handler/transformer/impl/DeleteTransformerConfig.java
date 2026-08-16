@@ -29,28 +29,9 @@ import lombok.experimental.Accessors;
  * </p>
  * <p>Can be used both as a pre-parse or post-parse handler.</p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.tagger.impl.DeleteTagger">
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- *     <fieldMatcher {@nx.include com.norconex.commons.lang.text.TextMatcher#matchAttributes}>
- *       (one or more matching fields to delete)
- *     </fieldMatcher>
- * </handler>
- * }
- *
- * {@nx.xml.example
- *  <handler class="DeleteTagger">
- *    <fieldMatcher method="regex">^[Xx]-.*</fieldMatcher>
- *  </handler>
- * }
- * <p>
- * The above deletes all metadata fields starting with "X-".
- * </p>
- *
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/DeleteTransformer">
+ *      DeleteTransformer configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
 public class DeleteTransformerConfig extends BaseDocHandlerConfig {

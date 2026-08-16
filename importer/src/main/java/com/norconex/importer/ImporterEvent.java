@@ -54,13 +54,11 @@ public class ImporterEvent extends Event {
      * Gets the document parse state (never {@code null}).
      * @return parse state
      */
-    @SuppressWarnings("javadoc")
     private final ParseState parseState;
     /**
      * Gets the document associated with this event, if applicable.
      * @return a document
      */
-    @SuppressWarnings("javadoc")
     private final transient Doc document;
 
     /**

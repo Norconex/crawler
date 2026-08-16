@@ -38,26 +38,9 @@ import lombok.experimental.Accessors;
  *
  * <p>Can be used both as a pre-parse or post-parse handler.</p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.tagger.impl.UUIDTagger"
- *     toField="(target field)"
- *     {@nx.include com.norconex.commons.lang.map.PropertySetter#attributes}>
- *
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- *
- * </handler>
- * }
- *
- * {@nx.xml.example
- * <handler class="UUIDTagger" field="uuid" onSet="replace" />
- * }
- * <p>
- * The above generates a UUID and stores it in a "uuid" field, overwriting
- * any existing values under that field.
- * </p>
- *
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/UuidTransformer">
+ *      UuidTransformer configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 @Accessors(chain = true)
 public class UuidTransformerConfig extends BaseDocHandlerConfig {

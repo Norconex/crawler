@@ -50,29 +50,6 @@ import lombok.Data;
  * <p>Can be used both as a pre-parse (text documents) or post-parse handler
  * documents.</p>
  *
- * {@nx.xml.usage
- * <handler class="com.norconex.importer.handler.splitter.impl.CsvSplitter"
- *          separatorCharacter=""
- *          quoteCharacter=""
- *          escapeCharacter=""
- *          useFirstRowAsFields="(false|true)"
- *          linesToSkip="(integer)"
- *          referenceColumn="(column name or position from 1)"
- *          contentColumns="(csv list of column/position to use as content)" >
- *   {@nx.include com.norconex.importer.handler.AbstractImporterHandler#restrictTo}
- * </handler>
- * }
- *
- * {@nx.xml.example
- * <handler class="CsvSplitter"
- *     separatorCharacter=","
- *     quoteCharacter="'"
- *     escapeCharacter="\"
- *     useFirstRowAsFields="true"
- *     linesToSkip="0"
- *     referenceColumn="clientId"
- *     contentColumns="orgDesc" />
- * }
  * <p>
  * Given this sample CSV file content...
  * </p>
@@ -86,8 +63,9 @@ import lombok.Data;
  * row after the header row):
  * </p>
  *
+ * @see <a href="https://crawler.norconex.com/docs/reference/importer/CsvSplitter">
+ *      CsvSplitter configuration reference</a>
  */
-@SuppressWarnings("javadoc")
 @Data
 public class CsvSplitter extends AbstractDocumentSplitter<CsvSplitterConfig> {
 

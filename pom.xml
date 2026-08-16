@@ -239,8 +239,25 @@
           <!-- Derives the aggregate Javadoc sourcepath dynamically from the
                reactor module list so the list stays in sync with <modules>
                automatically and cannot drift when modules are added, removed,
-               or renamed. Only modules with an existing delombok output
-               directory are included. inherited=false: root-only execution. -->
+               or renamed. inherited=false: root-only execution.
+
+               The paths are declared, NOT filtered by existence. This runs at
+               "initialize" on the root, and the root is always the first module
+               in the reactor, so no sub-module has reached "process-sources"
+               (where delombok is bound) by the time this executes. Filtering on
+               File.exists() here therefore yields an empty sourcepath on any
+               clean checkout — Javadoc then silently falls back to the raw
+               src/main/java trees, where Lombok-generated types do not exist,
+               and every @Builder reference fails with "cannot find symbol".
+               It appeared to work only on a warm tree, where the directories
+               were left behind by an earlier build.
+
+               Declaring the paths unconditionally is safe: javadoc:aggregate is
+               a forking aggregator that runs the reactor through "compile" —
+               delombok included — before generating the report, so every
+               directory listed here is populated by the time Javadoc reads it.
+               Javadoc ignores sourcepath entries that do not exist, so a module
+               without Lombok sources costs nothing. -->
           <plugin>
             <groupId>org.codehaus.gmavenplus</groupId>
             <artifactId>gmavenplus-plugin</artifactId>
@@ -259,8 +276,7 @@
                       def base = project.basedir
                       def sourcepath = project.modules.collect { module ->
                         new File(base, "${module}/target/generated-sources/delombok")
-                      }.findAll { it.exists() }
-                       .collect { it.absolutePath }
+                      }.collect { it.absolutePath }
                        .join(sep)
                       project.properties['aggregate.javadoc.sourcepath'] = sourcepath
                       log.info("Aggregate Javadoc sourcepath: ${sourcepath}")
@@ -783,6 +799,18 @@
             <additionalJOptions>
               <additionalJOption>-Xdoclint:all</additionalJOption>
               <additionalJOption>-Xdoclint:-missing</additionalJOption>
+              <!-- javac defaults -Xmaxerrs to 100: once doclint hits that many
+                   errors it stops REPORTING more (failOnError=false lets the
+                   build finish regardless), so the count in the log becomes a
+                   floor, not a total. That masked a real regression here: the
+                   count sat at exactly 100 while the true figure was 329, and
+                   nothing said so. This is a bounded counter, not a retry or a
+                   loop - raising it only changes how many of the errors doclint
+                   already found get listed; it cannot make the build hang or
+                   scan more than once. 10000 is far above any plausible error
+                   count for this codebase (92 today) and still finite. -->
+              <additionalJOption>-Xmaxerrs</additionalJOption>
+              <additionalJOption>10000</additionalJOption>
             </additionalJOptions>
             <show>protected</show>
             <nodeprecated>false</nodeprecated>
