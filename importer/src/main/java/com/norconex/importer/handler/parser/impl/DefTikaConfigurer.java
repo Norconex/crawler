@@ -23,6 +23,7 @@ import org.apache.tika.config.TikaConfig;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.metadata.filter.FieldNameMappingFilter;
 import org.apache.tika.parser.ocr.TesseractOCRParser;
+import org.apache.tika.parser.sentiment.SentimentAnalysisParser;
 import org.w3c.dom.Element;
 
 import com.norconex.commons.lang.xml.Xml;
@@ -74,19 +75,39 @@ final class DefTikaConfigurer {
 
             var parsersXml = tikaXml.addElement("parsers");
             var ocr = config.getOcrConfig();
+            var sentiment = config.getSentimentConfig();
 
-            // If nothing to configure, return default
+            // Exclude parsers from the default parser composite that must
+            // not be auto-initialized with their default settings:
+            // - Tesseract OCR, when explicitly configured (re-added below
+            //   with the supplied settings).
+            // - Sentiment analysis, always. Unlike most Tika parsers,
+            //   SentimentAnalysisParser downloads a model from the network
+            //   the moment it is initialized, regardless of whether it
+            //   ever gets used. Left unexcluded, this network call happens
+            //   for every document parser initialization (i.e., typically
+            //   on startup), which can slow down or fail startup when the
+            //   model URL is unreachable. It is re-added below, with our
+            //   own configured settings, only when explicitly enabled.
+            var excludesXml = new StringBuilder();
+            if (!ocr.isDisabled()) {
+                excludesXml.append("<parser-exclude class=\"%s\"/>"
+                        .formatted(TesseractOCRParser.class.getName()));
+            }
+            excludesXml.append("<parser-exclude class=\"%s\"/>"
+                    .formatted(SentimentAnalysisParser.class.getName()));
+            parsersXml.addXML(
+                    """
+                            <parser class="%s">
+                                %s
+                            </parser>
+                            """.formatted(
+                            org.apache.tika.parser.DefaultParser.class
+                                    .getName(),
+                            excludesXml));
+
             // https://cwiki.apache.org/confluence/display/TIKA/TikaOCR
             if (!ocr.isDisabled()) {
-                parsersXml.addXML(
-                        """
-                                <parser class="%s">
-                                    <parser-exclude class="%s"/>
-                                </parser>
-                                """.formatted(
-                                org.apache.tika.parser.DefaultParser.class
-                                        .getName(),
-                                TesseractOCRParser.class.getName()));
                 // Configure Tesseract OCR
                 parsersXml.addXML(
                         new TesseractParserConfigBuilder()
@@ -121,6 +142,22 @@ final class DefTikaConfigurer {
                                         "timeoutSeconds",
                                         ocr.getTimeoutSeconds())
                                 .build());
+            }
+
+            // Configure sentiment analysis, only when explicitly enabled.
+            if (sentiment.isEnabled()) {
+                parsersXml.addXML(
+                        """
+                                <parser class="%s">
+                                    <params>
+                                        <param name="modelPath" type="string">%s</param>
+                                    </params>
+                                </parser>
+                                """.formatted(
+                                SentimentAnalysisParser.class.getName(),
+                                StringUtils.defaultIfBlank(
+                                        sentiment.getModelPath(),
+                                        SentimentConfig.DEFAULT_MODEL_PATH)));
             }
 
             // XFDL Parser

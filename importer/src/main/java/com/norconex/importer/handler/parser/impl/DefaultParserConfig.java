@@ -44,4 +44,7 @@ public class DefaultParserConfig extends BaseDocHandlerConfig {
 
     @JsonProperty("grobid")
     private final GrobidConfig grobidConfig = new GrobidConfig();
+
+    @JsonProperty("sentiment")
+    private final SentimentConfig sentimentConfig = new SentimentConfig();
 }
