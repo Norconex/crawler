@@ -74,10 +74,32 @@ class StartCleanAfterStopTest {
                                     client,
                                     path + "/0000")));
                     webCfg.setNumThreads(1);
-                    webCfg.setMaxDepth(6);
+                    // Must stay >= MAX_DOCS so MaxDocuments — not the mock
+                    // site's linear page chain — is the binding limit. The
+                    // site only has SITE_DEPTH+1 pages; a lower cap here
+                    // makes both this run and the second run converge on the
+                    // exact same finite page set, so a first run that
+                    // happens to finish before the stop signal lands (e.g.
+                    // under CI's parallel-test CPU contention) leaves zero
+                    // headroom for the second run to show progress beyond,
+                    // failing the assertion at the bottom of this test with
+                    // no actual crawler bug involved.
+                    webCfg.setMaxDepth(SITE_DEPTH);
                     webCfg.setMaxDocuments(MAX_DOCS);
+                    // The stop() call below is an out-of-process HTTP round
+                    // trip through the crawler's admin server, not an
+                    // in-memory signal — its delivery latency depends on OS
+                    // thread scheduling. Under CI's parallel-tests profile
+                    // (many JUnit classes competing for CPU), that latency
+                    // can exceed what a short per-document delay leaves as
+                    // headroom before the crawl finishes all MAX_DOCS
+                    // documents on its own, which races the stop signal and
+                    // makes the assertions below flaky depending on which
+                    // one lands first. A generous per-document delay here
+                    // keeps the crawl slow enough that the stop reliably
+                    // arrives well before MAX_DOCS is reached.
                     webCfg.setDelayResolver(WebTestUtil
-                            .delayResolver(200));
+                            .delayResolver(1000));
                     webCfg.setMetadataChecksummer(null);
                     webCfg.setDocumentChecksummer(null);
                 });
@@ -110,7 +132,7 @@ class StartCleanAfterStopTest {
                         List.of(serverUrl(client, path
                                 + "/0000")));
                 webCfg.setNumThreads(1);
-                webCfg.setMaxDepth(6);
+                webCfg.setMaxDepth(SITE_DEPTH);
                 webCfg.setMaxDocuments(MAX_DOCS);
                 webCfg.setDelayResolver(
                         WebTestUtil.delayResolver(0));
