@@ -762,7 +762,8 @@ public class HttpClientFetcher
                     new AuthScope(
                             null,
                             authHost != null ? authHost.getName() : null,
-                            authHost != null ? authHost.getPort() : -1,
+                            authHost != null && authHost.getPort() > 0
+                                    ? authHost.getPort() : -1,
                             authConfig.getRealm(),
                             Objects.toString(
                                     authConfig.getMethod(),
