@@ -23,9 +23,9 @@ ceiling. Teams can extend parser behavior and pipeline logic for
 customer-specific formats and extraction requirements.
 :::
 
-Three optional features hang off this parser, each with its own settings page:
-`embedded` for documents inside documents, `ocr` for text inside images, and
-`grobid` for scientific papers.
+Four optional features hang off this parser, each with its own settings page:
+`embedded` for documents inside documents, `ocr` for text inside images,
+`grobid` for scientific papers, and `sentiment` for sentiment analysis.
 
 ## Properties
 
@@ -64,6 +64,15 @@ Once active, OCR is attempted on every supported image format (TIFF, PNG, JPEG,
 GIF, BMP, and images embedded in documents). It is slow next to text
 extraction, so restricting it by content type and file size is usually worth
 doing. All settings are described under [OcrConfig](./OcrConfig).
+
+### sentiment
+
+Optional Tika sentiment analysis settings, for scoring document content as
+positive or negative. Disabled by default: unlike most Tika parsers, this one
+downloads its model from the network the moment it initializes, regardless of
+whether it is ever used, so leaving it off avoids startup delays or failures
+when that network call cannot complete. See
+[SentimentConfig](./SentimentConfig).
 
 ## Examples
 

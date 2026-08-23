@@ -1,0 +1,28 @@
+---
+component: SentimentConfig
+module: importer
+locale: en
+propertyCoverage: all
+---
+
+# SentimentConfig
+
+## Summary
+
+Configuration for Tika sentiment analysis of document content.
+
+## Notes
+
+Configuration for Tika's sentiment analysis parser, which scores document content as expressing positive or negative sentiment using a pre-trained OpenNLP model.
+
+Sentiment analysis is disabled by default. Unlike most Tika parsers, this one downloads its model from the network the moment it initializes, regardless of whether any document ever needs sentiment analysis. Left enabled without a reachable model URL, this can slow down or fail startup.
+
+## Properties
+
+### enabled
+
+Whether to enable sentiment analysis. Default is `false`. Enabling it causes the model at `modelPath` to be fetched when the parser initializes.
+
+### modelPath
+
+URL or file path to the sentiment analysis model. Defaults to a Tika-hosted model on GitHub. Only relevant when `enabled` is `true`.
