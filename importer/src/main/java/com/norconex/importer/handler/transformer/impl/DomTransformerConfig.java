@@ -14,8 +14,6 @@
  */
 package com.norconex.importer.handler.transformer.impl;
 
-import com.norconex.importer.handler.BaseDocHandlerConfig;
-
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,6 +23,7 @@ import com.norconex.commons.lang.bean.jackson.JsonXmlCollection;
 import com.norconex.commons.lang.collection.CollectionUtil;
 import com.norconex.commons.lang.map.PropertySetter;
 import com.norconex.commons.lang.text.TextMatcher;
+import com.norconex.importer.handler.BaseDocHandlerConfig;
 import com.norconex.importer.handler.CommonMatchers;
 import com.norconex.importer.handler.CommonRestrictions;
 import com.norconex.importer.util.DomUtil;
