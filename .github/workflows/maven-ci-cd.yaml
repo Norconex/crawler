@@ -296,15 +296,54 @@ jobs:
 
       #--- Step ------------------------------------------------------------------
 
+      # Integration tests gate every release. They are skipped on ordinary CI
+      # because they are slow (hence the nightly run), but a release must not
+      # ship without them.
+      #
+      # This deliberately runs BEFORE the deploy step rather than by dropping
+      # -DskipITs from it: artifacts go to Maven Central module-by-module, so
+      # an IT failure partway through a deploy could leave earlier modules
+      # permanently published while later ones never make it. Gating here means
+      # a failure stops the release before anything has been pushed anywhere.
+      - name: Run integration tests (release gate)
+        if: >
+          github.event_name == 'push' && startsWith(github.ref,
+          'refs/heads/release/') && !endsWith(steps.get_version.outputs.version,
+          '-SNAPSHOT')
+        timeout-minutes: 120
+        run: |
+          mvn -U -B clean verify \
+            -Dmaven.compiler.maxmem=3072m \
+            -DargLine="-Xmx3g" \
+            -Dgpg.skip=true \
+            -Dsonar.skip=true \
+            -Dmaven.javadoc.skip=true \
+            -Dassembly.skipAssembly=true \
+            -Dmaven.wagon.rss.buffer.size=2048 \
+            -Dlog4j.configurationFile=${{ github.workspace }}/.github/log4j2-ci.xml \
+            -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
+            -Pjacoco,parallel-tests \
+            -C
+
+      #--- Step ------------------------------------------------------------------
+
       - name: Build and publish release (push to release/*)
         if: >
           github.event_name == 'push' && startsWith(github.ref,
           'refs/heads/release/') && !endsWith(steps.get_version.outputs.version,
           '-SNAPSHOT')
         run: |
+          # Tests are NOT re-run here: the "release gate" step above already
+          # ran the full unit + integration suite on this exact commit.
+          # Re-running them during deploy would reopen the very window the gate
+          # closes — Central receives artifacts module-by-module, so a flaky
+          # test failing midway through would leave earlier modules permanently
+          # published. Note -DskipTests (not -Dmaven.test.skip), so test classes
+          # are still compiled and the *-tests.jar artifacts are still produced.
           mvn -U clean deploy \
             -Dmaven.compiler.maxmem=3072m \
             -DargLine="-Xmx3g" \
+            -DskipTests \
             -DskipITs=true \
             -Dmaven.javadoc.skip=true \
             -Dassembly.skipAssembly=true \
@@ -456,11 +495,26 @@ jobs:
           'refs/heads/release/') && !endsWith(steps.get_version.outputs.version,
           '-SNAPSHOT')
         run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+
+          # Versions carrying a qualifier (4.0.0-beta, 4.0.0-rc1, …) are
+          # published as GitHub pre-releases. This keeps the repository's
+          # "Latest release" badge on the newest stable version, and — because
+          # the scheduled Docker rebuild resolves its target with
+          # "gh release list --exclude-pre-releases" — stops a pre-release from
+          # being rebuilt and re-tagged as :latest every Monday.
+          PRERELEASE_FLAG=""
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            PRERELEASE_FLAG="--prerelease"
+            echo "Version '$VERSION' has a qualifier — publishing as a pre-release."
+          fi
+
           # The git tag was created by "Tag release version". Create the GitHub
           # Release for it (or upload to it if pre-created manually).
-          gh release create "v${{ steps.get_version.outputs.version }}" \
-            --title "Release ${{ steps.get_version.outputs.version }}" \
+          gh release create "v${VERSION}" \
+            --title "Release ${VERSION}" \
             --generate-notes \
+            $PRERELEASE_FLAG \
             crawler/web/target/nx-crawler-web-*-full.zip \
             crawler/web/target/nx-crawler-web-*-standard.zip \
             crawler/fs/target/nx-crawler-fs-*-full.zip \
@@ -490,8 +544,23 @@ jobs:
           '-SNAPSHOT')
         run: |
           VERSION="${{ steps.get_version.outputs.version }}"
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
-          NEXT_SNAPSHOT="${MAJOR}.${MINOR}.$((PATCH + 1))-SNAPSHOT"
+
+          # Strip any qualifier before doing arithmetic: reading "4.0.0-beta"
+          # straight into MAJOR/MINOR/PATCH puts "0-beta" in PATCH, which bash
+          # evaluates as 0-0 and would bump to 4.0.1-SNAPSHOT — silently
+          # skipping 4.0.0 and making it unreleasable from this branch.
+          BASE="${VERSION%%-*}"
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$BASE"
+
+          if [[ "$VERSION" == "$BASE" ]]; then
+            # Final release: open the next patch for development.
+            NEXT_SNAPSHOT="${MAJOR}.${MINOR}.$((PATCH + 1))-SNAPSHOT"
+          else
+            # Pre-release: return to the snapshot of the SAME target version so
+            # the final X.Y.Z can still be cut from this branch afterwards.
+            NEXT_SNAPSHOT="${MAJOR}.${MINOR}.${PATCH}-SNAPSHOT"
+          fi
+          echo "Released '$VERSION' — next development version: $NEXT_SNAPSHOT"
           mvn versions:set \
             -DnewVersion="$NEXT_SNAPSHOT" \
             -DgenerateBackupPoms=false \

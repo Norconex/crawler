@@ -20,12 +20,17 @@ Registry pages:
 
 ## Tags and release channels
 
-Stable releases are published with these tags:
+Stable releases are published to both registries with these tags:
 
 - `latest`
 - major version (example: `4`)
 - minor version (example: `4.1`)
 - full version (example: `4.1.2`)
+
+Pre-releases (betas and release candidates) are published to the same
+registries, but **only under their exact version tag** — for example
+`norconex/crawler-web:4.0.0-beta-1`. They never take `latest`, `4`, or `4.1`,
+so those moving tags always resolve to the newest *stable* build.
 
 An `edge` tag is also published from the `main` branch to GHCR only:
 
@@ -33,7 +38,14 @@ An `edge` tag is also published from the `main` branch to GHCR only:
 - `ghcr.io/norconex/crawler-fs:edge`
 - `ghcr.io/norconex/crawler-web-playwright:edge`
 
-Use stable tags for production, and reserve `edge` for testing.
+Use stable tags for production, reserve pre-release tags for evaluation, and
+use `edge` only for testing against unreleased changes.
+
+:::note[During the v4 beta]
+Version 4.0.0 has not been released yet, so there is **no `latest` tag on
+Docker Hub**. Until it ships, replace `:latest` in the examples below with the
+current pre-release tag — the [download page](/download) always shows it.
+:::
 
 ## Quick run (docker run)
 

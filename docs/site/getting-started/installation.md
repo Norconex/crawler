@@ -122,6 +122,13 @@ docker pull norconex/crawler-web:latest
 docker pull ghcr.io/norconex/crawler-fs:latest
 ```
 
+:::note[During the v4 beta]
+Version 4.0.0 has not been released yet, so there is no `latest` tag published
+yet. Until it ships, use the current pre-release tag instead (for example
+`norconex/crawler-web:4.0.0-beta-1`) — the [download page](/download) always
+shows the current one.
+:::
+
 Official Docker images already bundle the external committer JARs,
 so no separate committer installation is required in containers.
 

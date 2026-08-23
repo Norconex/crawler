@@ -75,6 +75,12 @@ docker run --rm \
   norconex/crawler-fs:latest
 ```
 
+:::note[During the v4 beta]
+No `latest` tag is published until 4.0.0 ships. Use the current pre-release tag
+instead (for example `norconex/crawler-fs:4.0.0-beta-1`); the
+[download page](/download) always shows it.
+:::
+
 For Docker Compose examples and release-tag guidance, see [Docker](./docker.md).
 
 ## Step 4 — Stop and resume

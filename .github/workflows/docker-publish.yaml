@@ -4,10 +4,16 @@ name: Publish Docker Images
 #
 # Event                      Trigger              Registries        Tags
 # ─────────────────────────  ──────────────────   ──────────────    ──────────────────────────────
-# Release tag                git push v4.0.1      DockerHub + GHCR  4.0.1, 4.0, 4, latest
+# Release tag (final)        git push v4.0.1      DockerHub + GHCR  4.0.1, 4.0, 4, latest
+# Release tag (pre-release)  git push v4.0.0-beta DockerHub + GHCR  4.0.0-beta ONLY (no moving tags)
 # Main branch push           git push main        GHCR only         edge
 # Scheduled (Monday 04:00)   cron                 DockerHub + GHCR  latest stable (multi-arch rebuild)
 # Manual dispatch            workflow_dispatch    DockerHub + GHCR  (version param) or edge (empty)
+#
+# "Final" means a bare X.Y.Z version. Anything with a qualifier (-beta, -rc1,
+# -M1, …) is treated as a pre-release: it is published under its exact version
+# tag only, so the moving tags (latest / MAJOR / MAJOR.MINOR) continue to point
+# at the newest stable release.
 #
 # Old triggers (kept for reference):
 #   Release tags  (v4.0.1)  → DockerHub + GHCR with version tags + latest
@@ -99,19 +105,41 @@ jobs:
               --exclude-pre-releases --limit 1 \
               --json tagName -q '.[0].tagName | ltrimstr("v")')
             if [[ -z "$VERSION" ]]; then
-              echo "No stable release found; nothing to rebuild." && exit 0
+              # No final release exists yet (pre-releases are excluded above),
+              # so there is no stable image to refresh.
+              #
+              # Emit mode=skip and guard the later steps on it: a bare "exit 0"
+              # ends only THIS step, leaving the build/push step to run with an
+              # empty tag list and no build context — which is why every
+              # scheduled run failed before a first stable release existed.
+              echo "No stable release found; nothing to rebuild."
+              echo "mode=skip" >> $GITHUB_OUTPUT
+              exit 0
             fi
             echo "Scheduled rebuild targeting release v${VERSION}"
           fi
 
           if [[ -n "$VERSION" ]]; then
-            MAJOR="${VERSION%%.*}"
-            MINOR="${VERSION%.*}"
             DOCKERHUB_IMG="norconex/${{ matrix.image }}"
             GHCR_IMG="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${{ matrix.image }}"
             echo "mode=release" >> $GITHUB_OUTPUT
             echo "version=${VERSION}" >> $GITHUB_OUTPUT
-            echo "tags=${DOCKERHUB_IMG}:${VERSION},${DOCKERHUB_IMG}:${MINOR},${DOCKERHUB_IMG}:${MAJOR},${DOCKERHUB_IMG}:latest,${GHCR_IMG}:${VERSION},${GHCR_IMG}:${MINOR},${GHCR_IMG}:${MAJOR},${GHCR_IMG}:latest" >> $GITHUB_OUTPUT
+
+            # The moving tags (latest, MAJOR, MAJOR.MINOR) are reserved for
+            # final releases. A pre-release (e.g. 4.0.0-beta, 4.0.0-rc1)
+            # publishes ONLY its exact version tag, so "docker pull
+            # norconex/crawler-web" keeps resolving to the newest stable
+            # build. The pre-release still goes through the full DockerHub
+            # publish path, so the release process is exercised end to end.
+            if [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              MAJOR="${VERSION%%.*}"
+              MINOR="${VERSION%.*}"
+              echo "prerelease=false" >> $GITHUB_OUTPUT
+              echo "tags=${DOCKERHUB_IMG}:${VERSION},${DOCKERHUB_IMG}:${MINOR},${DOCKERHUB_IMG}:${MAJOR},${DOCKERHUB_IMG}:latest,${GHCR_IMG}:${VERSION},${GHCR_IMG}:${MINOR},${GHCR_IMG}:${MAJOR},${GHCR_IMG}:latest" >> $GITHUB_OUTPUT
+            else
+              echo "prerelease=true" >> $GITHUB_OUTPUT
+              echo "tags=${DOCKERHUB_IMG}:${VERSION},${GHCR_IMG}:${VERSION}" >> $GITHUB_OUTPUT
+            fi
           else
             IMG="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${{ matrix.image }}"
             echo "mode=edge" >> $GITHUB_OUTPUT
@@ -207,7 +235,7 @@ jobs:
       # and bundle it only into the playwright image.
 
       - name: Download Playwright JARs from Maven Central
-        if: ${{ matrix.playwright }}
+        if: ${{ matrix.playwright && steps.ctx.outputs.mode != 'skip' }}
         run: |
           PW_VERSION=$(mvn help:evaluate \
             -Dexpression=playwright.version -q -DforceStdout \
@@ -236,6 +264,7 @@ jobs:
       # ── Build and push ──────────────────────────────────────────────────────
 
       - name: Build and push
+        if: steps.ctx.outputs.mode != 'skip'
         uses: docker/build-push-action@v7
         with:
           context: target/docker-context
