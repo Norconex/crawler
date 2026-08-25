@@ -73,17 +73,17 @@ public class HazelcastQueueAdapter<T> implements CacheQueue<T> {
         }
         // Offer to the distributed FIFO queue with a hard timeout so queue
         // store/network stalls do not block a crawler thread indefinitely.
+        // The timeout check below is deliberately outside this try block:
+        // ClusterException is a RuntimeException, so throwing it from inside
+        // would have been immediately re-caught by "catch (Exception e)"
+        // and re-wrapped with a generic message, losing the specific
+        // "within N ms" detail.
+        Boolean added;
         try {
-            var added = hzQueue.offer(
+            added = hzQueue.offer(
                     toStore,
                     OFFER_TIMEOUT_MS,
                     TimeUnit.MILLISECONDS);
-            if (!Boolean.TRUE.equals(added)) {
-                throw new ClusterException("Could not add item to queue '%s' "
-                        + "within %d ms."
-                                .formatted(hzQueue.getName(),
-                                        OFFER_TIMEOUT_MS));
-            }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new ClusterException(
@@ -94,6 +94,12 @@ public class HazelcastQueueAdapter<T> implements CacheQueue<T> {
             throw new ClusterException("Could not add item to queue '%s'."
                     .formatted(hzQueue.getName()),
                     e);
+        }
+        if (!Boolean.TRUE.equals(added)) {
+            throw new ClusterException(
+                    "Could not add item to queue '%s' within %d ms."
+                            .formatted(hzQueue.getName(),
+                                    OFFER_TIMEOUT_MS));
         }
     }
 

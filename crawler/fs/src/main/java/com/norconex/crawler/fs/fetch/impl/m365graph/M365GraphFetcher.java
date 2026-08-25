@@ -338,9 +338,11 @@ public class M365GraphFetcher extends AbstractFetcher<M365GraphFetcherConfig> {
     private FetchResponse fetchDriveDeltaChildPaths(M365GraphReference ref)
             throws IOException {
         var usingStoredCursor = false;
-        var pagePathOrUrl =
-                getDeltaCursor(ref).orElseGet(() -> ref.driveDeltaApiPath());
-        if (!StringUtils.equals(pagePathOrUrl, ref.driveDeltaApiPath())) {
+        // Computed once (ref.kind() is DRIVE here per the caller's guard)
+        // and reused below instead of calling driveDeltaApiPath() again.
+        var deltaApiPath = ref.driveDeltaApiPath();
+        var pagePathOrUrl = getDeltaCursor(ref).orElse(deltaApiPath);
+        if (!StringUtils.equals(pagePathOrUrl, deltaApiPath)) {
             usingStoredCursor = true;
         }
 

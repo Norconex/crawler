@@ -100,9 +100,8 @@ public class ClusterAdminClient {
     }
 
     private HttpResponse<String> send(HttpRequest request) {
-        try {
-            return HttpClient.newHttpClient()
-                    .send(request, HttpResponse.BodyHandlers.ofString());
+        try (var client = HttpClient.newHttpClient()) {
+            return client.send(request, HttpResponse.BodyHandlers.ofString());
         } catch (ConnectException e) {
             throw new ClusterAdminException("""
                     Could not connect to crawler endpoint: %s. \
