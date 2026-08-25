@@ -21,6 +21,12 @@
         Maven dependency updates: Tika 3.x, Apache Commons Lang 3.18.0, 
         Bouncy Castle 1.79, OkHttp 4.11.0, jsoup 1.21.1, H2 2.2.220.
       </action>
+      <action dev="essiembre" type="fix" issue="1319">
+        Fixed "NoSuchMethodError" on ZIP-container documents (zip, docx,
+        xlsx, pptx, odt, jar, etc.) caused by Apache Commons Compress being
+        pinned to a version older than the one required by Tika. Commons
+        Compress is now 1.28.0.
+      </action>
       <action dev="carehart" type="fix">
         Fixed incorrect output directory in minimum-config.xml example
         ("complex" changed to "simple").

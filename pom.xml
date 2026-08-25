@@ -37,7 +37,7 @@
     <netty.version>4.1.96.Final</netty.version>
     <selenium.version>4.31.0</selenium.version>
     <okhttp.version>4.11.0</okhttp.version>
-    <commons-compress.version>1.21</commons-compress.version>
+    <commons-compress.version>1.28.0</commons-compress.version>
     <cxf.version>3.4.5</cxf.version>
     <h2.version>2.2.220</h2.version>
     <hikaricp.version>4.0.3</hikaricp.version>
