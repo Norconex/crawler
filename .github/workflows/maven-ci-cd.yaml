@@ -509,11 +509,25 @@ jobs:
             echo "Version '$VERSION' has a qualifier — publishing as a pre-release."
           fi
 
+          # Release notes come from our own curated changelog rather than
+          # gh's --generate-notes: the release workflow already requires
+          # changelogs/changelog-X.Y.Z.md to exist and have content before it
+          # will bump the version, so it is always present here. Falling back
+          # to auto-generated notes only guards against this step ever being
+          # reached some other way (e.g. a manual version-bump push).
+          CHANGELOG_FILE="changelogs/changelog-${VERSION}.md"
+          NOTES_FLAG="--generate-notes"
+          if [[ -f "$CHANGELOG_FILE" ]]; then
+            NOTES_FLAG="--notes-file $CHANGELOG_FILE"
+          else
+            echo "::warning::$CHANGELOG_FILE not found; falling back to auto-generated notes."
+          fi
+
           # The git tag was created by "Tag release version". Create the GitHub
           # Release for it (or upload to it if pre-created manually).
           gh release create "v${VERSION}" \
             --title "Release ${VERSION}" \
-            --generate-notes \
+            $NOTES_FLAG \
             $PRERELEASE_FLAG \
             crawler/web/target/nx-crawler-web-*-full.zip \
             crawler/web/target/nx-crawler-web-*-standard.zip \
