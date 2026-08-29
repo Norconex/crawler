@@ -18,7 +18,7 @@
   <parent>
     <groupId>com.norconex.crawler</groupId>
     <artifactId>nx-crawler-parent</artifactId>
-    <version>4.0.0-SNAPSHOT</version>
+    <version>4.0.0-beta.1</version>
     <relativePath>../..</relativePath>
   </parent>
   <artifactId>nx-committer-core</artifactId>
