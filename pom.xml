@@ -110,6 +110,7 @@
     
     <!-- === Maven plugins ================================================= -->
 
+    <central-publishing-maven-plugin.version>0.9.0</central-publishing-maven-plugin.version>
     <editorconfig-maven-plugin.version>0.2.0</editorconfig-maven-plugin.version>
     <formatter-maven-plugin.version>2.29.0</formatter-maven-plugin.version>
     <gmavenplus-plugin.version>5.0.0</gmavenplus-plugin.version>
@@ -140,11 +141,20 @@
 
   </properties>
 
+  <!--
+    Releases are NOT published via distributionManagement. The Central Portal
+    has no plain "PUT to a release repository URL" endpoint: releases go
+    through central-publishing-maven-plugin (declared below), which uploads a
+    bundle to the Portal API and publishes it. A <repository> entry here
+    pointing at central.sonatype.com/repository/maven-central/ resolves to the
+    Portal *website* (it answers with an HTML 404 page, not a Maven
+    repository), which is why release deploys failed with a misleading
+    "Could not find artifact ... in central".
+
+    Snapshots are different and DO use a real repository URL — the Nexus-backed
+    endpoint below is the documented Central Portal snapshot target.
+  -->
   <distributionManagement>
-    <repository>
-      <id>central</id>
-      <url>https://central.sonatype.com/repository/maven-central/</url>
-    </repository>  
     <snapshotRepository>
       <id>central</id>
       <url>https://central.sonatype.com/repository/maven-snapshots/</url>
@@ -910,7 +920,32 @@
           <version>${maven-deploy-plugin.version}</version>
           <inherited>true</inherited>
         </plugin>
-        
+
+        <!--
+          Publishes releases to Maven Central through the Central Portal.
+          "publishingServerId" matches the <server> id the CI workflow sets up
+          (setup-java server-id: central -> MAVEN_USERNAME/MAVEN_CENTRAL_TOKEN).
+
+          The Portal always creates a "deployment" that is validated before it
+          goes live — that step cannot be turned off. What autoPublish does is
+          release it automatically once validation passes, so nothing waits on
+          a manual "Publish" click in the web UI. waitUntil=published makes the
+          build block until Central confirms, so a failed publish fails the
+          release job instead of passing silently.
+        -->
+        <plugin>
+          <groupId>org.sonatype.central</groupId>
+          <artifactId>central-publishing-maven-plugin</artifactId>
+          <version>${central-publishing-maven-plugin.version}</version>
+          <extensions>true</extensions>
+          <configuration>
+            <publishingServerId>central</publishingServerId>
+            <autoPublish>true</autoPublish>
+            <waitUntil>published</waitUntil>
+          </configuration>
+          <inherited>true</inherited>
+        </plugin>
+
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
@@ -1264,9 +1299,16 @@
     </pluginManagement>
 
     <plugins>
-    
+
+      <!-- Release publishing to Maven Central (see pluginManagement above). -->
+      <plugin>
+        <groupId>org.sonatype.central</groupId>
+        <artifactId>central-publishing-maven-plugin</artifactId>
+        <extensions>true</extensions>
+      </plugin>
+
       <!-- === Plugins bound to "Verify" (order matters) == -->
-    
+
       <!-- Enforce formatting rules first to fail fast if there are issues -->
       <plugin>
         <groupId>org.ec4j.maven</groupId>
