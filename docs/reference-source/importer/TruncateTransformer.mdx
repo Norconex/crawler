@@ -20,6 +20,9 @@ If a target field with the same name already exists for a document, values will 
 
 The maxLength is guaranteed to be respected. This means any appended hash code and suffix will fit within the maxLength.
 
+### Truncating (or clearing) the document content
+When no `fieldMatcher` is specified, this handler truncates the document content (body) instead of a field. Setting `maxLength` to `0` with no `fieldMatcher` effectively clears the document content entirely, while leaving its metadata untouched — a common substitute for keeping a document's metadata while discarding its body. Pair it with `toField` to first copy the content elsewhere (subject to the same `maxLength`) before it is cleared — use a large `maxLength` if the copy should not be truncated.
+
 Can be used both as a pre-parse or post-parse handler.
 
 ## Properties
@@ -30,7 +33,7 @@ Appends a hash to the end of the truncated value.
 
 ### fieldMatcher
 
-Matches document fields based on specified patterns and methods
+Matches document fields based on specified patterns and methods. When unset, the document content (body) is truncated instead.
 
 ### label
 
@@ -72,6 +75,17 @@ The following  example will truncate the content to
       "fieldMatcher": {
         "pattern": "myField"
       }
+    }
+  }}
+/>
+
+Clearing a document's content while keeping its metadata (no `fieldMatcher`, `maxLength` of `0`):
+
+<ConfigBlock
+  json={{
+    "handler": {
+      "class": "TruncateTransformer",
+      "maxLength": 0
     }
   }}
 />

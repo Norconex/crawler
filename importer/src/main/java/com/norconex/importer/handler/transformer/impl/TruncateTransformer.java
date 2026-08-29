@@ -56,6 +56,16 @@ import lombok.extern.slf4j.Slf4j;
  * The <code>maxLength</code> is guaranteed to be respected. This means any
  * appended hash code and suffix will fit within the <code>maxLength</code>.
  * </p>
+ * <h2>Truncating (or clearing) the document content</h2>
+ * <p>
+ * When no <code>fieldMatcher</code> is specified, this handler truncates the
+ * document content (body) instead of a field. Setting <code>maxLength</code>
+ * to <code>0</code> with no <code>fieldMatcher</code> effectively clears the
+ * document content entirely, while leaving its metadata untouched. Pair it
+ * with <code>toField</code> to first copy the content elsewhere (subject to
+ * the same <code>maxLength</code>) before it is cleared - use a large
+ * <code>maxLength</code> if the copy should not be truncated.
+ * </p>
  * <p>
  * Can be used both as a pre-parse or post-parse handler.
  * </p>
