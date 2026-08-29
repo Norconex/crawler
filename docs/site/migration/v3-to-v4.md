@@ -1008,5 +1008,5 @@ migration:
 If you hit a v3 construct this guide does not mention, try importing the config
 into the [Visual Configurator](https://configurator.norconex.com) — it will
 name the v4 equivalent or tell you the feature is gone. Failing that, open a
-[GitHub Discussion](https://github.com/Norconex/crawler/discussions) with your
+[GitHub Discussion](https://github.com/Norconex/crawler/discussions/categories/q-a) with your
 v3 config.

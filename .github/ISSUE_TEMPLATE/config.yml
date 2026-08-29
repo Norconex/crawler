@@ -1,0 +1,20 @@
+# Controls the "New issue" chooser. Questions and half-formed ideas are routed
+# to Discussions; only reproducible defects should become issues.
+blank_issues_enabled: false
+contact_links:
+  - name: 🙏 Question or usage help
+    url: https://github.com/Norconex/crawler/discussions/categories/q-a
+    about: >-
+      Configuration, v3-to-v4 migration, "how do I...", "why does it...".
+      Ask in Q&A Discussions - not here.
+  - name: 💡 Feature idea or proposal
+    url: https://github.com/Norconex/crawler/discussions/categories/ideas
+    about: >-
+      Discuss new features in Ideas first, and vote for existing ones with a
+      thumbs-up. Maintainers move accepted ideas to issues.
+  - name: 🔒 Security vulnerability
+    url: https://github.com/Norconex/crawler/security/policy
+    about: Report privately. Never open a public issue for a vulnerability.
+  - name: 🛟 Commercial support
+    url: https://crawler.norconex.com/support
+    about: Paid support, response-time commitments, and custom development.

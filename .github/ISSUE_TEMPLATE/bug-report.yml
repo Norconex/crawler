@@ -1,0 +1,72 @@
+name: Bug report
+description: A reproducible defect in the crawler, its build, docs, or packaging.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        Not sure it's a bug? For configuration help or "how do I..." questions,
+        use [Q&A Discussions](https://github.com/Norconex/crawler/discussions/categories/q-a)
+        instead - you'll usually get an answer faster there.
+
+
+        During the v4 beta, please add the **V4** label after creating the issue
+        so it isn't mixed in with v3 reports.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Crawler version, or the commit SHA if you built from source.
+      placeholder: "4.0.0-beta.x  /  main @ abc1234"
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Best guess is fine.
+      options:
+        - Web crawler (crawler-web)
+        - File system crawler (crawler-fs)
+        - Crawler core
+        - Importer
+        - Committer (name it under "What happened")
+        - Configuration / config parsing
+        - Build / CI / packaging
+        - Documentation
+        - Other / not sure
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you observed, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: >-
+        Minimal config and commands. Redact credentials, tokens, and internal
+        URLs.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Stack traces or log excerpts, as text (not screenshots).
+      render: text
+    validations:
+      required: false
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Java version, and how you run it (CLI, Docker, embedded).
+      placeholder: "Windows 11, Temurin 21.0.4, Docker :latest"
+    validations:
+      required: true

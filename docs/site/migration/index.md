@@ -92,5 +92,5 @@ the v3 mapping callout.
 
 ## Need help?
 
-- Open a [GitHub Discussion](https://github.com/Norconex/crawler/discussions) with your v3 config
+- Open a [GitHub Discussion](https://github.com/Norconex/crawler/discussions/categories/q-a) with your v3 config
 - Check [Issues](https://github.com/Norconex/crawler/issues) for known migration edge cases
