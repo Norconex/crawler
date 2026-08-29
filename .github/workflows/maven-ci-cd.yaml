@@ -111,6 +111,32 @@ jobs:
 
       #--- Step ------------------------------------------------------------------
 
+      # Idempotency guard: a release/* branch sits at a non-SNAPSHOT version
+      # only briefly, between the version-bump commit (from release.yaml) and
+      # the auto-bump-back-to-SNAPSHOT commit below. Any OTHER push landing
+      # in that window — a hotfix, a workflow tweak, a re-run of the Release
+      # workflow with the same version — would otherwise match the exact
+      # same "release/* + non-SNAPSHOT" condition and re-run the whole
+      # release path (IT gate, Central deploy, tag, GitHub Release), racing
+      # or duplicating the real release. Since "v${VERSION}" is only ever
+      # tagged once, its existence is a reliable signal this version already
+      # shipped, so we skip the release-only steps below when it's there.
+      - name: Guard against re-running an already-released version
+        id: release_guard
+        if: >
+          startsWith(github.ref, 'refs/heads/release/') &&
+          !endsWith(steps.get_version.outputs.version, '-SNAPSHOT')
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          if git ls-remote --exit-code --tags origin "refs/tags/v${VERSION}" > /dev/null 2>&1; then
+            echo "::warning::Tag v${VERSION} already exists — this version was already released from this branch. Skipping the release steps (IT gate, Central deploy, tag, packaging, GitHub Release) to avoid a duplicate or racing deploy."
+            echo "already_released=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "already_released=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      #--- Step ------------------------------------------------------------------
+
       - name: Cache SonarCloud packages
         if: env.SONAR_TOKEN != ''
         uses: actions/cache@v6
@@ -309,7 +335,7 @@ jobs:
         if: >
           github.event_name == 'push' && startsWith(github.ref,
           'refs/heads/release/') && !endsWith(steps.get_version.outputs.version,
-          '-SNAPSHOT')
+          '-SNAPSHOT') && steps.release_guard.outputs.already_released != 'true'
         timeout-minutes: 120
         run: |
           mvn -U -B clean verify \
@@ -331,7 +357,7 @@ jobs:
         if: >
           github.event_name == 'push' && startsWith(github.ref,
           'refs/heads/release/') && !endsWith(steps.get_version.outputs.version,
-          '-SNAPSHOT')
+          '-SNAPSHOT') && steps.release_guard.outputs.already_released != 'true'
         run: |
           # Tests are NOT re-run here: the "release gate" step above already
           # ran the full unit + integration suite on this exact commit.
@@ -368,7 +394,8 @@ jobs:
           env.SONAR_TOKEN != '' &&
           github.event_name == 'push' &&
           startsWith(github.ref, 'refs/heads/release/') &&
-          !endsWith(steps.get_version.outputs.version, '-SNAPSHOT')
+          !endsWith(steps.get_version.outputs.version, '-SNAPSHOT') &&
+          steps.release_guard.outputs.already_released != 'true'
         run: |
           mvn -N -q -Psonar-parallel initialize \
             -Dsonar.gate.mode=all \
@@ -405,6 +432,7 @@ jobs:
           startsWith(github.ref, 'refs/heads/release/') &&
           steps.get_version.outputs.version != '' &&
           !endsWith(steps.get_version.outputs.version, '-SNAPSHOT') &&
+          steps.release_guard.outputs.already_released != 'true' &&
           success()
         run: |
           git config user.name "github-actions[bot]"
@@ -424,7 +452,8 @@ jobs:
             (github.ref == 'refs/heads/main' &&
               endsWith(steps.get_version.outputs.version, '-SNAPSHOT')) ||
             (startsWith(github.ref, 'refs/heads/release/') &&
-              !endsWith(steps.get_version.outputs.version, '-SNAPSHOT'))
+              !endsWith(steps.get_version.outputs.version, '-SNAPSHOT') &&
+              steps.release_guard.outputs.already_released != 'true')
           )
         run: |
           # Full zips (default profile): reuses compiled output from main deploy
@@ -493,7 +522,7 @@ jobs:
         if: >
           success() && github.event_name == 'push' && startsWith(github.ref,
           'refs/heads/release/') && !endsWith(steps.get_version.outputs.version,
-          '-SNAPSHOT')
+          '-SNAPSHOT') && steps.release_guard.outputs.already_released != 'true'
         run: |
           VERSION="${{ steps.get_version.outputs.version }}"
 
@@ -555,7 +584,7 @@ jobs:
         if: >
           success() && github.event_name == 'push' && startsWith(github.ref,
           'refs/heads/release/') && !endsWith(steps.get_version.outputs.version,
-          '-SNAPSHOT')
+          '-SNAPSHOT') && steps.release_guard.outputs.already_released != 'true'
         run: |
           VERSION="${{ steps.get_version.outputs.version }}"
 
