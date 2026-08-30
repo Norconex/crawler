@@ -66,15 +66,20 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # 'description' is the Docker Hub short description (100 char max).
+          # The long overview lives in .github/docker/overview/<image>.md.
           - image: crawler-fs
             crawler_type: fs
             playwright: false
+            description: "Open-source file system crawler: collect, parse and commit local or remote files."
           - image: crawler-web
             crawler_type: web
             playwright: false
+            description: "Open-source web crawler: collect, parse and commit website content to your repository."
           - image: crawler-web-playwright
             crawler_type: web
             playwright: true
+            description: "Norconex Web Crawler with Playwright and Chromium bundled, as an alternative to WebDriver."
 
     steps:
       - name: Checkout
@@ -284,3 +289,41 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
           build-args: |
             VERSION=${{ steps.ctx.outputs.version }}
+
+      # ── Docker Hub metadata ────────────────────────────────────────────────
+      # The short description and overview are Docker Hub database fields, not
+      # part of the image: "docker push" never touches them. Syncing them here
+      # keeps the public page from drifting away from the code.
+      #
+      # Release builds only. Edge builds push to GHCR alone (no Docker Hub repo
+      # to describe), and the scheduled rebuild republishes an existing stable
+      # version, so it would rewrite the page with an older version number.
+      - name: Render overview with the published version
+        if: steps.ctx.outputs.mode == 'release' && github.event_name != 'schedule'
+        run: |
+          SRC=".github/docker/overview/${{ matrix.image }}.md"
+          if [ ! -f "$SRC" ]; then
+            echo "::warning::No overview template at $SRC; skipping Docker Hub description sync."
+            echo "overview=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          mkdir -p "$RUNNER_TEMP/overview"
+          OUT="$RUNNER_TEMP/overview/${{ matrix.image }}.md"
+          # Substitute with a shell parameter expansion rather than sed, so a
+          # version containing regex-significant characters cannot corrupt it.
+          CONTENT=$(cat "$SRC")
+          printf '%s\n' "${CONTENT//\{\{VERSION\}\}/${{ steps.ctx.outputs.version }}}" > "$OUT"
+          echo "Rendered $OUT for version ${{ steps.ctx.outputs.version }}"
+        id: overview
+        shell: bash
+
+      - name: Sync description and overview to Docker Hub
+        if: steps.ctx.outputs.mode == 'release' && github.event_name != 'schedule'
+        uses: peter-evans/dockerhub-description@v4
+        continue-on-error: true
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+          repository: norconex/${{ matrix.image }}
+          short-description: ${{ matrix.description }}
+          readme-filepath: ${{ runner.temp }}/overview/${{ matrix.image }}.md
