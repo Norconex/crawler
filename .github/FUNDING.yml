@@ -3,17 +3,28 @@
 #
 # Sponsorship is recognition, not a support contract -- see SPONSORS.md.
 
-github: [Norconex]
+github: Norconex
 
-# NOTE (2026-08-30): the repository Sponsor button does not appear despite
-# this file being valid and on the default branch. GitHub's contents API
-# lists it, but its funding parser returns no funding links
-# (repository.fundingLinks is empty) and Settings offers to *create* the
-# file. Verified correct: exact path and filename, minimal valid content,
-# no duplicate funding file in .github/, root or docs/, repository public
-# and not a fork, archived or template, Sponsorships feature enabled, and
-# the organisation listing active and public with three published tiers.
-# Committing the file through GitHub's own settings flow changed nothing
-# either. Believed to be a GitHub-side issue; the organisation-level
-# Sponsor button works, and SPONSORS.md and the README link to the
-# sponsors page directly, so nothing is blocked on it.
+# NOTE (2026-08-30): the repository Sponsor button does not appear, and
+# GitHub reports no funding links for this repository, even though this
+# file is valid and on the default branch. Believed to be a GitHub-side
+# issue -- their contents API serves this file while their funding parser
+# returns nothing for it.
+#
+# Ruled out, so nobody repeats the checks:
+#   - Sponsorships feature is enabled in repository settings.
+#   - File is at .github/FUNDING.yml on the default branch (main).
+#   - Both documented forms tried: "github: Norconex" and
+#     "github: [Norconex]". Each valid YAML, each verified live.
+#   - No duplicate funding file: checked .github/, root and docs/, for
+#     both .yml and .yaml.
+#   - Repository is public, and not a fork, archived or a template.
+#   - No organisation-wide .github repository exists to conflict with it.
+#   - Organisation sponsors listing is active and public, with three
+#     published tiers, and the organisation-level button works.
+#   - Committing this file through GitHub's own settings flow changed
+#     nothing, nor did deleting and re-adding it, with and without a
+#     several-minute gap between the two commits.
+#
+# Nothing is blocked on this: SPONSORS.md and the README link to the
+# sponsors page directly.
