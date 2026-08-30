@@ -70,8 +70,8 @@
          artifact). Must satisfy the newest Jackson on the classpath; see the
          dependencyManagement note. Match to the Jackson 3 line: 3.0.x -> 2.20, 3.2.x -> 2.22. -->
     <jackson-annotations.version>2.22</jackson-annotations.version>
-    <!-- Jackson 2.x line, used ONLY by transitive test/benchmark deps (MockServer,
-         benchmark harness). Keep aligned with the Jackson 3 line's annotations
+    <!-- Jackson 2.x line, used ONLY by transitive test deps (MockServer).
+         Keep aligned with the Jackson 3 line's annotations
          generation: Jackson 3.0.x -> 2.20.x; 3.2.x -> 2.22.x. -->
     <jackson2.version>2.22.0</jackson2.version>
     <jakarta-activation.version>2.1.4</jakarta-activation.version>
@@ -413,7 +413,7 @@
       </dependency>
 
       <!-- Jackson 2 (com.fasterxml.jackson) - NOT used by our code; pulled in only
-           transitively by test/benchmark deps (e.g. MockServer, benchmark harness).
+           transitively by test deps (e.g. MockServer).
            Pinned to one consistent 2.x line so those deps don't drift into mismatched
            versions (which crashes ObjectMapper static init). See jackson2.version. -->
       <dependency>

@@ -39,9 +39,6 @@ crawler/core/src/main/resources/log4j2-local.xml
 /crawlers-v4.code-workspace
 
 # Benchmark generated outputs
-/benchmark/results/*
-!/benchmark/results/.gitkeep
-/benchmark/**/target/
 .codex
 
 .claude/settings.local.json
