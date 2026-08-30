@@ -3,7 +3,7 @@
 #
 # Sponsorship is recognition, not a support contract -- see SPONSORS.md.
 
-github: Norconex
+github: [Norconex]
 
 # NOTE (2026-08-30): the repository Sponsor button does not appear despite
 # this file being valid and on the default branch. GitHub's contents API
