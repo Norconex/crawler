@@ -442,9 +442,16 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag "v${{ steps.get_version.outputs.version }}"
-          git push origin "v${{ steps.get_version.outputs.version }}"
+          # Push the tag with a PAT, NOT the default GITHUB_TOKEN. GitHub does
+          # not raise workflow events for pushes made with GITHUB_TOKEN, so a
+          # tag pushed with it never triggers docker-publish.yaml's
+          # "on: push: tags" and no images get published. Note that setting
+          # GITHUB_TOKEN in env does not help here: git uses the credentials
+          # actions/checkout persisted, so the remote has to be authenticated
+          # explicitly.
+          git push             "https://x-access-token:${RELEASE_PAT}@github.com/${GITHUB_REPOSITORY}.git"             "v${{ steps.get_version.outputs.version }}"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_PAT: ${{ secrets.RELEASE_PAT }}
 
       #--- Step ------------------------------------------------------------------
 
@@ -582,8 +589,10 @@ jobs:
       # After a successful release, bump all POMs to the next patch SNAPSHOT
       # (e.g. 4.0.0 → 4.0.1-SNAPSHOT) so that subsequent commits on the
       # release branch don't accidentally re-trigger a Maven Central deploy.
-      # Uses RELEASE_PAT so the commit re-triggers the CI/CD workflow for a
-      # snapshot build/deploy of the new version.
+      # This push uses the credentials actions/checkout persisted
+      # (GITHUB_TOKEN), so it raises no workflow event. That is fine here: a
+      # release/* branch at a SNAPSHOT version only takes the "build only"
+      # path anyway, so there is nothing to gain from a re-run.
       - name: Bump to next patch SNAPSHOT after release
         if: >
           success() && github.event_name == 'push' && startsWith(github.ref,
@@ -676,9 +685,12 @@ jobs:
           git add -A
           git commit -s -m "chore(release): bump ${DEFAULT_BRANCH} to ${NEXT_MINOR} after ${VERSION} release"
 
-          if ! git push origin "$DEFAULT_BRANCH"; then
+          # Authenticate explicitly with the PAT: git uses the credentials
+          # actions/checkout persisted (GITHUB_TOKEN), and pushes made with
+          # that token do not raise workflow events, so CI would never build
+          # the new snapshot.
+          if ! git push               "https://x-access-token:${RELEASE_PAT}@github.com/${GITHUB_REPOSITORY}.git"               "$DEFAULT_BRANCH"; then
             echo "::warning::Could not push the version bump to '$DEFAULT_BRANCH' (it may be protected). ${VERSION} IS released; please set $DEFAULT_BRANCH to ${NEXT_MINOR} manually."
           fi
         env:
-          # PAT so the commit triggers CI for the new SNAPSHOT version.
-          GITHUB_TOKEN: ${{ secrets.RELEASE_PAT }}
+          RELEASE_PAT: ${{ secrets.RELEASE_PAT }}
