@@ -35,6 +35,18 @@ on:
       - "**/README.md"
       - "**/TODO.txt"
       - "docs/**"
+      # Community-health and project-meta files. None of these reach the
+      # build: they are read by GitHub or by people, never by Maven.
+      - "CONTRIBUTING.md"
+      - "SPONSORS.md"
+      - "CODE_OF_CONDUCT.md"
+      - "changelogs/**"
+      - ".github/FUNDING.yml"
+      - ".github/SECURITY.md"
+      - ".github/SUPPORT.md"
+      - ".github/PULL_REQUEST_TEMPLATE.md"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/copilot-instructions.md"
   pull_request:
     branches:
       - "*"
@@ -46,6 +58,18 @@ on:
       - "**/README.md"
       - "**/TODO.txt"
       - "docs/**"
+      # Community-health and project-meta files. None of these reach the
+      # build: they are read by GitHub or by people, never by Maven.
+      - "CONTRIBUTING.md"
+      - "SPONSORS.md"
+      - "CODE_OF_CONDUCT.md"
+      - "changelogs/**"
+      - ".github/FUNDING.yml"
+      - ".github/SECURITY.md"
+      - ".github/SUPPORT.md"
+      - ".github/PULL_REQUEST_TEMPLATE.md"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/copilot-instructions.md"
 
 jobs:
   build:
