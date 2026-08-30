@@ -5,8 +5,9 @@ Norconex Crawler is free and Apache-2.0 licensed, built and maintained by
 on top of what we already invest, and puts your name in front of the people
 using it.
 
-👉 **[Become a sponsor](https://github.com/sponsors/Norconex)** ·
-[What sponsorship includes](https://crawler.norconex.com/support#back-the-project)
+👉 **[Become a sponsor](https://github.com/sponsors/Norconex)** — the tiers
+and what each one includes are listed there. They are deliberately not
+repeated in this file, so the two cannot drift apart.
 
 Sponsorship is recognition, not a support contract. It carries no response
 times and no committed engineering time. If your team needs those, see
