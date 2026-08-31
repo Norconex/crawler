@@ -81,7 +81,7 @@
     <jetty.version>11.0.25</jetty.version>
     <json.version>1.8</json.version>
     <!-- 1.17.1+ required by Tika 3.x JSoupParser (TagSet class) -->
-    <jsoup.version>1.22.2</jsoup.version>
+    <jsoup.version>1.23.1</jsoup.version>
     <log4j.version>2.24.3</log4j.version>
     <picocli.version>4.7.7</picocli.version>
     <slf4j.version>2.0.17</slf4j.version>
