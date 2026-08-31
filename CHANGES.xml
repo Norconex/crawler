@@ -7,7 +7,7 @@
   </properties>
   <body>
 
-    <release version="3.2.0-SNAPSHOT" date="2026-??-??" description="Minor release.">
+    <release version="3.2.0" date="2026-08-31" description="Minor release.">
       <action dev="essiembre" type="update">
         Minimum Java version is now 17.
       </action>

@@ -16,14 +16,14 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>com.norconex.collectors.v3</groupId>
+    <groupId>com.norconex.collectors</groupId>
     <artifactId>norconex-collector-parent</artifactId>
-    <version>3.2.0-SNAPSHOT</version>
+    <version>3.2.0</version>
   </parent>
-  <groupId>com.norconex.collectors.v3</groupId>
+  <groupId>com.norconex.collectors</groupId>
   <artifactId>norconex-collector-http</artifactId>
   <name>Norconex HTTP Collector</name>
-  <version>3.2.0-SNAPSHOT</version>
+  <version>3.2.0</version>
   <properties>
     <maven.compiler.source>17</maven.compiler.source>
     <maven.compiler.target>17</maven.compiler.target>
@@ -112,7 +112,7 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>com.norconex.collectors.v3</groupId>
+      <groupId>com.norconex.collectors</groupId>
       <artifactId>norconex-collector-core</artifactId>
       <exclusions>
         <exclusion>
@@ -202,12 +202,12 @@
                getting a ClassNotFoundException. -->
           <tagletArtifacts combine.children="append">
             <tagletArtifact>
-              <groupId>com.norconex.collectors.v3</groupId>
+              <groupId>com.norconex.collectors</groupId>
               <artifactId>norconex-importer</artifactId>
               <version>${project.version}</version>
             </tagletArtifact>
             <tagletArtifact>
-              <groupId>com.norconex.collectors.v3</groupId>
+              <groupId>com.norconex.collectors</groupId>
               <artifactId>norconex-collector-core</artifactId>
               <version>${project.version}</version>
             </tagletArtifact>
