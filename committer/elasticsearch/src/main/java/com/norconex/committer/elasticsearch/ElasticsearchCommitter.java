@@ -146,8 +146,7 @@ import lombok.extern.slf4j.Slf4j;
  * You can specify timeout values for when this committer sends documents
  * to Elasticsearch.
  * </p>
- *
- * @author Pascal Essiembre
+
  */
 @EqualsAndHashCode
 @ToString

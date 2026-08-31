@@ -25,7 +25,6 @@ import lombok.experimental.Accessors;
 
 /**
  * IDOL Committer configuration.
- * @author Pascal Essiembre
  */
 @Data
 @Accessors(chain = true)

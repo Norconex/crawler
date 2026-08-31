@@ -46,7 +46,6 @@ import lombok.Data;
  * To use different fields (one or several) to constitute a checksum,
  * you can use the {@link GenericMetadataChecksummer}.
  * </p>
- * @author Pascal Essiembre
  * @see GenericMetadataChecksummer
  */
 @Data

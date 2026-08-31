@@ -63,7 +63,6 @@ import lombok.extern.slf4j.Slf4j;
  * <p>
  * Simple Microsoft Azure Search client.
  * </p>
- * @author Pascal Essiembre
  */
 @Slf4j
 class AzureSearchClient {

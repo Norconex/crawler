@@ -24,7 +24,6 @@ import lombok.experimental.Accessors;
  * <p>
  * Configuration for {@link ApacheKafkaCommitter}.
  * </p>
- * @author Harinder Hanjan
  */
 @Data
 @Accessors(chain = true)

@@ -60,8 +60,7 @@ import com.norconex.commons.lang.url.UrlStreamer;
 
 /**
  * AmazonCloudSearch main tests.
- *
- * @author Pascal Essiembre
+
  */
 
 @Testcontainers(disabledWithoutDocker = true)

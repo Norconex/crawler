@@ -50,7 +50,6 @@ import lombok.extern.slf4j.Slf4j;
  * have them created when not already present with
  * {@link ApacheKafkaCommitterConfig#setCreateTopic(boolean)}.
  * </p>
- * @author Harinder Hanjan
  */
 @Slf4j
 @EqualsAndHashCode

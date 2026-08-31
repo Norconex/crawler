@@ -821,6 +821,16 @@
               <additionalJOption>-Xmaxerrs</additionalJOption>
               <additionalJOption>10000</additionalJOption>
             </additionalJOptions>
+            <!-- A single year, not a range. The default bottom renders
+                 {inceptionYear}-{currentYear}, and inceptionYear is set once on
+                 the parent, so every module inherited 2022 regardless of its own
+                 history: amazoncloudsearch's own file headers start at 2016, and
+                 newer modules did not exist in 2022. The start year was
+                 therefore inherited rather than observed, and wrong for most
+                 modules. A single year states the publication year and asserts
+                 nothing about a span. Per-file headers keep their real ranges:
+                 those are accurate and maintained by the copyright workflow. -->
+            <bottom><![CDATA[Copyright &#169; {currentYear} <a href="https://norconex.com">Norconex Inc.</a> Licensed under the Apache License, Version 2.0.]]></bottom>
             <show>protected</show>
             <nodeprecated>false</nodeprecated>
             <detectLinks>false</detectLinks>

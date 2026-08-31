@@ -25,9 +25,6 @@ import com.norconex.commons.lang.bean.BeanMapper.Format;
 import com.norconex.commons.lang.map.PropertyMatcher;
 import com.norconex.commons.lang.text.TextMatcher;
 
-/**
- * @author Pascal Essiembre
- */
 @Timeout(30)
 class IdolCommitterConfigTest {
 

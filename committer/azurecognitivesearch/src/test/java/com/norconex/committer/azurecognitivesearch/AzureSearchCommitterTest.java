@@ -51,9 +51,7 @@ import com.norconex.commons.lang.security.Credentials;
 /**
  * Azure Search main tests. Because Microsoft does not offer a local instance
  * for unit testing, we simulate one using a mock server.
- *
- * @author Pascal Essiembre
- * @author Harinder Hanjan
+
  */
 @Isolated
 @ExtendWith(MockServerExtension.class)

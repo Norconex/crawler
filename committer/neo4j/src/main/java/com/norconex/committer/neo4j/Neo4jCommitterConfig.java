@@ -32,8 +32,6 @@ import lombok.experimental.Accessors;
  * <p>
  * Neo4j Committer configuration.
  * </p>
- * @author Sylvain Roussy
- * @author Pascal Essiembre
  */
 @Data
 @Accessors(chain = true)

@@ -90,8 +90,7 @@ import lombok.ToString;
  *       character must be a letter. Cannot start with "azureSearch".
  *       Maximum length is 128 characters.</li>
  * </ul>
- *
- * @author Pascal Essiembre
+
  */
 @EqualsAndHashCode
 @ToString

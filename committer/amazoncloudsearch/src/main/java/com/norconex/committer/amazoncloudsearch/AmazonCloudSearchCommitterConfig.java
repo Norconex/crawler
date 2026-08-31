@@ -47,8 +47,7 @@ import lombok.experimental.Accessors;
  * collision-free (uniqueness), but it should safely cover the vast
  * majority of cases.
  * </p>
- *
- * @author Pascal Essiembre
+
  */
 @Data
 @Accessors(chain = true)

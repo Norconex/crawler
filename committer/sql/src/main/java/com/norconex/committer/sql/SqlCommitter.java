@@ -67,8 +67,7 @@ import lombok.ToString;
  *     fields.
  *   </dd>
  * </dl>
- *
- * @author Pascal Essiembre
+
  */
 @EqualsAndHashCode
 @ToString

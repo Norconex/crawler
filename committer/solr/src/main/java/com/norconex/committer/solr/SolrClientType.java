@@ -35,7 +35,6 @@ import com.fasterxml.jackson.annotation.JsonValue;
  * Supported
  * <a href="https://lucene.apache.org/solr/guide/8_1/using-solrj.html#types-of-solrclients">
  * SolrClient</a> types.
- * @author Pascal Essiembre
  */
 public enum SolrClientType {
 

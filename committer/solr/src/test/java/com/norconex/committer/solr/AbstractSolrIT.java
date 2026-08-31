@@ -39,8 +39,6 @@ import com.norconex.commons.lang.TimeIdGenerator;
 /**
  * Base class for Solr tests requiring a running Solr server.  One Solr
  * instance is shared with all all tests in implementing class.
- * @author Pascal Essiembre
- * @author Harinder Hanjan
  */
 @Testcontainers(disabledWithoutDocker = true)
 @TestInstance(Lifecycle.PER_CLASS)
