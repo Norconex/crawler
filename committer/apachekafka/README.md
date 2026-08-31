@@ -3,5 +3,5 @@ Apache Kafka Committer
 
 Apache Kafka implementation of Norconex Committer.
 
-Website: https://opensource.norconex.com/committers/apachekafka/
+Website: https://crawler.norconex.com/docs/reference/committers/ApacheKafkaCommitter
 

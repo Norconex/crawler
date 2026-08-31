@@ -3,7 +3,7 @@ IDOL Committer
 
 OpenText IDOL implementation of Norconex Committer.  
 
-Website: https://opensource.norconex.com/committers/idol/
+Website: https://crawler.norconex.com/docs/reference/committers/IdolCommitter
 
 
 

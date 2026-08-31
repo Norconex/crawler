@@ -2,7 +2,7 @@
 
 Google Cloud Search implementation of Norconex Committer.
 
-Website: https://opensource.norconex.com/committers/googlecloudsearch/
+Website: https://crawler.norconex.com/docs/reference/committers/GoogleCloudSearchCommitter
 
 Additional Google-specific HTTP resilience options (in addition to inherited
 committer-core queue retry/split options):

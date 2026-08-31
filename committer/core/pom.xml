@@ -109,7 +109,7 @@
   </build>
 
   
-  <url>https://opensource.norconex.com/committers/core</url>
+  <url>https://crawler.norconex.com/docs/reference/committers-overview</url>
   <description>Norconex Committer is a java library and command line application used to route content to local or remote target repositories, such as a search engine index.</description>
 
 </project>

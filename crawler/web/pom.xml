@@ -310,7 +310,7 @@
   </build>
   
 
-  <url>https://opensource.norconex.com/crawlers/web</url>
+  <url>https://crawler.norconex.com/docs/reference/crawler/WebCrawlerConfig</url>
   <description>
     Norconex Web Crawler is use for in-depth crawling of web sites of any size. 
     It aims to be very flexible, easy to extend, and portable

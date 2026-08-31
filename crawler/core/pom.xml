@@ -333,7 +333,7 @@
   </build>
 
 
-  <url>https://opensource.norconex.com/crawlers/core</url>
+  <url>https://crawler.norconex.com/docs/reference/crawler/CrawlerConfig</url>
   <description>Norconex Collector Core contains core functionalities shared between collectors.</description>
 
 </project>

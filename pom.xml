@@ -836,11 +836,19 @@
                  finding the links.
               -->
 
-              <!-- Norconex dependencies -->
+              <!-- Norconex dependencies.
+                   The three importer/committer/crawler entries that used to sit
+                   here pointed at v4 apidocs on opensource.norconex.com, which
+                   were never published there - all three 404'd, so the links
+                   they were meant to produce silently went nowhere. V4 ships a
+                   single AGGREGATE Javadoc covering every module, so one entry
+                   replaces all three.
+                   The commons-lang link stays on the old site deliberately: it
+                   resolves, and serves the element-list that <link> requires.
+                   javadoc.io does not (404 for both element-list and
+                   package-list), so it is not a usable replacement. -->
               <link>https://opensource.norconex.com/commons/lang/v3/apidocs</link>
-              <link>https://opensource.norconex.com/importer/v4/apidocs</link>
-              <link>https://opensource.norconex.com/committers/core/v4/apidocs</link>
-              <link>https://opensource.norconex.com/crawlers/core/v4/apidocs</link>
+              <link>https://crawler.norconex.com/apidocs/latest</link>
 
               <!-- Regular dependencies -->
               <link>https://commons.apache.org/proper/commons-lang/javadocs/api-release</link>
@@ -1422,7 +1430,7 @@
     <name>Norconex Inc.</name>
     <url>https://norconex.com</url>
   </organization>
-  <url>https://opensource.norconex.com/crawlers</url>
+  <url>https://crawler.norconex.com</url>
   <scm>
     <url>https://github.com/Norconex/crawler</url>
     <connection>scm:git:git@github.com:Norconex/crawler.git</connection>

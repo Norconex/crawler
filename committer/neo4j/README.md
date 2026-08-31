@@ -3,7 +3,7 @@ Neo4j Committer
 
 Neo4j implementation of Norconex Committer.
 
-Website: https://opensource.norconex.com/committers/neo4j
+Website: https://crawler.norconex.com/docs/reference/committers/Neo4jCommitter
 
 ## Compatibility Matrix
 

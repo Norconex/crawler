@@ -133,7 +133,7 @@
   </build>
 
 
-  <url>https://opensource.norconex.com/committers/solr</url>
+  <url>https://crawler.norconex.com/docs/reference/committers/SolrCommitter</url>
   <description>
     Solr implementation of Norconex Committer. Should also work with any 
     Solr-based products, such as LucidWorks.
