@@ -34,4 +34,5 @@ configurator's import tool to convert an existing V3 configuration.
 
 - This is a beta release: expect rough edges, incomplete documentation in
   places, and the possibility of breaking changes before 4.0.0 is final.
-- Feedback is very welcome — please open an issue on GitHub.
+- Feedback is very welcome — see [Start here](https://github.com/Norconex/crawler/discussions/1321)
+  for where to post it (bug reports, questions, and ideas each have their own place).
