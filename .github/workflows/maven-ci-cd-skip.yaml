@@ -35,7 +35,6 @@ on:
       - "*"
     types: [opened, synchronize, reopened]
     paths:
-      - "V4_MIGRATION.md"
       - "**/README.md"
       - "**/TODO.txt"
       - "docs/**"

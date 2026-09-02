@@ -31,7 +31,6 @@ on:
     # Only run this workflow if one or more files were changed and not part of
     # 'paths-ignore'.
     paths-ignore:
-      - "V4_MIGRATION.md"
       - "**/README.md"
       - "**/TODO.txt"
       - "docs/**"
@@ -54,7 +53,6 @@ on:
     # Unfortunately GitHub actions does not yet support Yaml anchors and aliases
     # so we have to repeat the paths-ignore here.
     paths-ignore:
-      - "V4_MIGRATION.md"
       - "**/README.md"
       - "**/TODO.txt"
       - "docs/**"
