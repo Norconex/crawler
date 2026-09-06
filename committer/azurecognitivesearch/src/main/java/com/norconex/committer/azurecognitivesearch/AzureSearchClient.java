@@ -156,7 +156,7 @@ class AzureSearchClient {
             throw e;
         } catch (Exception e) {
             throw new CommitterException(
-                    "Could not commit JSON batch to CloudSearch.", e);
+                    "Could not commit JSON batch to Azure Search.", e);
         }
     }
 
