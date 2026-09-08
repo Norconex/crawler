@@ -1,1 +1,13 @@
-workdir = ./examples-output/complex
+# Implicit variable file: same base name as complex-config.xml, so it is
+# picked up automatically with no command-line argument.
+#
+# Keys are matched ignoring case and non-alphanumeric characters, and values
+# are taken literally after trimming surrounding spaces.
+
+profile      = development
+crawlerId    = complex-example
+workdir      = ./examples-output/complex
+startUrl     = https://opensource.norconex.com/crawlers/web/
+crawlDepth   = 1
+maxDocuments = 10
+numThreads   = 1

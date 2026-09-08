@@ -1,0 +1,15 @@
+# Explicit variable file, passed with -variables to override the implicit one:
+#
+#   crawl-web.sh start -config=./examples/complex/complex-config.xml \
+#       -variables=./examples/complex/production.variables
+#
+# Switching the profile also flips the Velocity conditionals in
+# complex-config.xml: slower politeness delay, plus a second committer.
+
+profile      = production
+crawlerId    = complex-example-prod
+workdir      = ./examples-output/complex-prod
+startUrl     = https://opensource.norconex.com/crawlers/web/
+crawlDepth   = 3
+maxDocuments = 100
+numThreads   = 4

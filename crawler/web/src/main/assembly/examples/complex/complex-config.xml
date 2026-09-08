@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE xml>
-<!-- 
-   Copyright 2010-2024 Norconex Inc.
+<!--
+   Copyright 2010-2026 Norconex Inc.
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -15,55 +15,126 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 -->
-<httpcollector id="Norconex Complex Collector">
+<!--
+  Demonstrates the templating features of a crawler configuration file:
+  variables, file inclusion, and conditional sections. Configuration files
+  are processed by Apache Velocity before being parsed, so anything Velocity
+  supports is available here.
 
-  <workDir>$workdir</workDir>
+  VARIABLES
 
-  <crawlerDefaults>
+    Referenced as ${name}, or ${name|'a default'} to supply a fallback.
+    They resolve in this order, first match winning:
 
-    <urlNormalizer class="GenericURLNormalizer" />
-    <numThreads>1</numThreads>
-    <maxDepth>0</maxDepth>
-    <orphansStrategy>DELETE</orphansStrategy>
-    
-    <!-- We know we don't want to crawl the entire site, so ignore sitemap. -->
-    <sitemapResolver ignore="true" />
+      1. System properties        java -DcrawlDepth=3 ...
+      2. Environment variables    export CRAWL_DEPTH=3
+      3. Explicit variable file   -variables=./my.variables
+      4. Implicit variable file   complex-config.variables  (this directory)
 
-    <referenceFilters>
-      <filter class="ExtensionReferenceFilter" onMatch="exclude">jpg,gif,png,ico,css,js</filter>
-      <filter class="impl.ReferenceFilter">
-        <valueMatcher method="regex">https://opensource\.norconex\.com/collectors/http/test/.*</valueMatcher>
-      </filter>
-    </referenceFilters>
+    Case and non-alphanumeric characters are ignored when matching, so
+    "crawlDepth", "crawldepth" and "CRAWL_DEPTH" are the same variable.
 
-  </crawlerDefaults>
+    One limit is worth knowing before you rely on it: system properties and
+    environment variables are applied where a variable is substituted into
+    the file, not to the conditions of directives. So -DcrawlDepth=3 changes
+    ${crawlDepth} below, but -Dprofile=production will NOT flip the
+    conditional sections further down, because that test reads $profile
+    straight from the variable files. Switch profile with a variable file,
+    as shown under RUNNING IT.
 
-  <crawlers>
+  INCLUDING OTHER FILES
 
-    <crawler id="Norconex Complex Test Page 1">
-      <start>
-        <ref>https://opensource.norconex.com/collectors/http/test/complex1</ref>
-      </start>
-      #parse("shared/importer-config.xml")
-      <committers>
-        <committer class="XmlFileCommitter">
-         <fileNamePrefix>complex1_</fileNamePrefix>
-        </committer>
-      </committers>
-    </crawler>
+#[[
+    #parse("file")    interprets the file as a template, so its own
+                      variables and its own implicit variable file apply
+    #include("file")  inserts the file verbatim, with no interpretation
+]]#
+    Paths are relative to the file doing the including, or absolute.
 
-    <crawler id="Norconex Complex Test Page 2">
-      <start>
-        <ref>https://opensource.norconex.com/collectors/http/test/complex2</ref>
-      </start>
-      #parse("shared/importer-config.xml")
-      <committers>
-        <committer class="XmlFileCommitter">
-         <fileNamePrefix>complex2_</fileNamePrefix>
-        </committer>
-      </committers>
-    </crawler>
+  A GOTCHA WORTH KNOWING
 
-  </crawlers>
+    Velocity processes this file before any XML parsing happens, so an XML
+    comment does NOT protect a directive: writing a parse or include
+    directive inside a comment still executes it. To show directive syntax
+    in prose, wrap it in an unparsed block, which is what the block just
+    above does:
 
-</httpcollector>
+        #[[  ... text Velocity should leave alone ...  ]]#
+
+  RUNNING IT
+
+    Defaults come from complex-config.variables:
+
+      crawl-web.sh start -config=./examples/complex/complex-config.xml
+
+    The production profile crawls deeper and wider, slows the politeness
+    delay, and adds a second committer:
+
+      crawl-web.sh start -config=./examples/complex/complex-config.xml \
+          -variables=./examples/complex/production.variables
+
+    See exactly what the template resolved to, without crawling. Run it
+    both ways and compare to watch the conditionals flip:
+
+      crawl-web.sh configrender -config=./examples/complex/complex-config.xml
+  -->
+<crawler id="${crawlerId|'complex-example'}">
+
+  <workDir>${workdir}</workDir>
+
+  <startReferences>
+    <ref>${startUrl}</ref>
+  </startReferences>
+
+  <maxDepth>${crawlDepth|'0'}</maxDepth>
+  <maxDocuments>${maxDocuments|'10'}</maxDocuments>
+  <numThreads>${numThreads|'1'}</numThreads>
+
+  <!-- Velocity conditionals let one file serve several environments.
+       Politeness is relaxed for a small local run and kept conservative
+       for anything larger. -->
+#if ( $profile == 'production' )
+  <delayResolver class="GenericDelayResolver">
+    <defaultDelay>5 seconds</defaultDelay>
+  </delayResolver>
+#else
+  <delayResolver class="GenericDelayResolver">
+    <defaultDelay>500 milliseconds</defaultDelay>
+  </delayResolver>
+#end
+
+  <!-- Skip files that are never worth fetching. -->
+  <referenceFilters>
+    <referenceFilter class="ExtensionReferenceFilter" onMatch="exclude">
+      <extensions>
+        <extension>jpg</extension>
+        <extension>jpeg</extension>
+        <extension>gif</extension>
+        <extension>png</extension>
+        <extension>ico</extension>
+        <extension>svg</extension>
+        <extension>css</extension>
+        <extension>js</extension>
+        <extension>woff</extension>
+        <extension>woff2</extension>
+      </extensions>
+    </referenceFilter>
+  </referenceFilters>
+
+  <!-- Interpreted include: importer-config.xml is itself a template and
+       picks up its own importer-config.properties from that directory. -->
+  #parse("shared/importer-config.xml")
+
+  <committers>
+    <committer class="XmlFileCommitter">
+      <directory>${workdir}/committed</directory>
+    </committer>
+#if ( $profile == 'production' )
+    <!-- A second committer, added only for the production profile. -->
+    <committer class="JsonFileCommitter">
+      <directory>${workdir}/committed-json</directory>
+    </committer>
+#end
+  </committers>
+
+</crawler>
