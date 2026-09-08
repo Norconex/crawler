@@ -243,6 +243,70 @@ to the core are required. For Maven projects, declare a dependency on the
 crawler module and the `importer` module — your JAR will be picked up
 automatically at runtime.
 
+## Class scanning
+
+Everything above works by name: a fully-qualified class name is loaded
+directly, and an SPI provider registers its types explicitly. Neither needs
+the classpath to be searched, so neither is affected by anything in this
+section.
+
+Scanning only comes in when something has to *discover* types it was not
+told about — `addFromScan` in a `PolymorphicTypeProvider`, or resolving a
+partial class name in a legacy XML configuration. That means opening every
+JAR on the classpath and reading its entries, and on a full distribution
+that is over 240 archives, nearly all of which hold nothing relevant.
+
+Three settings control it. All are optional, and with none of them set
+behaviour is exactly as it has always been.
+
+### Restricting which JARs are scanned
+
+`norconex.classfinder.includeJars` takes comma-separated wildcard patterns
+matched against JAR **file names**. A JAR that does not match is never
+opened:
+
+```
+-Dnorconex.classfinder.includeJars=nx-*.jar,norconex-*.jar
+```
+
+This is the setting that saves real time, because it decides from the file
+name without touching the archive. On the web crawler distribution it cuts a
+steady-state scan of the 242-entry classpath from roughly 190 ms to 60 ms,
+resolving the same types.
+
+Directories are never excluded by these patterns, so working from
+`target/classes` or an IDE keeps behaving normally.
+
+### The extension directory
+
+The `ext/` directory — or wherever `norconex.classfinder.extDir` points — is
+always scanned when it exists, whatever the patterns say. It is where a JAR
+belongs when its types must be discovered by scanning but its name is
+excluded by the patterns above.
+
+The launcher must also put it on the classpath for those classes to be
+loadable:
+
+```
+-cp "./lib/*:./ext/*"
+```
+
+### Shipping a class index
+
+A JAR may carry a `META-INF/norconex/classes.idx` resource listing the
+classes it holds, one per line, written either as class names
+(`com.example.Foo`) or as archive paths (`com/example/Foo.class`). Blank
+lines and lines starting with `#` are ignored. When present it is read
+instead of the archive being walked.
+
+An index avoids enumerating a large JAR, but it does not avoid *opening*
+it — establishing whether an index exists costs the same file access either
+way. Prefer `includeJars` for speed and treat the index as a way for a JAR
+to declare its contents precisely.
+
+Setting `norconex.classfinder.scanMode=indexed` additionally skips any
+classpath JAR that carries no index. Directories are still scanned.
+
 ## Resources
 
 - [Reference](/docs/reference/) — all built-in extension points with examples
