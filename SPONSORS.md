@@ -64,7 +64,9 @@ step with it.
 
 Sponsors who choose to sponsor privately are deliberately omitted, and
 Norconex reserves the right to decline any sponsorship, and to omit any
-sponsor's name or logo from this file and from
-[crawler.norconex.com](https://crawler.norconex.com), at its sole discretion.
+sponsor's name or logo from the
+[`Norconex/crawler` repository](https://github.com/Norconex/crawler) and the
+[crawler.norconex.com](https://crawler.norconex.com) website, at its sole
+discretion.
 
 Thank you to everyone who supports this work.
