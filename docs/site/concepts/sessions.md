@@ -123,6 +123,43 @@ rather than restarting.
 To abandon a session part-way rather than resume it, clean the state first —
 otherwise the next `start` will always try to finish what was left open.
 
+### How `stop` reaches a running crawl
+
+`stop` is a separate process from the crawl it stops, so it has to find it.
+Every crawl starts a small HTTP administrative server and writes the port it
+bound to into `admin.port`, inside its working directory. `stop` reads that
+file, then `POST`s to `/cluster/stop`. The crawler shuts down in an orderly
+way from there: in-flight documents finish and state is flushed.
+
+Two more endpoints answer questions about a live crawl: `GET /cluster/size`
+and `GET /cluster/nodes`. Every request must carry a `crawler-id` header
+matching the crawler's configured id, or it is refused with `412`.
+
+This also means a crawl is observable and controllable **without being a child
+of whatever launched it** — useful for supervising crawls from another process,
+or picking them back up after the supervisor restarts. The presence of
+`admin.port` plus a successful `GET /cluster/size` is a reliable liveness
+check; the file is deleted on clean shutdown, so a leftover one that answers
+nothing indicates a crawl that died abruptly.
+
+By default this server listens on the **loopback interface only**, so it is
+reachable from the host running the crawl and nowhere else. That is a
+deliberate default: the endpoints can stop a crawl, and the `crawler-id`
+header is an identifier rather than a secret — it prevents stopping the wrong
+crawler, not stopping yours. Clustered deployments, where nodes and `stop` may
+run on different hosts, need to widen it:
+
+```xml
+<cluster>
+  <adminBindAddress>any</adminBindAddress>
+</cluster>
+```
+
+The crawler logs a warning whenever it binds beyond loopback. Set
+`adminDisabled` to skip the server entirely, accepting that `stop` then has no
+way to reach the crawl. See
+[ClusterConfig](/docs/reference/crawler/ClusterConfig) for all the options.
+
 ## Limiting documents per run
 
 `maxDocuments` caps how many documents a single **run** processes, not a

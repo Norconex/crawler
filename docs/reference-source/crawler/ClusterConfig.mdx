@@ -13,17 +13,55 @@ Cluster configuration for distributed crawling.
 
 ## Notes
 
-Configures distributed crawler cluster settings, including whether clustering is enabled, the port for administrative access, and the cluster connector implementation to use.
+Configures distributed crawler cluster settings, including whether clustering is enabled, the administrative server used to query and stop a running crawl, and the cluster connector implementation to use.
+
+In a configuration file this section is named `cluster`:
+
+```xml
+<crawler id="my-crawler">
+  <cluster>
+    <adminBindAddress>loopback</adminBindAddress>
+    <adminPort>27295</adminPort>
+  </cluster>
+</crawler>
+```
+
+### The administrative server
+
+Unless `adminDisabled` is set, each crawl starts a small HTTP server offering `GET /cluster/size`, `GET /cluster/nodes` and `POST /cluster/stop`. Requests must carry a `crawler-id` header matching the crawler's configured id, or they are refused with `412`.
+
+Two things follow from that, and both matter when deciding `adminBindAddress`:
+
+- The endpoints can **stop a running crawl**.
+- The `crawler-id` header is an identifier taken from the configuration, **not a secret**. It is there to keep you from stopping the wrong crawler, not to keep anyone out.
+
+The crawler also writes the port it actually bound to into `admin.port`, inside its working directory, and deletes that file on clean shutdown. That makes the server discoverable to another process on the same host without guessing, which is how the built-in `stop` command finds it.
 
 ## Properties
 
+### adminBindAddress
+
+The network interface the administrative server binds to. Accepted values:
+
+| Value | Effect |
+|---|---|
+| `loopback` (default) | The loopback interface only. Reachable from the host running the crawler, and from nowhere else. |
+| `any` | Every interface. Required for clustered mode, where nodes and the `stop` command may run on other hosts. |
+| a host name or IP address | That interface only. |
+
+The default is the restrictive one deliberately. Because the endpoints can stop a crawl and are not protected by a secret, exposing them beyond the host means anyone who can reach the port and name the crawler can halt a crawl. Widening this should be a decision, so the crawler logs a warning whenever it binds beyond loopback.
+
+If the value cannot be resolved, the crawl fails to start rather than quietly falling back — silently disabling administration or silently exposing it would both be worse than stopping.
+
 ### adminDisabled
 
-When enabled, the crawler administrative server endpoints are not launched.
+When enabled, the crawler administrative server endpoints are not launched. The crawl then cannot be stopped through `POST /cluster/stop`, and `admin.port` is not written.
 
 ### adminPort
 
-The port each cluster node listens on for administrative commands. If the specified port is in use, the next available port is used instead. Default is 27295.
+The port each cluster node listens on for administrative commands. If the specified port is in use, the next available port is used instead — up to 99 above the configured one — so concurrent crawls on one host do not collide. Set it to `0` to let the operating system choose any free port. Default is 27295.
+
+Because the effective port may differ from the configured one, read `admin.port` from the working directory rather than assuming.
 
 ### clustered
 

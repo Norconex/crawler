@@ -16,8 +16,10 @@ package com.norconex.crawler.core.cluster.admin;
 
 import java.io.IOException;
 import java.net.BindException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.net.UnknownHostException;
 import java.nio.file.Files;
 
 import org.apache.commons.lang3.StringUtils;
@@ -89,10 +91,32 @@ public class ClusterAdminServer {
 
     public int doStart() {
         var config = session.getCrawlContext().getCrawlConfig();
-        var basePort = config.getClusterConfig().getAdminPort();
+        var clusterConfig = config.getClusterConfig();
+        var basePort = clusterConfig.getAdminPort();
+        var bindAddress = resolveBindAddress(
+                clusterConfig.getAdminBindAddress());
+
+        // The administrative endpoints can stop a crawl and are guarded only
+        // by a crawler-id header, which is an identifier and not a secret.
+        // Binding beyond loopback is legitimate for clustered mode, but it is
+        // worth saying out loud so it is never a surprise in an audit.
+        if (bindAddress == null) {
+            LOG.warn("Cluster admin server will bind to ALL network "
+                    + "interfaces (adminBindAddress={}). Its endpoints, "
+                    + "which include stopping the crawl, will be reachable "
+                    + "from other hosts and are not protected by a secret. "
+                    + "Set adminBindAddress to \"{}\" to restrict it to "
+                    + "this host.",
+                    ClusterConfig.ADMIN_BIND_ANY,
+                    ClusterConfig.ADMIN_BIND_LOOPBACK);
+        } else if (!bindAddress.isLoopbackAddress()) {
+            LOG.warn("Cluster admin server will bind to {}, making its "
+                    + "endpoints reachable from other hosts.", bindAddress);
+        }
+
         if (basePort == 0) {
             try {
-                return startHttpServer(0);
+                return startHttpServer(0, bindAddress);
             } catch (IOException e) {
                 throw new CrawlerException(
                         "Failed to start cluster admin HTTP server", e);
@@ -101,9 +125,9 @@ public class ClusterAdminServer {
         var maxAttempts = 100;
         var port = basePort;
         for (var attempt = 0; attempt < maxAttempts; attempt++) {
-            port = findAvailablePort(port);
+            port = findAvailablePort(port, bindAddress);
             try {
-                return startHttpServer(port);
+                return startHttpServer(port, bindAddress);
             } catch (IOException e) {
                 if (e instanceof BindException) {
                     LOG.warn("Port {} is taken after findAvailablePort, "
@@ -119,8 +143,44 @@ public class ClusterAdminServer {
                 "No available port found starting from " + basePort);
     }
 
-    private int startHttpServer(int port) throws IOException {
-        httpServer = HttpServer.create(new InetSocketAddress(port), 0);
+    /**
+     * Resolves the configured bind address.
+     * @param value configured value; blank is treated as the default
+     * @return the address to bind to, or <code>null</code> to bind every
+     *     interface
+     */
+    static InetAddress resolveBindAddress(String value) {
+        var address = StringUtils.trimToNull(value);
+        if (address == null
+                || ClusterConfig.ADMIN_BIND_LOOPBACK
+                        .equalsIgnoreCase(address)) {
+            return InetAddress.getLoopbackAddress();
+        }
+        if (ClusterConfig.ADMIN_BIND_ANY.equalsIgnoreCase(address)) {
+            // A null address means the wildcard, i.e. every interface.
+            return null;
+        }
+        try {
+            return InetAddress.getByName(address);
+        } catch (UnknownHostException e) {
+            // Failing closed here would silently disable administration;
+            // failing loudly is right, since the operator asked for a
+            // specific interface and did not get it.
+            throw new CrawlerException(
+                    "Cannot resolve cluster admin bind address \"" + address
+                            + "\". Use \"" + ClusterConfig.ADMIN_BIND_LOOPBACK
+                            + "\", \"" + ClusterConfig.ADMIN_BIND_ANY
+                            + "\", or a resolvable host name or IP address.",
+                    e);
+        }
+    }
+
+    private int startHttpServer(int port, InetAddress bindAddress)
+            throws IOException {
+        var socketAddress = bindAddress == null
+                ? new InetSocketAddress(port)
+                : new InetSocketAddress(bindAddress, port);
+        httpServer = HttpServer.create(socketAddress, 0);
         var actualPort = httpServer.getAddress().getPort();
         endpoint(GET, Endpoint.CLUSTER_SIZE, TEXT_PLAIN, exchange -> {
             sendResponse(exchange, 200,
@@ -138,6 +198,16 @@ public class ClusterAdminServer {
         httpServer.start();
         LOG.info("Cluster admin HTTP server started on port {}", actualPort);
         return actualPort;
+    }
+
+    /**
+     * The socket address the server actually bound to, or <code>null</code>
+     * if it is not running. Useful for asserting the interface exposure is
+     * what the configuration asked for.
+     * @return bound address, or <code>null</code>
+     */
+    InetSocketAddress getBoundAddress() {
+        return httpServer == null ? null : httpServer.getAddress();
     }
 
     /**
@@ -198,12 +268,20 @@ public class ClusterAdminServer {
 
     /**
      * Finds the next available port starting from the given port.
+     * <p>
+     * The probe binds the same address the server will use. Probing the
+     * wildcard address instead would give the wrong answer both ways: a port
+     * held by another process on one interface would look taken when it is
+     * free on ours, and vice versa.
+     * </p>
      * @param startPort the port to start checking from
+     * @param bindAddress address to test, or <code>null</code> for every
+     *     interface
      * @return the available port
      */
-    private int findAvailablePort(int startPort) {
+    private int findAvailablePort(int startPort, InetAddress bindAddress) {
         for (var port = startPort; port < startPort + 100; port++) {
-            try (var socket = new ServerSocket(port)) {
+            try (var socket = new ServerSocket(port, 0, bindAddress)) {
                 return port;
             } catch (IOException e) {
                 // Port taken, try next

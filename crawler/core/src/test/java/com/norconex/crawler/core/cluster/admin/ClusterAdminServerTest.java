@@ -15,6 +15,7 @@
 package com.norconex.crawler.core.cluster.admin;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -34,6 +35,7 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.norconex.crawler.core.CrawlerConfig;
+import com.norconex.crawler.core.CrawlerException;
 import com.norconex.crawler.core.cluster.Cluster;
 import com.norconex.crawler.core.cluster.ClusterConfig;
 import com.norconex.crawler.core.context.CrawlerContext;
@@ -116,6 +118,91 @@ class ClusterAdminServerTest {
                 server.close();
             }
         }
+    }
+
+    // The administrative endpoints can stop a crawl and are guarded only by a
+    // crawler-id header, which is an identifier from the configuration and
+    // not a secret. So the default must not put them on the network.
+    @Test
+    void start_bindsLoopbackOnlyByDefault() throws Exception {
+        var fixture = newFixture(0, tempDir);
+        var server = new ClusterAdminServer(fixture.session);
+        var port = server.start();
+
+        try {
+            // Bound to loopback, so unreachable from any other host. This is
+            // the security property, asserted on the bound address rather
+            // than by probing: binding the wildcard while loopback is held
+            // fails on most platforms regardless, so a probe proves nothing.
+            assertThat(server.getBoundAddress().getAddress()
+                    .isLoopbackAddress()).isTrue();
+            assertThat(server.getBoundAddress().getAddress()
+                    .isAnyLocalAddress()).isFalse();
+
+            // Still reachable locally, so administration keeps working.
+            assertThat(send(port, "GET", Endpoint.CLUSTER_SIZE, "crawler-1")
+                    .statusCode())
+                            .isEqualTo(200);
+        } finally {
+            server.close();
+        }
+    }
+
+    @Test
+    void start_bindsAllInterfacesWhenAsked() throws Exception {
+        var fixture = newFixture(0, tempDir);
+        fixture.session.getCrawlContext().getCrawlConfig().getClusterConfig()
+                .setAdminBindAddress(ClusterConfig.ADMIN_BIND_ANY);
+        var server = new ClusterAdminServer(fixture.session);
+        var port = server.start();
+
+        try {
+            assertThat(server.getBoundAddress().getAddress()
+                    .isAnyLocalAddress()).isTrue();
+            assertThat(send(port, "GET", Endpoint.CLUSTER_SIZE, "crawler-1")
+                    .statusCode())
+                            .isEqualTo(200);
+        } finally {
+            server.close();
+        }
+    }
+
+    @Test
+    void resolveBindAddress_defaultsAndKeywords() {
+        // Blank and the default keyword both mean loopback.
+        assertThat(ClusterAdminServer.resolveBindAddress(null)
+                .isLoopbackAddress()).isTrue();
+        assertThat(ClusterAdminServer.resolveBindAddress("  ")
+                .isLoopbackAddress()).isTrue();
+        assertThat(ClusterAdminServer.resolveBindAddress(
+                ClusterConfig.ADMIN_BIND_LOOPBACK)
+                .isLoopbackAddress()).isTrue();
+        // Case should not matter in a hand-edited config file.
+        assertThat(ClusterAdminServer.resolveBindAddress("LoopBack")
+                .isLoopbackAddress()).isTrue();
+
+        // Null means the wildcard, i.e. every interface.
+        assertThat(ClusterAdminServer.resolveBindAddress(
+                ClusterConfig.ADMIN_BIND_ANY)).isNull();
+        assertThat(ClusterAdminServer.resolveBindAddress("ANY")).isNull();
+    }
+
+    @Test
+    void resolveBindAddress_acceptsAnExplicitAddress() {
+        assertThat(ClusterAdminServer.resolveBindAddress("127.0.0.1")
+                .getHostAddress()).isEqualTo("127.0.0.1");
+    }
+
+    // Failing loudly is right: the operator asked for a specific interface
+    // and did not get it. Falling back silently would either disable
+    // administration or expose it, and both are worse than stopping.
+    @Test
+    void resolveBindAddress_rejectsAnUnresolvableAddress() {
+        assertThatExceptionOfType(CrawlerException.class)
+                .isThrownBy(() -> ClusterAdminServer.resolveBindAddress(
+                        "no-such-host.invalid"))
+                .withMessageContaining(ClusterConfig.ADMIN_BIND_LOOPBACK)
+                .withMessageContaining(ClusterConfig.ADMIN_BIND_ANY);
     }
 
     private HttpResponse<String> send(

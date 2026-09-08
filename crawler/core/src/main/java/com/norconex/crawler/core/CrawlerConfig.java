@@ -174,7 +174,8 @@ public class CrawlerConfig {
     private Duration maxCrawlDuration = Duration.ZERO;
 
     /**
-     * The Importer module configuration.
+     * Cluster configuration: how crawl state is stored and shared, and the
+     * administrative server used to query and stop a running crawl.
      */
     @NonNull
     @JsonProperty("cluster")
