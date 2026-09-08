@@ -14,17 +14,30 @@
  */
 package com.norconex.crawler.core.session;
 
+import tools.jackson.databind.annotation.JsonDeserialize;
+import tools.jackson.databind.annotation.JsonPOJOBuilder;
+
 import lombok.Builder;
 import lombok.Value;
-import lombok.extern.jackson.Jacksonized;
 
 /**
  * Details on the current crawl run.
  */
+// Lombok's @Jacksonized cannot be used here: it emits Jackson 2
+// annotations (com.fasterxml.jackson.databind.annotation), which Jackson 3
+// does not read. The result was a class that serialized fine and then
+// failed to deserialize with "no Creators, like default constructor,
+// exist". The builder is wired up explicitly against tools.jackson instead.
+@JsonDeserialize(builder = CrawlerRunInfo.CrawlerRunInfoBuilder.class)
 @Value
 @Builder
-@Jacksonized
 public class CrawlerRunInfo {
+
+    @JsonPOJOBuilder(withPrefix = "")
+    public static class CrawlerRunInfoBuilder {
+        // Lombok fills this in.
+    }
+
     /**
      * Stable identity of a crawler. Usually configuration-driven.
      */
