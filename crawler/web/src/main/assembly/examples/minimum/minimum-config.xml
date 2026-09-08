@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE xml>
-<!-- 
-   Copyright 2010-2024 Norconex Inc.
+<!--
+   Copyright 2010-2026 Norconex Inc.
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -15,29 +15,45 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 -->
-<!-- This configuration shows the minimum required and basic recommendations
-     to run a crawler.  
-     -->
-<crawlSession id="s1">
+<!--
+  The minimum configuration needed to run the Web Crawler, plus a few
+  recommended settings.
+
+  One configuration file describes ONE crawler. To run several crawlers,
+  give each its own configuration file.
+
+  Run it with:
+
+      crawl-web.sh start -config=./examples/minimum/minimum-config.xml
+
+  Validate it without crawling anything:
+
+      crawl-web.sh configcheck -config=./examples/minimum/minimum-config.xml
+  -->
+<crawler id="minimum-example">
+
+  <!-- Where the crawler keeps its state between runs. Deleting this
+       directory makes the next run treat every document as new. -->
   <workDir>./examples-output/minimum</workDir>
-  <crawlers>
-    <crawler id="myCrawler1" class="WebCrawlerConfig">
-    <startReferences>
-      <ref>https://opensource.norconex.com/crawlers/web/v3/configuration</ref>
-      <ref>https://opensource.norconex.com/committers/elasticsearch/</ref>
-    </startReferences>
-    <maxDepth>0</maxDepth>
-    <numThreads>1</numThreads>
-    <maxDocuments>2</maxDocuments>
-	<fetchersRetryDelay>100</fetchersRetryDelay>
 
-    <committers>
-      <committer class="XmlFileCommitter">
-      </committer>
-    </committers>
+  <!-- Where to start crawling. At least one reference is required. -->
+  <startReferences>
+    <ref>https://opensource.norconex.com/crawlers/web/</ref>
+  </startReferences>
 
-    </crawler>
- </crawlers>
+  <!-- Kept deliberately small so the example finishes quickly.
+       Remove these three to crawl the whole site. -->
+  <maxDepth>1</maxDepth>
+  <maxDocuments>10</maxDocuments>
+  <numThreads>1</numThreads>
 
+  <!-- Where crawled documents go. This one writes XML files to disk, which
+       is useful for seeing what was collected; swap it for a committer that
+       targets your search engine or database. -->
+  <committers>
+    <committer class="XmlFileCommitter">
+      <directory>./examples-output/minimum/committed</directory>
+    </committer>
+  </committers>
 
-</crawlSession>
+</crawler>
