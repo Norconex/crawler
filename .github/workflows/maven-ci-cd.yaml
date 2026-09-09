@@ -76,12 +76,17 @@ jobs:
     # Env. vars. defined here are available to all steps.
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      # Referenced by the "github" server entry in ~/.m2/settings.xml
+      # (see the second setup-java step) for snapshot deploys.
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     permissions:
       actions: read
       id-token: write
       # write is required for release tagging and dependency submission
       contents: write
+      # write is required to publish snapshots to GitHub Packages
+      packages: write
 
     steps:
       #--- Step ------------------------------------------------------------------
@@ -118,6 +123,22 @@ jobs:
           gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
           # Env variable name for GPG private key passphrase
           gpg-passphrase: MAVEN_GPG_PASSPHRASE
+
+      # A second invocation, not a replacement of the one above: setup-java
+      # writes server credentials into the same ~/.m2/settings.xml on each
+      # call, so this adds the "github" server (used for snapshots) alongside
+      # "central" (used for releases) rather than overwriting it. JDK/cache
+      # setup is idempotent, so re-running it here costs nothing.
+      # GITHUB_ACTOR is provided by the runner already; GITHUB_TOKEN is set
+      # below since secrets are not auto-exposed as plain env vars.
+      - name: Add GitHub Packages credentials (for snapshot deploys)
+        uses: actions/setup-java@v5
+        with:
+          distribution: "temurin"
+          java-version: "21"
+          server-id: github
+          server-username: GITHUB_ACTOR
+          server-password: GITHUB_TOKEN
 
       - run: mvn --version
 
@@ -233,6 +254,11 @@ jobs:
 
       #--- Step ------------------------------------------------------------------
 
+      # Deploys to GitHub Packages (see the "github" snapshotRepository in
+      # pom.xml), not Sonatype — auth comes from the settings.xml written by
+      # the "Add GitHub Packages credentials" step above, via the job-level
+      # GITHUB_TOKEN. -Dgpg.skip=true because GitHub Packages doesn't ask for
+      # signatures; snapshots were never signed for Sonatype either.
       - name: Build and publish snapshot (push to main)
         if: >
           github.event_name == 'push' && github.ref == 'refs/heads/main' &&
@@ -249,12 +275,47 @@ jobs:
             -Pjacoco,parallel-tests \
             -C \
             -B
+
+      #--- Step ------------------------------------------------------------------
+
+      # Same "keep last 3" convention as the snapshot GitHub Release cleanup
+      # below, applied to GitHub Packages instead — a different pipeline
+      # (Maven registry vs. release download assets) that happens to publish
+      # on the same trigger. One GitHub Package per module (14 currently).
+      # Discovered by name via the API rather than hardcoded artifactIds, so
+      # a new module is covered automatically and this does not depend on
+      # guessing whether GitHub names a Maven package "artifactId" or
+      # "groupId.artifactId".
+      #
+      # continue-on-error: package deletion has historically needed a token
+      # scoped beyond what the ephemeral GITHUB_TOKEN carries even with
+      # packages: write (that covers publish, not delete, for org-owned
+      # packages) — unconfirmed either way for this org without a real run.
+      # A failure here must not fail the snapshot publish above, which is
+      # the part that actually matters; it will show as an orange warning in
+      # the Actions UI rather than pass silently, so it stays visible to
+      # follow up on: if it's failing, a PAT with delete:packages scope,
+      # added as a repo secret, is what's needed instead.
+      - name: Prune old Maven snapshot packages (keep last 3 per package)
+        if: >
+          success() && github.event_name == 'push' && github.ref ==
+          'refs/heads/main' && endsWith(steps.get_version.outputs.version,
+          '-SNAPSHOT')
+        continue-on-error: true
+        run: |
+          gh api --paginate "/orgs/Norconex/packages?package_type=maven&per_page=100" \
+            --jq '.[] | select(.repository.name == "crawler") | .name' \
+            > /tmp/packages.txt
+
+          while IFS= read -r PKG; do
+            [ -z "$PKG" ] && continue
+            gh api --paginate "/orgs/Norconex/packages/maven/${PKG}/versions?per_page=100" \
+              --jq 'sort_by(.created_at) | reverse | .[3:] | .[].id' \
+              | xargs -r -I {} gh api --method DELETE \
+                  "/orgs/Norconex/packages/maven/${PKG}/versions/{}"
+          done < /tmp/packages.txt
         env:
-          # Keep existing GitHub secret names; only the local env var names
-          # reflect Central publishing.
-          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          MAVEN_CENTRAL_TOKEN: ${{ secrets.OSSRH_TOKEN }}
-          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       #--- Step ------------------------------------------------------------------
 

@@ -148,13 +148,20 @@
     repository), which is why release deploys failed with a misleading
     "Could not find artifact ... in central".
 
-    Snapshots are different and DO use a real repository URL — the Nexus-backed
-    endpoint below is the documented Central Portal snapshot target.
+    Snapshots go to GitHub Packages, not Sonatype. A snapshot is thrown away
+    the moment a newer one exists — it has no business consuming the same
+    metered, permanent-storage service that public releases publish through.
+    Every push to main deploys one (see maven-ci-cd.yaml), which on Sonatype's
+    Central Portal was quietly the dominant contributor to the org's
+    Publisher quota: a single module's build number was already past 100
+    before anyone noticed. GitHub Packages costs nothing extra for a public
+    repo and needs no Sonatype credentials at all — just GITHUB_TOKEN, which
+    every workflow run already has.
   -->
   <distributionManagement>
     <snapshotRepository>
-      <id>central</id>
-      <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+      <id>github</id>
+      <url>https://maven.pkg.github.com/Norconex/crawler</url>
     </snapshotRepository>
   </distributionManagement>
 
