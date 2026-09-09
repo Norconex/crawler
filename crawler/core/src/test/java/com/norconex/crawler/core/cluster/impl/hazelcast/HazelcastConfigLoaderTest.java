@@ -59,9 +59,10 @@ class HazelcastConfigLoaderTest {
                 </hazelcast>
                 """);
 
-        assertThatThrownBy(() -> HazelcastConfigLoader.load(
-                file.toString(), Map.of("clusterName", "xml-cluster")))
-                        .hasMessageContaining("accessExternalSchema");
+        var config = HazelcastConfigLoader.load(
+                file.toString(), Map.of("clusterName", "xml-cluster"));
+
+        assertThat(config.getClusterName()).isEqualTo("xml-cluster");
     }
 
     @Test
