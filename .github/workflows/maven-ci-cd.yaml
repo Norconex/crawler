@@ -111,7 +111,7 @@ jobs:
       #--- Step ------------------------------------------------------------------
 
       - name: Set up JDK 21 and Maven
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: "temurin"
           java-version: "21"
@@ -132,7 +132,7 @@ jobs:
       # GITHUB_ACTOR is provided by the runner already; GITHUB_TOKEN is set
       # below since secrets are not auto-exposed as plain env vars.
       - name: Add GitHub Packages credentials (for snapshot deploys)
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: "temurin"
           java-version: "21"
