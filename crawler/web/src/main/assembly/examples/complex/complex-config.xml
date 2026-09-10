@@ -67,8 +67,11 @@
 
       crawl-web.sh start -config=./examples/complex/complex-config.xml
 
-    The production profile crawls deeper and wider, slows the politeness
-    delay, and adds a second committer:
+    The production profile raises the depth and document caps, slows the
+    politeness delay, and adds a second committer. Both profiles crawl the
+    same two example pages: the reference filter below bounds the scope,
+    so the raised caps only show up in configrender, not in what is
+    collected.
 
       crawl-web.sh start -config=./examples/complex/complex-config.xml \
           -variables=./examples/complex/production.variables
@@ -90,6 +93,13 @@
   <maxDocuments>${maxDocuments|'10'}</maxDocuments>
   <numThreads>${numThreads|'1'}</numThreads>
 
+  <!-- Disable sitemap support (empty elements = null). Otherwise the crawler
+       finds the site's sitemap and seeds every URL in it, which the include
+       filter below would still reject one by one, but this skips the work
+       and keeps the example self-contained. -->
+  <sitemapResolver/>
+  <sitemapLocator/>
+
   <!-- Velocity conditionals let one file serve several environments.
        Politeness is relaxed for a small local run and kept conservative
        for anything larger. -->
@@ -103,8 +113,17 @@
   </delayResolver>
 #end
 
-  <!-- Skip files that are never worth fetching. -->
+  <!-- Two filters, different jobs. The "include" filter holds the crawl to
+       the pages built for this example: the start page and the one page it
+       links to. Because an include filter is present, anything that does not
+       match it is rejected, so the crawl never leaves those two pages. Point
+       startReferences at your own site and widen or drop this pattern to go
+       further. The "exclude" filter then drops files not worth fetching. -->
   <referenceFilters>
+    <referenceFilter class="GenericReferenceFilter" onMatch="include">
+      <valueMatcher method="regex"
+          pattern="https://crawler\.norconex\.com/examples/complex.*"/>
+    </referenceFilter>
     <referenceFilter class="ExtensionReferenceFilter" onMatch="exclude">
       <extensions>
         <extension>jpg</extension>

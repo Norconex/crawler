@@ -36,16 +36,24 @@
        directory makes the next run treat every document as new. -->
   <workDir>./examples-output/minimum</workDir>
 
-  <!-- Where to start crawling. At least one reference is required. -->
+  <!-- Where to start crawling. At least one reference is required.
+
+       This page exists only to be crawled by this example. Once collected,
+       its text confirms the run worked and points at what to do next.
+       Change this to your own site when you are ready. -->
   <startReferences>
-    <ref>https://opensource.norconex.com/crawlers/web/</ref>
+    <ref>https://crawler.norconex.com/examples/minimum</ref>
   </startReferences>
 
-  <!-- Kept deliberately small so the example finishes quickly.
-       Remove these three to crawl the whole site. -->
-  <maxDepth>1</maxDepth>
-  <maxDocuments>10</maxDocuments>
-  <numThreads>1</numThreads>
+  <!-- Depth 0 fetches the start reference and nothing it links to, so this
+       example collects exactly one document. Raise it to follow links. -->
+  <maxDepth>0</maxDepth>
+
+  <!-- Off by default the crawler finds the site's sitemap and queues every
+       URL in it, which would ignore maxDepth and crawl the whole site.
+       Empty elements disable sitemap support; drop them to use sitemaps. -->
+  <sitemapResolver/>
+  <sitemapLocator/>
 
   <!-- Where crawled documents go. This one writes XML files to disk, which
        is useful for seeing what was collected; swap it for a committer that

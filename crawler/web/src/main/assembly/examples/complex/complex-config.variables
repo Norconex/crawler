@@ -4,10 +4,14 @@
 # Keys are matched ignoring case and non-alphanumeric characters, and values
 # are taken literally after trimming surrounding spaces.
 
+# startUrl points at a page built only for this example. It links to one
+# other example page; the reference filter in complex-config.xml keeps the
+# crawl to those two.
+
 profile      = development
 crawlerId    = complex-example
 workdir      = ./examples-output/complex
-startUrl     = https://opensource.norconex.com/crawlers/web/
+startUrl     = https://crawler.norconex.com/examples/complex
 crawlDepth   = 1
 maxDocuments = 10
 numThreads   = 1
