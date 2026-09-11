@@ -134,6 +134,12 @@ public class CrawlerCommand implements Command {
         session.fire(CrawlerEvent.CRAWLER_CRAWL_END, session);
         LOG.info("Crawler terminated with state: {}", finalState);
 
+        // Written here, while the ledger is still open and before session
+        // cleanup, and once per run rather than once per node.
+        var endState = finalState;
+        session.oncePerRun("run-summary-task",
+                () -> RunSummaryWriter.writeIfRequested(session, endState));
+
         if (Boolean.getBoolean(SYS_PROP_ENABLE_JMX)) {
             LOG.info("Unregistering JMX crawler MBeans.");
             swallow(() -> CrawlerMetricsJMX.unregister(ctx));
