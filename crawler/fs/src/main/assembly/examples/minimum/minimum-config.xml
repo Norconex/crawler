@@ -55,13 +55,10 @@
        walk into sub-folders. -->
   <maxDepth>1</maxDepth>
 
-  <!-- The File System Crawler has no fetcher by default: leave this out and
-       it starts, finds nothing, and exits without an error. LocalFetcher
-       reads the machine's own file systems, including mapped and mounted
-       drives. Other fetchers cover FTP, SFTP, SMB, S3, and more. -->
-  <fetchers>
-    <fetcher class="LocalFetcher"/>
-  </fetchers>
+  <!-- No <fetchers> declared, so the File System Crawler uses its default:
+       a LocalFetcher reading the machine's own file systems (including
+       mapped and mounted drives). Declare <fetchers> to use FTP, SFTP,
+       SMB, S3, and the rest. -->
 
   <!-- Where crawled documents go. This one writes XML files to disk, which
        is useful for seeing what was collected; swap it for a committer that

@@ -94,8 +94,9 @@
   <maxDepth>${crawlDepth|'2'}</maxDepth>
   <numThreads>${numThreads|'1'}</numThreads>
 
-  <!-- The File System Crawler has no fetcher by default. LocalFetcher reads
-       the machine's own file systems. -->
+  <!-- LocalFetcher (the machine's own file systems) is the default, so this
+       block is optional. It is shown here to mark where fetchers go: swap in
+       or add FtpFetcher, SftpFetcher, SmbFetcher, S3Fetcher, and the rest. -->
   <fetchers>
     <fetcher class="LocalFetcher"/>
   </fetchers>
