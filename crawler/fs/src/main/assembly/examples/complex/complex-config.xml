@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE xml>
+<!--
+   Copyright 2010-2026 Norconex Inc.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<!--
+  Demonstrates the templating features of a crawler configuration file:
+  variables, file inclusion, and conditional sections. Configuration files
+  are processed by Apache Velocity before being parsed, so anything Velocity
+  supports is available here.
+
+  VARIABLES
+
+    Referenced as ${name}, or ${name|'a default'} to supply a fallback.
+    They resolve in this order, first match winning:
+
+      1. System properties        java -DcrawlDepth=3 ...
+      2. Environment variables    export CRAWL_DEPTH=3
+      3. Explicit variable file   -variables=./my.variables
+      4. Implicit variable file   complex-config.variables  (this directory)
+
+    Case and non-alphanumeric characters are ignored when matching, so
+    "crawlDepth", "crawldepth" and "CRAWL_DEPTH" are the same variable.
+
+    One limit is worth knowing before you rely on it: system properties and
+    environment variables are applied where a variable is substituted into
+    the file, not to the conditions of directives. So -DcrawlDepth=3 changes
+    ${crawlDepth} below, but -Dprofile=production will NOT flip the
+    conditional section further down, because that test reads $profile
+    straight from the variable files. Switch profile with a variable file,
+    as shown under RUNNING IT.
+
+  INCLUDING OTHER FILES
+
+#[[
+    #parse("file")    interprets the file as a template, so its own
+                      variables and its own implicit variable file apply
+    #include("file")  inserts the file verbatim, with no interpretation
+]]#
+    Paths are relative to the file doing the including, or absolute.
+
+  A GOTCHA WORTH KNOWING
+
+    Velocity processes this file before any XML parsing happens, so an XML
+    comment does NOT protect a directive: writing a parse or include
+    directive inside a comment still executes it. To show directive syntax
+    in prose, wrap it in an unparsed block, which is what the block just
+    above does:
+
+        #[[  ... text Velocity should leave alone ...  ]]#
+
+  RUNNING IT
+
+    Defaults come from complex-config.variables, which crawl the sample
+    folder shipped in the ZIP:
+
+      crawl-fs.sh start -config=./examples/complex/complex-config.xml
+
+    The production profile crawls deeper, runs more threads, and adds a
+    second committer:
+
+      crawl-fs.sh start -config=./examples/complex/complex-config.xml \
+          -variables=./examples/complex/production.variables
+
+    See exactly what the template resolved to, without crawling. Run it
+    both ways and compare to watch the conditional section appear:
+
+      crawl-fs.sh configrender -config=./examples/complex/complex-config.xml
+  -->
+<crawler id="${crawlerId|'fs-complex-example'}">
+
+  <workDir>${workdir}</workDir>
+
+  <!-- The folder to crawl. Defaults to the sample folder shipped beside
+       this file (${user.dir} is the distribution root when launched with
+       the crawl-fs script). Set "sourceDir" in a variable file to an
+       absolute path of your own; forward slashes are fine on Windows. -->
+  <startReferences>
+    <ref>${sourceDir|"${user.dir}/examples/complex/sample-files"}</ref>
+  </startReferences>
+
+  <maxDepth>${crawlDepth|'2'}</maxDepth>
+  <numThreads>${numThreads|'1'}</numThreads>
+
+  <!-- The File System Crawler has no fetcher by default. LocalFetcher reads
+       the machine's own file systems. -->
+  <fetchers>
+    <fetcher class="LocalFetcher"/>
+  </fetchers>
+
+  <!-- Skip file types that are not worth indexing as documents. -->
+  <referenceFilters>
+    <referenceFilter class="ExtensionReferenceFilter" onMatch="exclude">
+      <extensions>
+        <extension>jpg</extension>
+        <extension>jpeg</extension>
+        <extension>gif</extension>
+        <extension>png</extension>
+        <extension>ico</extension>
+        <extension>svg</extension>
+        <extension>zip</extension>
+        <extension>gz</extension>
+        <extension>tar</extension>
+        <extension>exe</extension>
+        <extension>dll</extension>
+      </extensions>
+    </referenceFilter>
+  </referenceFilters>
+
+  <!-- Interpreted include: importer-config.xml is itself a template and
+       picks up its own importer-config.properties from that directory. -->
+  #parse("shared/importer-config.xml")
+
+  <committers>
+    <committer class="XmlFileCommitter">
+      <directory>${workdir}/committed</directory>
+    </committer>
+#if ( $profile == 'production' )
+    <!-- A second committer, added only for the production profile. -->
+    <committer class="JsonFileCommitter">
+      <directory>${workdir}/committed-json</directory>
+    </committer>
+#end
+  </committers>
+
+</crawler>

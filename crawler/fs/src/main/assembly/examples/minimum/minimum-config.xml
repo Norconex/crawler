@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE xml>
+<!--
+   Copyright 2010-2026 Norconex Inc.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<!--
+  The minimum configuration needed to run the File System Crawler, plus a
+  few recommended settings.
+
+  One configuration file describes ONE crawler. To run several crawlers,
+  give each its own configuration file.
+
+  Run it with:
+
+      crawl-fs.sh start -config=./examples/minimum/minimum-config.xml
+
+  Validate it without crawling anything:
+
+      crawl-fs.sh configcheck -config=./examples/minimum/minimum-config.xml
+  -->
+<crawler id="fs-minimum-example">
+
+  <!-- Where the crawler keeps its state between runs. Deleting this
+       directory makes the next run treat every document as new. -->
+  <workDir>./examples-output/minimum</workDir>
+
+  <!-- Where to start crawling. At least one reference is required.
+
+       ${user.dir} is the directory the crawler started from, which the
+       crawl-fs script sets to the distribution root. So this points at the
+       sample folder shipped in the ZIP next to this file. A start reference
+       must be an absolute path (or a file:// URL); a bare relative path
+       like ./sample-files is not accepted.
+
+       Point it at a folder of your own when you are ready. Forward slashes
+       work on Windows too, e.g. C:/data/documents. -->
+  <startReferences>
+    <ref>${user.dir}/examples/minimum/sample-files</ref>
+  </startReferences>
+
+  <!-- For a folder, depth is how many directories down to descend. Depth 1
+       collects the files sitting directly in the folder above; raise it to
+       walk into sub-folders. -->
+  <maxDepth>1</maxDepth>
+
+  <!-- The File System Crawler has no fetcher by default: leave this out and
+       it starts, finds nothing, and exits without an error. LocalFetcher
+       reads the machine's own file systems, including mapped and mounted
+       drives. Other fetchers cover FTP, SFTP, SMB, S3, and more. -->
+  <fetchers>
+    <fetcher class="LocalFetcher"/>
+  </fetchers>
+
+  <!-- Where crawled documents go. This one writes XML files to disk, which
+       is useful for seeing what was collected; swap it for a committer that
+       targets your search engine or database. -->
+  <committers>
+    <committer class="XmlFileCommitter">
+      <directory>./examples-output/minimum/committed</directory>
+    </committer>
+  </committers>
+
+</crawler>

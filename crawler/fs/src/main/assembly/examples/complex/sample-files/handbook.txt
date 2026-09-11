@@ -1,0 +1,10 @@
+You successfully ran the Norconex File System Crawler complex example.
+
+If you ran it with the default (development) profile, the crawler wrote XML
+to examples-output/complex/committed/. If you ran it with the production
+profile, the conditional section in complex-config.xml also activated and a
+second committer wrote JSON to examples-output/complex-prod/committed-json/.
+
+Either way, the included importer fragment stamped every document with a
+"collection" field. Check it in the committed output: it should read
+whatever collectionName is set to in shared/importer-config.properties.

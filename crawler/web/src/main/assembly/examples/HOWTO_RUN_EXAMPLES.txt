@@ -1,37 +1,42 @@
-To run the test, go to the root directory where you uncompressed the 
-distribution zip and run the following in a command-line console.
+The Norconex Web Crawler examples crawl pages published for the purpose at
+https://crawler.norconex.com/examples/, so they need internet access but no
+other setup. Each page's text confirms the run worked once it lands in your
+committed output.
 
-Windows:
-========
-
-Minimal test:
-
-collector-http.bat start -config=examples\minimum\minimum-config.xml
+Run them from the directory where you unpacked the distribution ZIP.
 
 
-Complex test:
+Minimum example
+===============
 
-collector-http.bat start -config=examples\complex\complex-config.xml
+  Windows:      crawl-web.bat  start -config=examples\minimum\minimum-config.xml
+  Unix/Linux:   ./crawl-web.sh start -config=examples/minimum/minimum-config.xml
 
-
-Unix/Linux:
-===========
-
-Minimal test:
-
-collector-http.sh start -config=examples/minimum/minimum-config.xml
+Crawls a single page. Output lands in examples-output/minimum/committed/.
 
 
-Complex test:
+Complex example
+===============
 
-collector-http.sh start -config=examples/complex/complex-config.xml
+  Windows:      crawl-web.bat  start -config=examples\complex\complex-config.xml
+  Unix/Linux:   ./crawl-web.sh start -config=examples/complex/complex-config.xml
+
+Adds configuration variables, an included importer fragment, and profile
+switching. Run it with the production profile to watch the conditional
+sections flip (slower politeness delay, a second committer):
+
+  ./crawl-web.sh start -config=examples/complex/complex-config.xml \
+      -variables=examples/complex/production.variables
+
+See what the configuration resolves to, without crawling:
+
+  ./crawl-web.sh configrender -config=examples/complex/complex-config.xml
 
 
------------
+Crawling your own site
+======================
 
-Look for a directory called "examples-output".  You will
-find sub-directories matching the test you ran.  In them, you will find
-a directory called "crawledFiles" containing the collected data.
-
-You need Internet access to run the examples.  Modify the example files
-if you wish to run them on a private network.
+Change <startReferences> in minimum-config.xml, or "startUrl" in a variables
+file for the complex example, to your own URL. The complex example also has
+a reference filter that keeps the crawl to the example pages -- widen or
+drop it.

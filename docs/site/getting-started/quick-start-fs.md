@@ -6,6 +6,13 @@ title: File System Crawler Quick Start
 
 This guide gets you from zero to a running file system crawl in under 5 minutes.
 
+:::tip[Just want to see it run?]
+The distribution ZIP ships ready-to-run examples that crawl bundled sample
+files offline. See
+[Run the bundled examples](./installation.md#run-the-bundled-examples) to
+try one before writing your own config.
+:::
+
 :::tip[Built-in baseline, not a hard limit]
 The source protocols and examples in this guide represent built-in support in
 Norconex Crawler v4. They are practical defaults, not a fixed ceiling.

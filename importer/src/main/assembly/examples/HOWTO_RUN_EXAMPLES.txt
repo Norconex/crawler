@@ -14,5 +14,5 @@ importer.sh -i "examples/books/alice-in-wonderland-book-chapter-1.pdf" -c "examp
 
 Change the extension to ".docx" or ".zip" for a different test.
 
-Look into the example/books folder for new files being created containing
+Look into the examples/books folder for new files being created containing
 the exported data.
