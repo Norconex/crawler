@@ -22,6 +22,7 @@ import java.util.Optional;
 import com.norconex.commons.lang.bean.BeanUtil;
 import com.norconex.crawler.core.doc.operations.spoil.SpoiledReferenceStrategy;
 import com.norconex.crawler.core.event.CrawlerEvent;
+import com.norconex.crawler.core.ledger.CrawlerEntry;
 import com.norconex.crawler.core.ledger.ProcessingOutcome;
 import com.norconex.crawler.core.ledger.ProcessingStatus;
 
@@ -176,19 +177,13 @@ final class ProcessFinalize {
                         "Ignoring spoiled reference: {}",
                         docCtx.getReference());
             } else if (strategy == SpoiledReferenceStrategy.DELETE) {
-                // Delete if previous state exists and is not already
-                // marked as deleted.
-                if (previousEntry != null
-                        && !previousEntry.getProcessingOutcome().isOneOf(
-                                ProcessingOutcome.DELETED)) {
+                if (mayExistInTarget(previousEntry)) {
                     ProcessDelete.execute(ctx);
                 }
             } else // GRACE_ONCE:
-            // Delete if previous state exists and is a bad state,
-            // but not already marked as deleted.
-            if (previousEntry != null
-                    && !previousEntry.getProcessingOutcome().isOneOf(
-                            ProcessingOutcome.DELETED)) {
+            // Delete on a second consecutive bad run only: a reference that
+            // was fine last time gets one crawl of grace.
+            if (previousEntry != null && mayExistInTarget(previousEntry)) {
                 if (!previousEntry.getProcessingOutcome().isGoodState()) {
                     ProcessDelete.execute(ctx);
                 } else {
@@ -200,6 +195,39 @@ final class ProcessFinalize {
                 }
             }
         }
+    }
+
+    /**
+     * Whether deleting this reference could still match anything in the
+     * target repository, judged from what the previous run did with it.
+     * <p>
+     * Two previous outcomes mean there is nothing to delete:
+     * </p>
+     * <ul>
+     *   <li>{@link ProcessingOutcome#DELETED} &mdash; already deleted.</li>
+     *   <li>{@link ProcessingOutcome#REJECTED} &mdash; deliberately not
+     *       committed. Either it was never sent under this reference, or it
+     *       was sent in some earlier run and the delete already went out when
+     *       it first turned rejected. Either way another one is redundant.</li>
+     * </ul>
+     * <p>
+     * The rejected case is not hypothetical. A reference that is not a
+     * document at all &mdash; a file system folder, whose only job is to yield
+     * its children &mdash; halts the importer pipeline and is labelled
+     * rejected for want of a better word. Without this check it was deleted
+     * from the customer's repository on every recrawl after the first: a
+     * delete for something that was never there, repeated forever, inflating
+     * the deletion count the console reports along with it.
+     * </p>
+     */
+    private static boolean mayExistInTarget(CrawlerEntry previousEntry) {
+        if (previousEntry == null) {
+            // Never seen before this run, so nothing was ever sent for it.
+            return false;
+        }
+        return !previousEntry.getProcessingOutcome().isOneOf(
+                ProcessingOutcome.DELETED,
+                ProcessingOutcome.REJECTED);
     }
 
     private static void markReferenceVariationsAsProcessed(

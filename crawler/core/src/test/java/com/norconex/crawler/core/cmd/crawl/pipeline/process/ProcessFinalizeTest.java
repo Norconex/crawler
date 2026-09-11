@@ -288,4 +288,67 @@ class ProcessFinalizeTest {
                 .getProcessingOutcome()).isEqualTo(
                         ProcessingOutcome.DELETED);
     }
+
+    // -----------------------------------------------------------------
+    // Nothing was ever committed → nothing to delete
+    // -----------------------------------------------------------------
+
+    @Test
+    void execute_previouslyRejected_doesNotDeleteAgain() {
+        // A reference rejected last run was never committed under that
+        // reference, so a delete would match nothing in the target. This is
+        // the file system folder case: a folder is not a document, halts the
+        // importer pipeline, and is labelled rejected -- and used to be
+        // deleted from the customer's repository on every recrawl.
+        var ctx = buildCtx(ProcessingOutcome.REJECTED,
+                ProcessingOutcome.REJECTED,
+                null);
+
+        assertThatNoException()
+                .isThrownBy(() -> ProcessFinalize.execute(ctx));
+
+        assertThat(ctx.docContext().getCurrentCrawlEntry()
+                .getProcessingOutcome())
+                        .as("a rejected reference must not be deleted twice")
+                        .isEqualTo(ProcessingOutcome.REJECTED);
+    }
+
+    @Test
+    void execute_previouslyRejected_doesNotDeleteUnderGraceOnce() {
+        var strategizer = mock(SpoiledReferenceStrategizer.class);
+        when(strategizer.resolveSpoiledReferenceStrategy(any(), any()))
+                .thenReturn(SpoiledReferenceStrategy.GRACE_ONCE);
+
+        // GRACE_ONCE deletes on a second bad run, but "bad twice" still does
+        // not mean the target holds anything to delete.
+        var ctx = buildCtx(ProcessingOutcome.ERROR,
+                ProcessingOutcome.REJECTED,
+                strategizer);
+
+        assertThatNoException()
+                .isThrownBy(() -> ProcessFinalize.execute(ctx));
+
+        assertThat(ctx.docContext().getCurrentCrawlEntry()
+                .getProcessingOutcome()).isEqualTo(
+                        ProcessingOutcome.ERROR);
+    }
+
+    @Test
+    void execute_committedThenRejected_stillDeletes() {
+        // The case that must keep working: a document that WAS committed and
+        // is now rejected (a filter changed, say) has to be removed from the
+        // target. Only the repeat is suppressed, never the first delete.
+        var ctx = buildCtx(ProcessingOutcome.REJECTED,
+                ProcessingOutcome.NEW,
+                null);
+
+        assertThatNoException()
+                .isThrownBy(() -> ProcessFinalize.execute(ctx));
+
+        assertThat(ctx.docContext().getCurrentCrawlEntry()
+                .getProcessingOutcome())
+                        .as("a previously committed document must still be "
+                                + "deleted when it turns rejected")
+                        .isEqualTo(ProcessingOutcome.DELETED);
+    }
 }
