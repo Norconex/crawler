@@ -211,13 +211,21 @@ final class ProcessFinalize {
      *       it first turned rejected. Either way another one is redundant.</li>
      * </ul>
      * <p>
-     * The rejected case is not hypothetical. A reference that is not a
-     * document at all &mdash; a file system folder, whose only job is to yield
-     * its children &mdash; halts the importer pipeline and is labelled
-     * rejected for want of a better word. Without this check it was deleted
-     * from the customer's repository on every recrawl after the first: a
-     * delete for something that was never there, repeated forever, inflating
-     * the deletion count the console reports along with it.
+     * The rejected case is not hypothetical, and a file system folder is the
+     * clearest example. A folder is a perfectly legitimate ledger entry: it is
+     * queued, traversed, depth-tracked, read back from the baseline to spot
+     * descendants that have gone missing, and it can be rejected by a rule
+     * like any other reference. What it does not do is yield a document of its
+     * own, so it ends every run rejected &mdash; which meant a delete for it
+     * went to the customer's repository on every recrawl after the first, for
+     * something that had never been sent there, inflating the deletion count
+     * reported alongside it.
+     * </p>
+     * <p>
+     * Note that this turns on what the previous run <em>committed</em>, not on
+     * what kind of thing the reference is. A folder that is also a file, or a
+     * document that was committed and is only now rejected by a new rule, has
+     * a good previous outcome and is still deleted &mdash; correctly.
      * </p>
      */
     private static boolean mayExistInTarget(CrawlerEntry previousEntry) {
