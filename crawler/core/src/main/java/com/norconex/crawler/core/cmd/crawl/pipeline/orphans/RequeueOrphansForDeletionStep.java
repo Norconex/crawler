@@ -23,6 +23,14 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Queue orphans for deletion.
+ * <p>
+ * An orphan is a reference the previous run knew about and this run never
+ * encountered, which is only evidence that it is gone if this run actually
+ * looked everywhere. A crawl that ended early &mdash; because it hit
+ * {@code maxDocuments} or {@code maxCrawlDuration} &mdash; did not, and
+ * everything it had not reached yet would otherwise be deleted from the
+ * target as an orphan.
+ * </p>
  */
 @Slf4j
 public class RequeueOrphansForDeletionStep extends BaseStep {
@@ -40,6 +48,26 @@ public class RequeueOrphansForDeletionStep extends BaseStep {
         var orphanCount = ctx.getCrawlEntryLedger().getBaselineCount();
         if (orphanCount == 0) {
             LOG.info("There are no orphans to process.");
+            return;
+        }
+
+        // References still queued mean the crawl stopped before visiting
+        // them, so their absence proves nothing. A stop signal never gets
+        // this far (the pipeline breaks out of its step loop), but hitting
+        // maxDocuments or maxCrawlDuration ends the crawl normally and does
+        // reach here.
+        //
+        // Erring this way is deliberate. Skipping a legitimate orphan sweep
+        // costs a stale document until the next full run; the reverse
+        // deletes a live corpus out of the customer's repository.
+        if (!ctx.getCrawlEntryLedger().isQueuedEntryEmpty()) {
+            LOG.warn("""
+                    Crawl ended with {} reference(s) still queued (max \
+                    documents, max duration, or an early exit), so orphan \
+                    deletion is skipped: references not visited this run \
+                    cannot be assumed gone. Run the crawler again to \
+                    complete the crawl.""",
+                    ctx.getCrawlEntryLedger().getQueuedEntryCount());
             return;
         }
 
