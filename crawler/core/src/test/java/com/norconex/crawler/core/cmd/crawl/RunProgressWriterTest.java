@@ -23,7 +23,9 @@ import static org.mockito.Mockito.when;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -65,6 +67,11 @@ class RunProgressWriterTest {
         when(metrics.getProcessingCount()).thenReturn(processing);
         when(metrics.getProcessedCount()).thenReturn(processed);
         when(metrics.getBaselineCount()).thenReturn(0L);
+        when(metrics.getEventCounts()).thenReturn(new HashMap<>());
+    }
+
+    private void events(Map<String, Long> eventCounts) {
+        when(metrics.getEventCounts()).thenReturn(new HashMap<>(eventCounts));
     }
 
     private List<String> lines(Path file) {
@@ -159,6 +166,81 @@ class RunProgressWriterTest {
         writer.sample();
         counts(9, 1, 6);
         writer.sample();
+        writer.sample();
+
+        assertThat(lines(file)).hasSize(2);
+    }
+
+    // -----------------------------------------------------------------
+    // Event counts: everything that happened, not a selection
+    // -----------------------------------------------------------------
+
+    @Test
+    void reportsEveryEventCountRatherThanAChosenFew() {
+        var file = tempDir.resolve("progress.ndjson");
+        var writer = new RunProgressWriter(file, NEVER, NEVER);
+        counts(0, 0, 403);
+
+        writer.start(session());
+
+        // A folder-bearing crawl: 403 references processed, 400 of which
+        // became documents. Both numbers are here without anyone having
+        // picked them, and a new event type would arrive as a new key.
+        events(Map.of(
+                "DOCUMENT_QUEUED", 403L,
+                "DOCUMENT_IMPORTED", 400L,
+                "COMMITTER_UPSERT_END", 400L,
+                "SOME_FUTURE_EVENT", 7L));
+        writer.sample();
+
+        var json = JsonMapper.builder().build().readTree(lines(file).get(0));
+        var eventCounts = json.get("eventCounts");
+        assertThat(eventCounts.get("COMMITTER_UPSERT_END").asLong())
+                .as("documents committed, without a field for it")
+                .isEqualTo(400);
+        assertThat(eventCounts.get("DOCUMENT_QUEUED").asLong())
+                .as("references, which include folders")
+                .isEqualTo(403);
+        assertThat(eventCounts.get("SOME_FUTURE_EVENT").asLong())
+                .as("an event this build never heard of still gets through")
+                .isEqualTo(7);
+    }
+
+    @Test
+    void eventCountsAreThisRunNotEveryRunBefore() {
+        var file = tempDir.resolve("progress.ndjson");
+        var writer = new RunProgressWriter(file, NEVER, NEVER);
+        counts(0, 0, 4);
+        // The crawler's own store accumulates across runs sharing a crawl
+        // store -- its execution summary says "incl. resumed" for exactly
+        // this reason. Reported raw, these would sit beside per-run gauges on
+        // a different time base, so what is written is the difference.
+        events(Map.of("COMMITTER_UPSERT_END", 400L, "COMMITTER_INIT_END", 1L));
+        writer.start(session());
+
+        events(Map.of("COMMITTER_UPSERT_END", 404L, "COMMITTER_INIT_END", 2L));
+        writer.sample();
+
+        var json = JsonMapper.builder().build().readTree(lines(file).get(0));
+        assertThat(json.get("eventCounts").get("COMMITTER_UPSERT_END").asLong())
+                .isEqualTo(4);
+        assertThat(json.get("eventCounts").get("COMMITTER_INIT_END").asLong())
+                .isEqualTo(1);
+    }
+
+    @Test
+    void anEventCountMovingIsItselfAChangeWorthReporting() {
+        var file = tempDir.resolve("progress.ndjson");
+        var writer = new RunProgressWriter(file, NEVER, NEVER);
+        counts(5, 1, 10);
+        events(Map.of("COMMITTER_UPSERT_END", 0L));
+
+        writer.start(session());
+        writer.sample();
+
+        // Gauges identical, but documents were committed in between. A
+        // console told "nothing happened" would be wrong.
+        events(Map.of("COMMITTER_UPSERT_END", 25L));
         writer.sample();
 
         assertThat(lines(file)).hasSize(2);

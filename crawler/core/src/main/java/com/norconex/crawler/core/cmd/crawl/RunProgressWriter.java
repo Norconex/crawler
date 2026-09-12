@@ -22,7 +22,10 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
+import java.util.TreeMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -123,6 +126,18 @@ public class RunProgressWriter implements EventListener<Event> {
     private Counts lastWritten;
     private boolean broken;
 
+    /**
+     * Event counts as they stood when this crawl began.
+     * <p>
+     * The crawler's own event-count store accumulates across runs sharing a
+     * crawl store &mdash; its execution summary says "incl. resumed" for
+     * exactly this reason &mdash; while the queued/processed gauges are this
+     * run's. Reporting both raw would put two different time bases in one
+     * record, so what is written is the difference from here.
+     * </p>
+     */
+    private Map<String, Long> eventCountsAtStart = Map.of();
+
     RunProgressWriter(Path target, Duration interval, Duration heartbeat) {
         this.target = target;
         this.interval = interval;
@@ -185,6 +200,16 @@ public class RunProgressWriter implements EventListener<Event> {
         }
         session = crawlSession;
         startedAt = System.currentTimeMillis();
+        try {
+            // Copied, not referenced: getEventCounts() hands back the live
+            // map, which keeps moving.
+            eventCountsAtStart = new HashMap<>(
+                    crawlSession.getCrawlContext().getMetrics()
+                            .getEventCounts());
+        } catch (Exception e) {
+            LOG.debug("Could not read the event counts at crawl start.", e);
+            eventCountsAtStart = Map.of();
+        }
         try {
             var parent = target.toAbsolutePath().getParent();
             if (parent != null) {
@@ -250,7 +275,29 @@ public class RunProgressWriter implements EventListener<Event> {
                 metrics.getQueuedCount(),
                 metrics.getProcessingCount(),
                 metrics.getProcessedCount(),
-                metrics.getBaselineCount());
+                metrics.getBaselineCount(),
+                eventCountsThisRun(metrics.getEventCounts()));
+    }
+
+    /**
+     * This run's event counts, as differences from where they stood when the
+     * crawl began.
+     * <p>
+     * Every event the crawler fires is counted by name, so this is whatever
+     * happened rather than a selection somebody made in advance: a new event
+     * type shows up as a new key, with nothing to change here or in whatever
+     * reads it.
+     * </p>
+     */
+    private Map<String, Long> eventCountsThisRun(Map<String, Long> current) {
+        Map<String, Long> thisRun = new TreeMap<>();
+        current.forEach((name, total) -> {
+            var delta = total - eventCountsAtStart.getOrDefault(name, 0L);
+            if (delta > 0) {
+                thisRun.put(name, delta);
+            }
+        });
+        return thisRun;
     }
 
     private void write(String type, Counts counts, long now) throws Exception {
@@ -262,7 +309,8 @@ public class RunProgressWriter implements EventListener<Event> {
                 counts.queued(),
                 counts.processing(),
                 counts.processed(),
-                counts.baseline());
+                counts.baseline(),
+                counts.eventCounts());
         writer.write(jsonMapper.writeValueAsString(record));
         writer.write('\n');
         // Flushed per record on purpose: these are seconds apart at most, and
@@ -301,9 +349,22 @@ public class RunProgressWriter implements EventListener<Event> {
         }
     }
 
-    /** The sampled counters, compared as a whole to detect change. */
+    /**
+     * The sampled numbers, compared as a whole to detect change.
+     * <p>
+     * Two kinds sit here, and they are not interchangeable. The four longs are
+     * gauges: current state, read off the ledger, answering how far along the
+     * crawl is. They cannot be derived from event counts &mdash; a cumulative
+     * count of queueings says nothing about how deep the queue is now. The map
+     * is counters: what has happened, by event name.
+     * </p>
+     */
     private record Counts(
-            long queued, long processing, long processed, long baseline) {
+            long queued,
+            long processing,
+            long processed,
+            long baseline,
+            Map<String, Long> eventCounts) {
     }
 
     /**
@@ -313,10 +374,19 @@ public class RunProgressWriter implements EventListener<Event> {
      * @param crawlerId  the crawler this concerns
      * @param at         when the sample was taken
      * @param elapsedMs  milliseconds since the crawl began
-     * @param queued     references waiting to be processed
+     * @param queued     references waiting to be processed. A reference is a
+     *                   ledger entry, not necessarily a document: a folder
+     *                   traversed for its children is counted here too
      * @param processing references being processed right now
      * @param processed  references processed so far this run
      * @param baseline   references from the previous run not yet seen again
+     * @param eventCounts what happened this run, by event name, as
+     *                   differences from where the counts stood when the
+     *                   crawl began. Every event the crawler fires is counted,
+     *                   so this is not a selection: ask it for
+     *                   {@code COMMITTER_UPSERT_END} to get documents
+     *                   committed, and a new event type appears as a new key
+     *                   with nothing to change here
      */
     public record ProgressRecord(
             String type,
@@ -326,6 +396,7 @@ public class RunProgressWriter implements EventListener<Event> {
             long queued,
             long processing,
             long processed,
-            long baseline) {
+            long baseline,
+            Map<String, Long> eventCounts) {
     }
 }
