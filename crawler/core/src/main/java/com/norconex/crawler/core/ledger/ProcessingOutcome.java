@@ -71,6 +71,31 @@ public class ProcessingOutcome implements Serializable {
     public static final ProcessingOutcome PREMATURE =
             new ProcessingOutcome("PREMATURE");
 
+    /**
+     * The reference is a legitimate, successfully processed crawl entry that
+     * does not represent a document of its own. A file system folder is the
+     * archetype: it is queued, traversed, depth-tracked and yields its
+     * children, but there is nothing to send to a committer for the folder
+     * itself.
+     * <p>
+     * This is deliberately distinct from {@link #REJECTED}, which says two
+     * things at once: do not commit this <em>and</em> remove it from the
+     * target if it is there. The second half is right for a reference that
+     * could have been a document and no longer qualifies &mdash; a
+     * non-canonical URL, a page a rule now excludes &mdash; and wrong for one
+     * that was never eligible. A folder marked rejected was deleted from the
+     * target on every recrawl, for something that had never been sent there.
+     * </p>
+     * <p>
+     * Note this describes a ledger entry, not a fetch. It must not be used as
+     * a fetch response outcome: fetchers signal success with a good state, and
+     * {@code MultiFetcher} would otherwise keep trying further fetchers for a
+     * folder that was fetched perfectly well.
+     * </p>
+     */
+    public static final ProcessingOutcome NON_DOCUMENT =
+            new ProcessingOutcome("NON_DOCUMENT");
+
     //TODO remove if not used:
     /**
      * Typically when a reference cannot be processed since it is

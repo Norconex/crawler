@@ -334,6 +334,39 @@ class ProcessFinalizeTest {
     }
 
     @Test
+    void execute_nonDocument_isNeitherGoodNorBad() {
+        // A folder that yielded its children was processed exactly as
+        // intended. It is not a good state (it is not a document at all) but
+        // it must not go anywhere near spoiled-reference handling.
+        var ctx = buildCtx(ProcessingOutcome.NON_DOCUMENT,
+                ProcessingOutcome.NON_DOCUMENT,
+                null);
+
+        assertThatNoException()
+                .isThrownBy(() -> ProcessFinalize.execute(ctx));
+
+        assertThat(ctx.docContext().getCurrentCrawlEntry()
+                .getProcessingOutcome())
+                        .as("a non-document must never be deleted")
+                        .isEqualTo(ProcessingOutcome.NON_DOCUMENT);
+    }
+
+    @Test
+    void execute_previouslyNonDocument_doesNotDelete() {
+        // Whatever it becomes now, nothing was ever committed under it.
+        var ctx = buildCtx(ProcessingOutcome.ERROR,
+                ProcessingOutcome.NON_DOCUMENT,
+                null);
+
+        assertThatNoException()
+                .isThrownBy(() -> ProcessFinalize.execute(ctx));
+
+        assertThat(ctx.docContext().getCurrentCrawlEntry()
+                .getProcessingOutcome()).isEqualTo(
+                        ProcessingOutcome.ERROR);
+    }
+
+    @Test
     void execute_committedThenRejected_stillDeletes() {
         // The case that must keep working: a document that WAS committed and
         // is now rejected (a filter changed, say) has to be removed from the

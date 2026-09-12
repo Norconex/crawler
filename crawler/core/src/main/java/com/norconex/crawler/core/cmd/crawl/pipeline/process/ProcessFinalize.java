@@ -135,9 +135,13 @@ final class ProcessFinalize {
         var currentEntry = docCtx.getCurrentCrawlEntry();
 
         //--- Deal with bad states (if not already deleted) ----------------
+        // NON_DOCUMENT is not a good state, but neither is it a bad one: the
+        // entry was processed exactly as intended and simply is not a
+        // document, so there is no spoiled reference to act on.
         if (!currentEntry.getProcessingOutcome().isGoodState()
                 && !currentEntry.getProcessingOutcome()
-                        .isOneOf(ProcessingOutcome.DELETED)) {
+                        .isOneOf(ProcessingOutcome.DELETED,
+                                ProcessingOutcome.NON_DOCUMENT)) {
 
             var previousEntry = docCtx.getPreviousCrawlEntry();
             if (previousEntry != null
@@ -209,6 +213,8 @@ final class ProcessFinalize {
      *       committed. Either it was never sent under this reference, or it
      *       was sent in some earlier run and the delete already went out when
      *       it first turned rejected. Either way another one is redundant.</li>
+     *   <li>{@link ProcessingOutcome#NON_DOCUMENT} &mdash; never a document,
+     *       so never sent.</li>
      * </ul>
      * <p>
      * The rejected case is not hypothetical, and a file system folder is the
@@ -235,7 +241,8 @@ final class ProcessFinalize {
         }
         return !previousEntry.getProcessingOutcome().isOneOf(
                 ProcessingOutcome.DELETED,
-                ProcessingOutcome.REJECTED);
+                ProcessingOutcome.REJECTED,
+                ProcessingOutcome.NON_DOCUMENT);
     }
 
     private static void markReferenceVariationsAsProcessed(
