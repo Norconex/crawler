@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.norconex.crawler.core.cluster.CacheManager;
 import com.norconex.crawler.core.cluster.CacheMap;
 import com.norconex.crawler.core.ledger.CrawlerEntryLedger;
 import com.norconex.crawler.core.session.CrawlerSession;
@@ -42,6 +43,31 @@ public class CrawlerMetricsImpl implements CrawlerMetrics {
     public CrawlerMetricsImpl() {
         LOG.info("[CrawlerMetricsImpl] Created instance: {}",
                 System.identityHashCode(this));
+    }
+
+    /**
+     * Discards event counts left in the crawl store by a previous crawl
+     * session.
+     * <p>
+     * Counts are meant to span the runs of one session &mdash; a crawl that
+     * was stopped and resumed did the work once, and the execution summary
+     * reports them as "incl. resumed" &mdash; but not to span sessions. Left
+     * alone, every recrawl of a source reported its own numbers plus those of
+     * every crawl before it, since the store outlives any one session and
+     * {@link #init(CrawlerSession)} only ever cleared the in-memory copy.
+     * </p>
+     * <p>
+     * Called from
+     * {@link com.norconex.crawler.core.session.CrawlerRunInfoResolver} rather
+     * than from {@code init}, which runs on every node: the resolver elects a
+     * single node to perform one-time setup for a run, so the counts cannot be
+     * wiped out from under a node that has already started counting.
+     * </p>
+     *
+     * @param cacheManager the crawl store to clear the counts in
+     */
+    public static void clearPersistedEventCounts(CacheManager cacheManager) {
+        cacheManager.getCacheMap(EVENT_COUNTS_CACHE, Long.class).clear();
     }
 
     @Override
