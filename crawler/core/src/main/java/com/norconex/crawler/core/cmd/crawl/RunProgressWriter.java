@@ -67,9 +67,22 @@ import tools.jackson.databind.json.JsonMapper;
  *
  * <pre>
  * {"type":"progress","crawlerId":"x","at":"2026-09-12T04:10:00Z","elapsedMs":12345,
- *  "queued":42,"processing":2,"processed":1203,"baseline":5000}
+ *  "queued":42,"processing":2,"processed":1203,"baseline":5000,
+ *  "sessionEventCounts":{"COMMITTER_UPSERT_END":1200, ...},
+ *  "runEventCounts":{"COMMITTER_UPSERT_END":1200, ...}}
  * {"type":"heartbeat", ... same fields ... }
  * </pre>
+ *
+ * <p>
+ * The four counters are gauges: current state, answering how far along the
+ * crawl is. They cannot be derived from any tally, since a cumulative count of
+ * queueings says nothing about how deep the queue is now. The two maps are
+ * counters, by the crawler's own event names, so nothing here is a selection
+ * made in advance &mdash; a new event type appears as a new key. They differ
+ * only for a crawl that was stopped and resumed: the session totals span its
+ * attempts, as the gauges do, while the run counts describe the attempt that
+ * wrote the line.
+ * </p>
  *
  * <p>
  * A <b>progress</b> line is written only when the numbers actually changed
@@ -127,13 +140,14 @@ public class RunProgressWriter implements EventListener<Event> {
     private boolean broken;
 
     /**
-     * Event counts as they stood when this crawl began.
+     * Event counts as they stood when this process began crawling.
      * <p>
-     * The crawler's own event-count store accumulates across runs sharing a
-     * crawl store &mdash; its execution summary says "incl. resumed" for
-     * exactly this reason &mdash; while the queued/processed gauges are this
-     * run's. Reporting both raw would put two different time bases in one
-     * record, so what is written is the difference from here.
+     * The store they come from is scoped to the crawl session, so it already
+     * spans the runs of a resumed crawl &mdash; which is what the execution
+     * summary means by "incl. resumed", and what makes it comparable to the
+     * queued/processed gauges, since the ledger behind those is session-scoped
+     * too. Subtracting this baseline gives the share of that total which this
+     * particular run is responsible for.
      * </p>
      */
     private Map<String, Long> eventCountsAtStart = Map.of();
@@ -271,33 +285,39 @@ public class RunProgressWriter implements EventListener<Event> {
 
     private Counts currentCounts() {
         var metrics = session.getCrawlContext().getMetrics();
+        // Read once: the map keeps moving, and both figures below have to
+        // describe the same moment.
+        Map<String, Long> session_ = new TreeMap<>(metrics.getEventCounts());
         return new Counts(
                 metrics.getQueuedCount(),
                 metrics.getProcessingCount(),
                 metrics.getProcessedCount(),
                 metrics.getBaselineCount(),
-                eventCountsThisRun(metrics.getEventCounts()));
+                session_,
+                thisRunsShare(session_));
     }
 
     /**
-     * This run's event counts, as differences from where they stood when the
-     * crawl began.
+     * The part of the session's totals this run is responsible for.
      * <p>
-     * Every event the crawler fires is counted by name, so this is whatever
-     * happened rather than a selection somebody made in advance: a new event
-     * type shows up as a new key, with nothing to change here or in whatever
-     * reads it.
+     * Reported alongside the totals rather than instead of them, because the
+     * two answer different questions and a resumed crawl makes them differ: a
+     * crawl stopped after 300 documents and resumed for 100 more has a session
+     * total of 400 and a run share of 100, and a console wants the first to
+     * show progress and the second to describe the run it is looking at.
+     * Neither needs any history kept &mdash; the total is in the store, and
+     * the baseline lives only as long as this process.
      * </p>
      */
-    private Map<String, Long> eventCountsThisRun(Map<String, Long> current) {
-        Map<String, Long> thisRun = new TreeMap<>();
-        current.forEach((name, total) -> {
+    private Map<String, Long> thisRunsShare(Map<String, Long> sessionTotals) {
+        Map<String, Long> share = new TreeMap<>();
+        sessionTotals.forEach((name, total) -> {
             var delta = total - eventCountsAtStart.getOrDefault(name, 0L);
             if (delta > 0) {
-                thisRun.put(name, delta);
+                share.put(name, delta);
             }
         });
-        return thisRun;
+        return share;
     }
 
     private void write(String type, Counts counts, long now) throws Exception {
@@ -310,7 +330,8 @@ public class RunProgressWriter implements EventListener<Event> {
                 counts.processing(),
                 counts.processed(),
                 counts.baseline(),
-                counts.eventCounts());
+                counts.sessionEventCounts(),
+                counts.runEventCounts());
         writer.write(jsonMapper.writeValueAsString(record));
         writer.write('\n');
         // Flushed per record on purpose: these are seconds apart at most, and
@@ -364,7 +385,8 @@ public class RunProgressWriter implements EventListener<Event> {
             long processing,
             long processed,
             long baseline,
-            Map<String, Long> eventCounts) {
+            Map<String, Long> sessionEventCounts,
+            Map<String, Long> runEventCounts) {
     }
 
     /**
@@ -380,13 +402,16 @@ public class RunProgressWriter implements EventListener<Event> {
      * @param processing references being processed right now
      * @param processed  references processed so far this run
      * @param baseline   references from the previous run not yet seen again
-     * @param eventCounts what happened this run, by event name, as
-     *                   differences from where the counts stood when the
-     *                   crawl began. Every event the crawler fires is counted,
-     *                   so this is not a selection: ask it for
+     * @param sessionEventCounts what this crawl session has done, by event
+     *                   name, spanning the runs of a resumed crawl the same
+     *                   way the gauges above do. Every event the crawler fires
+     *                   is counted, so this is not a selection: ask it for
      *                   {@code COMMITTER_UPSERT_END} to get documents
      *                   committed, and a new event type appears as a new key
      *                   with nothing to change here
+     * @param runEventCounts the share of those totals belonging to this run,
+     *                   which differs from the session's only when a crawl
+     *                   was stopped and resumed
      */
     public record ProgressRecord(
             String type,
@@ -397,6 +422,7 @@ public class RunProgressWriter implements EventListener<Event> {
             long processing,
             long processed,
             long baseline,
-            Map<String, Long> eventCounts) {
+            Map<String, Long> sessionEventCounts,
+            Map<String, Long> runEventCounts) {
     }
 }

@@ -194,7 +194,7 @@ class RunProgressWriterTest {
         writer.sample();
 
         var json = JsonMapper.builder().build().readTree(lines(file).get(0));
-        var eventCounts = json.get("eventCounts");
+        var eventCounts = json.get("sessionEventCounts");
         assertThat(eventCounts.get("COMMITTER_UPSERT_END").asLong())
                 .as("documents committed, without a field for it")
                 .isEqualTo(400);
@@ -207,25 +207,46 @@ class RunProgressWriterTest {
     }
 
     @Test
-    void eventCountsAreThisRunNotEveryRunBefore() {
+    void aResumedCrawlReportsSessionTotalsAndThisRunsShare() {
         var file = tempDir.resolve("progress.ndjson");
         var writer = new RunProgressWriter(file, NEVER, NEVER);
-        counts(0, 0, 4);
-        // The crawler's own store accumulates across runs sharing a crawl
-        // store -- its execution summary says "incl. resumed" for exactly
-        // this reason. Reported raw, these would sit beside per-run gauges on
-        // a different time base, so what is written is the difference.
-        events(Map.of("COMMITTER_UPSERT_END", 400L, "COMMITTER_INIT_END", 1L));
+        counts(0, 0, 400);
+
+        // This process starts on a crawl that already committed 300 documents
+        // before being stopped. The store is session-scoped, so those 300 are
+        // still this session's -- the work was not done twice.
+        events(Map.of("COMMITTER_UPSERT_END", 300L));
         writer.start(session());
 
-        events(Map.of("COMMITTER_UPSERT_END", 404L, "COMMITTER_INIT_END", 2L));
+        // It then commits 100 more.
+        events(Map.of("COMMITTER_UPSERT_END", 400L));
         writer.sample();
 
         var json = JsonMapper.builder().build().readTree(lines(file).get(0));
-        assertThat(json.get("eventCounts").get("COMMITTER_UPSERT_END").asLong())
-                .isEqualTo(4);
-        assertThat(json.get("eventCounts").get("COMMITTER_INIT_END").asLong())
-                .isEqualTo(1);
+        assertThat(json.get("sessionEventCounts")
+                .get("COMMITTER_UPSERT_END").asLong())
+                        .as("the crawl has committed 400 documents")
+                        .isEqualTo(400);
+        assertThat(json.get("runEventCounts")
+                .get("COMMITTER_UPSERT_END").asLong())
+                        .as("this run committed 100 of them")
+                        .isEqualTo(100);
+    }
+
+    @Test
+    void withoutAResumeTheTwoMapsAgree() {
+        var file = tempDir.resolve("progress.ndjson");
+        var writer = new RunProgressWriter(file, NEVER, NEVER);
+        counts(0, 0, 50);
+
+        writer.start(session()); // nothing counted yet
+        events(Map.of("COMMITTER_UPSERT_END", 50L));
+        writer.sample();
+
+        var json = JsonMapper.builder().build().readTree(lines(file).get(0));
+        assertThat(json.get("runEventCounts"))
+                .as("a crawl that was never interrupted has one set of numbers")
+                .isEqualTo(json.get("sessionEventCounts"));
     }
 
     @Test
