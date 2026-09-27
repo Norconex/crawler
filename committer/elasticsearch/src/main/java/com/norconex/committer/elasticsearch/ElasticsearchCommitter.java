@@ -353,7 +353,7 @@ public class ElasticsearchCommitter
 
     private void appendValue(StringBuilder json, String field, String value) {
         if (configuration.getJsonFieldsPattern() != null
-                && configuration.getJsonFieldsPattern().matches(field)) {
+                && field.matches(configuration.getJsonFieldsPattern())) {
             json.append(value);
         } else {
             json.append('"')

@@ -55,7 +55,7 @@ Name of target Elasticsearch index where documents will be stored.
 
 ### jsonFieldsPattern
 
-Regular expression matching fields containing a JSON object for value, as opposed to a regular string.
+Regular expression matching fields whose values are raw JSON rather than regular strings, such as a JSON object or, for a multi-valued field, a list of numbers like an embedding vector. Values of matching fields are sent as they are, unquoted.
 
 ### nodes
 

@@ -1,0 +1,116 @@
+---
+component: TextEmbeddingTransformer
+module: importer
+locale: en
+propertyCoverage: all
+---
+
+# TextEmbeddingTransformer
+
+## Summary
+
+Calls an embeddings API and stores the resulting vector as a document field.
+
+## Notes
+
+Targets the "OpenAI-compatible" `/embeddings` request and response shape,
+which is also spoken by Ollama, self-hosted embedding servers such as vLLM,
+and proxies such as LiteLLM that front many providers behind that same
+shape — so this one handler works with all of them without provider-specific
+code, by pointing `apiUrl` at whichever you run. The crawler calls the
+service you choose; it does not run an embedding model itself.
+
+Embeds the document's body — its text content at the point this handler
+runs — so it should run post-parse, ideally after `TextChunkSplitter` if
+documents are being chunked first, which is recommended for anything longer
+than a paragraph or two. A blank body is skipped without calling the API.
+
+The vector is stored as a multi-valued field, one value per dimension. To
+index it, use a committer whose target can hold a vector:
+
+- **Elasticsearch and OpenSearch:** set the committer's `jsonFieldsPattern`
+  to a regular expression matching the vector field (for example
+  `embedding`). Fields matching it are sent as JSON numbers; without it the
+  values go out as quoted strings.
+- **Solr:** the values are sent as they are, and a `DenseVectorField`
+  accepts them.
+
+**Repeated crawls.** Every document the crawler fetches goes through the
+importer, this handler included, before the crawler compares its content
+checksum with the previous crawl. Documents it can recognize as unchanged
+sooner never reach this handler: by default the web crawler compares the
+`Last-Modified` header before it even downloads the page. Anything else is
+embedded again, and only then found unchanged and left out of the commit. If
+your embeddings service bills per call, plan for that.
+
+## Properties
+
+### apiKey
+
+The API key, sent as an `Authorization: Bearer` header. Leave blank for
+servers that do not require one (e.g., a local Ollama instance).
+
+### apiUrl
+
+The embeddings endpoint URL, e.g. `https://api.openai.com/v1/embeddings`
+or, for a local Ollama server, `http://localhost:11434/v1/embeddings`.
+
+### label
+
+An optional, user-supplied label for this step in the importer pipeline. It has no effect on processing — it exists purely to help identify this step, for example in large configurations or in the visual configurator.
+
+### model
+
+The embedding model name to request, e.g. `text-embedding-3-small`.
+
+### targetField
+
+The metadata field the resulting vector is stored into. Blank means the
+default, `embedding`.
+
+### timeoutSeconds
+
+How long to wait for the embeddings API to respond, in seconds. A value
+below 1 means the default, 60.
+
+## Examples
+
+The following example embeds each document (typically a chunk produced by
+`TextChunkSplitter`) using OpenAI's `text-embedding-3-small` model.
+
+<ConfigBlock
+  json={{
+    "handler": {
+      "class": "TextEmbeddingTransformer",
+      "apiUrl": "https://api.openai.com/v1/embeddings",
+      "apiKey": "${OPENAI_API_KEY}",
+      "model": "text-embedding-3-small",
+      "targetField": "embedding"
+    }
+  }}
+/>
+
+Pointing at a local Ollama server instead, with no API key required:
+
+<ConfigBlock
+  json={{
+    "handler": {
+      "class": "TextEmbeddingTransformer",
+      "apiUrl": "http://localhost:11434/v1/embeddings",
+      "model": "nomic-embed-text",
+      "targetField": "embedding"
+    }
+  }}
+/>
+
+A vector is only useful once it reaches an index that can hold it. For
+Elasticsearch or OpenSearch, name the field on the committer so it is sent as
+numbers:
+
+<ConfigBlock
+  json={{
+    "class": "ElasticsearchCommitter",
+    "indexName": "web-content",
+    "jsonFieldsPattern": "embedding"
+  }}
+/>

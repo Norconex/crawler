@@ -92,8 +92,10 @@ public class ElasticsearchCommitterConfig extends BaseBatchCommitterConfig {
     private String dotReplacement;
 
     /**
-     * The regular expression matching fields that contains a JSON
-     * object for its value (as opposed to a regular string).
+     * The regular expression matching fields whose values are raw JSON
+     * rather than regular strings, such as a JSON object or, for a
+     * multi-valued field, a list of numbers like an embedding vector. Values
+     * of matching fields are sent as they are, unquoted.
      * Default is {@code null} (not matching any fields).
      */
     private String jsonFieldsPattern;
