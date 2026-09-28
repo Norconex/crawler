@@ -24,7 +24,9 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -55,6 +57,7 @@ public class TextEmbeddingTransformer
         implements ConfigurableDocHandler<TextEmbeddingTransformerConfig> {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final String VECTOR_DELIMITER = ",";
 
     private final TextEmbeddingTransformerConfig configuration =
             new TextEmbeddingTransformerConfig();
@@ -76,7 +79,7 @@ public class TextEmbeddingTransformer
                     "Embeddings API URL is not configured (apiUrl).");
         }
 
-        var embedding = embed(text);
+        var embedding = embed(docCtx, text);
         // Blank means the default, for the same reason as the timeout below:
         // a set with an empty field name would silently store nowhere useful.
         docCtx.metadata().set(
@@ -87,7 +90,41 @@ public class TextEmbeddingTransformer
         return true;
     }
 
-    private List<Double> embed(String text) throws IOException {
+    // Caches by a hash of the exact text plus the model and endpoint that
+    // would embed it, so the same paragraph never pays for the same API call
+    // twice — whether it recurs on a later crawl of an unchanged page, or as
+    // boilerplate shared by many different pages in this same crawl. When no
+    // real cache is supplied (e.g., the importer running standalone), this
+    // still works: it just calls the API every time.
+    private List<Double> embed(DocHandlerContext docCtx, String text)
+            throws IOException {
+        var cached = docCtx.cache().computeIfAbsent(
+                cacheKey(text), key -> serialize(call(text)));
+        return deserialize(cached);
+    }
+
+    private String cacheKey(String text) {
+        return "TextEmbeddingTransformer|"
+                + configuration.getApiUrl() + '|'
+                + configuration.getModel() + '|'
+                + DigestUtils.sha256Hex(text);
+    }
+
+    private static String serialize(List<Double> vector) {
+        return vector.stream()
+                .map(String::valueOf)
+                .collect(Collectors.joining(VECTOR_DELIMITER));
+    }
+
+    private static List<Double> deserialize(String serialized) {
+        var values = new ArrayList<Double>();
+        for (String value : StringUtils.split(serialized, VECTOR_DELIMITER)) {
+            values.add(Double.valueOf(value));
+        }
+        return values;
+    }
+
+    private List<Double> call(String text) throws IOException {
         var requestBody = MAPPER.createObjectNode();
         requestBody.put("model", configuration.getModel());
         requestBody.put("input", text);

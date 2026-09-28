@@ -38,6 +38,7 @@ import com.norconex.importer.doc.ContentTypeDetector;
 import com.norconex.importer.doc.Doc;
 import com.norconex.importer.doc.DocMetaConstants;
 import com.norconex.importer.handler.DocHandler;
+import com.norconex.importer.handler.DocHandlerCache;
 import com.norconex.importer.handler.DocHandlerContext;
 import com.norconex.importer.handler.DocHandlerException;
 import com.norconex.importer.response.ImporterResponse;
@@ -74,6 +75,14 @@ public class Importer implements Closeable {
     @EqualsAndHashCode.Exclude
     @JsonIgnore
     private final EventManager eventManager;
+
+    // Not known until whatever runs the importer is ready to supply one
+    // (e.g., a crawler only after its cluster has joined), so it is set
+    // after construction rather than passed in like the event manager.
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @JsonIgnore
+    private DocHandlerCache cache = DocHandlerCache.NOOP;
 
     private static final InheritableThreadLocal<Importer> INSTANCE =
             new InheritableThreadLocal<>();
@@ -140,6 +149,16 @@ public class Importer implements Closeable {
      */
     public EventManager getEventManager() {
         return eventManager;
+    }
+
+    /**
+     * Sets the cache document handlers use for results expensive to obtain
+     * more than once for the same input (e.g., a call to a paid external
+     * API). Passing {@code null} restores {@link DocHandlerCache#NOOP}.
+     * @param cache the cache to supply to handlers
+     */
+    public synchronized void setCache(DocHandlerCache cache) {
+        this.cache = cache != null ? cache : DocHandlerCache.NOOP;
     }
 
     /**
@@ -340,6 +359,7 @@ public class Importer implements Closeable {
         var ctx = DocHandlerContext.builder()
                 .doc(doc)
                 .eventManager(eventManager)
+                .cache(cache)
                 .build();
         try {
             for (DocHandler handler : configuration.getHandlers()) {

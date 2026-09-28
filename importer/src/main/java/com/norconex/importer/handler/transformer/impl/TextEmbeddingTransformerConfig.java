@@ -51,8 +51,15 @@ import lombok.experimental.Accessors;
  * The crawler compares a document's content checksum with the previous crawl
  * only after the importer has run, so a document it cannot recognize as
  * unchanged sooner (by default on the web crawler, through the
- * <code>Last-Modified</code> header, before download) is embedded again
- * before being found unchanged and left out of the commit.
+ * <code>Last-Modified</code> header, before download) still reaches this
+ * handler before being found unchanged and left out of the commit. It is not
+ * necessarily embedded again, though: this handler caches each result by a
+ * hash of the exact text together with the model and endpoint that produced
+ * it, so unchanged text is not re-sent to the API — whether it recurs on a
+ * later crawl or as boilerplate shared by many documents in this same crawl.
+ * A crawler backs that cache with its own persistent, cluster-aware store,
+ * at no extra setup; running the importer standalone (e.g., from the
+ * command line), every call reaches the API.
  * </p>
  *
  * @see <a href="https://crawler.norconex.com/docs/reference/importer/TextEmbeddingTransformer">

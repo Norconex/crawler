@@ -39,9 +39,14 @@ index it, use a committer whose target can hold a vector:
 importer, this handler included, before the crawler compares its content
 checksum with the previous crawl. Documents it can recognize as unchanged
 sooner never reach this handler: by default the web crawler compares the
-`Last-Modified` header before it even downloads the page. Anything else is
-embedded again, and only then found unchanged and left out of the commit. If
-your embeddings service bills per call, plan for that.
+`Last-Modified` header before it even downloads the page. Anything else
+reaches this handler again — but is not necessarily re-embedded: results are
+cached by a hash of the exact text together with the model and endpoint that
+produced it, so unchanged text is not re-sent to the API, whether it recurs
+on a later crawl or as boilerplate shared by many documents in the same
+crawl. A crawler backs this cache with its own persistent, cluster-aware
+store, at no extra setup. Running the importer standalone (for example, from
+the command line) always calls the API.
 
 ## Properties
 

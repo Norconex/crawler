@@ -18,10 +18,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.AfterEach;
@@ -30,7 +34,10 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.parallel.Isolated;
 
 import com.norconex.commons.lang.bean.BeanMapper;
+import com.norconex.commons.lang.event.EventManager;
 import com.norconex.importer.TestUtil;
+import com.norconex.importer.handler.DocHandlerCache;
+import com.norconex.importer.handler.DocHandlerContext;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
@@ -140,6 +147,70 @@ class TextEmbeddingTransformerTest {
     }
 
     @Test
+    void testRepeatedTextReusesCachedVectorInsteadOfCallingApiAgain()
+            throws IOException {
+        var calls = new AtomicInteger();
+        var server = startServer(calls, 200,
+                "{\"data\":[{\"embedding\":[0.1,0.2],\"index\":0}]}");
+
+        var t = new TextEmbeddingTransformer();
+        t.getConfiguration()
+                .setApiUrl(baseUrl(server) + "/embeddings")
+                .setModel("test-model");
+
+        var cache = mapCache(new HashMap<>());
+        var first = contextWithCache("same text", cache);
+        var second = contextWithCache("same text", cache);
+        t.handle(first);
+        t.handle(second);
+
+        assertThat(calls.get()).isEqualTo(1);
+        assertThat(first.metadata().getStrings("embedding"))
+                .isEqualTo(second.metadata().getStrings("embedding"))
+                .containsExactly("0.1", "0.2");
+    }
+
+    @Test
+    void testDifferentModelsDoNotShareACacheEntry() throws IOException {
+        var calls = new AtomicInteger();
+        var server = startServer(calls, 200,
+                "{\"data\":[{\"embedding\":[0.1,0.2],\"index\":0}]}");
+
+        var cache = mapCache(new HashMap<>());
+
+        var t1 = new TextEmbeddingTransformer();
+        t1.getConfiguration()
+                .setApiUrl(baseUrl(server) + "/embeddings")
+                .setModel("model-one");
+        t1.handle(contextWithCache("same text", cache));
+
+        var t2 = new TextEmbeddingTransformer();
+        t2.getConfiguration()
+                .setApiUrl(baseUrl(server) + "/embeddings")
+                .setModel("model-two");
+        t2.handle(contextWithCache("same text", cache));
+
+        assertThat(calls.get()).isEqualTo(2);
+    }
+
+    @Test
+    void testWithoutARealCacheEveryCallReachesTheApi() throws IOException {
+        var calls = new AtomicInteger();
+        var server = startServer(calls, 200,
+                "{\"data\":[{\"embedding\":[0.1,0.2],\"index\":0}]}");
+
+        var t = new TextEmbeddingTransformer();
+        t.getConfiguration()
+                .setApiUrl(baseUrl(server) + "/embeddings")
+                .setModel("test-model");
+
+        t.handle(TestUtil.newHandlerContext("same text"));
+        t.handle(TestUtil.newHandlerContext("same text"));
+
+        assertThat(calls.get()).isEqualTo(2);
+    }
+
+    @Test
     void testWriteRead() {
         var t = new TextEmbeddingTransformer();
         t.getConfiguration()
@@ -154,9 +225,18 @@ class TextEmbeddingTransformerTest {
 
     private HttpServer startServer(int status, String body)
             throws IOException {
+        return startServer(null, status, body);
+    }
+
+    private HttpServer startServer(
+            AtomicInteger callCount, int status, String body)
+            throws IOException {
         var server = HttpServer.create(new InetSocketAddress(0), 0);
         server.createContext("/embeddings", exchange -> {
             try {
+                if (callCount != null) {
+                    callCount.incrementAndGet();
+                }
                 respond(exchange, status, body);
             } finally {
                 exchange.close();
@@ -165,6 +245,29 @@ class TextEmbeddingTransformerTest {
         server.start();
         servers.add(server);
         return server;
+    }
+
+    // A trivial, non-clustered stand-in for the cache a crawler would
+    // supply, sufficient to prove the handler consults and populates it.
+    private DocHandlerCache mapCache(Map<String, String> store) {
+        return (key, loader) -> {
+            if (store.containsKey(key)) {
+                return store.get(key);
+            }
+            var value = loader.load(key);
+            store.put(key, value);
+            return value;
+        };
+    }
+
+    private DocHandlerContext contextWithCache(String body,
+            DocHandlerCache cache) {
+        return DocHandlerContext.builder()
+                .doc(TestUtil.newDoc(
+                        "dummy-ref", new ByteArrayInputStream(body.getBytes())))
+                .eventManager(new EventManager())
+                .cache(cache)
+                .build();
     }
 
     private void respond(HttpExchange exchange, int status, String body)
