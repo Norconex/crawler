@@ -405,6 +405,27 @@ jobs:
 
       #--- Step ------------------------------------------------------------------
 
+      # Several fetcher ITs (S3, Azure Blob, WebDAV, ...) start a real backing
+      # container via Testcontainers — e.g. minio/minio for S3FetcherIT. Pulled
+      # anonymously, that competes for Docker Hub's shared per-IP rate limit
+      # across every GitHub-hosted runner, and fails outright once it's spent:
+      # "pull access denied ... repository does not exist" is Docker Hub's
+      # response to an exhausted anonymous quota, not a missing image. Logging
+      # in first — with the same credentials already used to publish images —
+      # moves these pulls onto the authenticated (much higher) limit. Testcontainers
+      # reads the docker CLI's own auth config, so nothing in the tests changes.
+      - name: Log in to Docker Hub (raises the pull limit for Testcontainers)
+        if: >
+          github.event_name == 'push' && startsWith(github.ref,
+          'refs/heads/release/') && !endsWith(steps.get_version.outputs.version,
+          '-SNAPSHOT') && steps.release_guard.outputs.already_released != 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+
+      #--- Step ------------------------------------------------------------------
+
       # Integration tests gate every release. They are skipped on ordinary CI
       # because they are slow (hence the nightly run), but a release must not
       # ship without them.
