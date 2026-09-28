@@ -7,4 +7,4 @@ its format (HTML, PDF, Word, etc). In addition, it allows you to perform any
 manipulation on the extracted text before importing/using it in your own 
 service or application.
 
-Website: https://opensource.norconex.com/importer/
+Website: https://crawler.norconex.com/docs/reference/importer-overview

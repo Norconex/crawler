@@ -50,7 +50,6 @@ import com.norconex.commons.lang.encrypt.EncryptionUtil;
  * <p>
  * Simple SQL client.
  * </p>
- * @author Pascal Essiembre
  */
 class SqlClient {
 

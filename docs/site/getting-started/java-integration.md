@@ -119,6 +119,49 @@ with monitoring tools such as [Prometheus](https://prometheus.io/). To enable
 it, pass the JVM argument `-DenableJMX=true`.
 :::
 
+## Pattern 4 — Run summary file
+
+When something else launches the crawler — a scheduler, a CI job, a
+supervising process — it usually needs to know what a run did without reading
+the log or embedding Java. Name a file with the `runSummaryFile` JVM argument
+and the crawler writes a summary there when the run ends:
+
+```bash
+-DrunSummaryFile=./run-summary.json
+```
+
+Add it to the `java` command in `crawl-web.sh` / `crawl-web.bat`, the same
+place `-DenableJMX=true` and `-Xmx` go. Nothing is written when the argument is
+absent.
+
+```json
+{
+  "crawlerId" : "my-crawler",
+  "state" : "COMPLETED",
+  "counts" : {
+    "NEW" : 3,
+    "MODIFIED" : 1,
+    "UNMODIFIED" : 41
+  }
+}
+```
+
+`counts` is keyed by processing outcome — `NEW`, `MODIFIED`, `UNMODIFIED`,
+`DELETED`, `ERROR`, `REJECTED`, `BAD_STATUS`, `NOT_FOUND` — so a second run
+over the same source tells you exactly what changed. `state` is the state the
+crawl ended in: `COMPLETED`, `STOPPED` or `FAILED`.
+
+A few properties worth relying on:
+
+- The file is written even when a crawl fails, so what it managed to process
+  before failing is still reported.
+- It is renamed into place, so a process waiting on it sees either no file or
+  a complete one — never a half-written one.
+- A crawl that processed nothing writes empty `counts` rather than no file,
+  which is what distinguishes "nothing to do" from "the crawler died".
+- Producing it costs one pass over the run's processed entries, which is why
+  it is opt-in rather than always on.
+
 ## Stopping a running crawl
 
 ```java

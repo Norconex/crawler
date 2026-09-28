@@ -3,7 +3,7 @@ Norconex SQL Committer
 
 SQL implementation of Norconex Committer.
 
-Website: https://opensource.norconex.com/committers/sql/
+Website: https://crawler.norconex.com/docs/reference/committers/SqlCommitter
 
 ## Compatibility Matrix
 

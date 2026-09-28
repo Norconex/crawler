@@ -5,7 +5,7 @@ Elasticsearch implementation of Norconex Committer.
 
 Compatible with AWS OpenSearch.
 
-Website: https://opensource.norconex.com/committers/elasticsearch/
+Website: https://crawler.norconex.com/docs/reference/committers/ElasticsearchCommitter
 
 
   

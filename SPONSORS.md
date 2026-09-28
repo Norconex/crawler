@@ -5,8 +5,9 @@ Norconex Crawler is free and Apache-2.0 licensed, built and maintained by
 on top of what we already invest, and puts your name in front of the people
 using it.
 
-👉 **[Become a sponsor](https://github.com/sponsors/Norconex)** ·
-[What sponsorship includes](https://crawler.norconex.com/support#back-the-project)
+👉 **[Become a sponsor](https://github.com/sponsors/Norconex)** — the tiers
+and what each one includes are listed there. They are deliberately not
+repeated in this file, so the two cannot drift apart.
 
 Sponsorship is recognition, not a support contract. It carries no response
 times and no committed engineering time. If your team needs those, see
@@ -26,6 +27,15 @@ Most of the ways to help are free, and they matter:
   See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
+
+<!--
+  The three marker blocks below are placeholders. The daily sync
+  (crawler-website: scripts/sync-sponsors.js) currently writes only that
+  repository's src/data/sponsors.gen.ts, so nothing fills these in yet.
+  Decide how to populate them when there is a first sponsor to show --
+  extending the sync to write here is the obvious route, since the
+  markers are already in place.
+-->
 
 ## Featured sponsors
 
@@ -47,10 +57,16 @@ Most of the ways to help are free, and they matter:
 
 ---
 
-The three lists above are generated from GitHub Sponsors and refreshed
-automatically. Sponsors who choose to sponsor privately are deliberately
-omitted, and Norconex reserves the right to decline any sponsorship, and to
-omit any sponsor's name or logo from this file and from
-[crawler.norconex.com](https://crawler.norconex.com), at its sole discretion.
+The live list is on
+[crawler.norconex.com/sponsors](https://crawler.norconex.com/sponsors), which
+updates itself daily from GitHub Sponsors. The three lists above are kept in
+step with it.
+
+Sponsors who choose to sponsor privately are deliberately omitted, and
+Norconex reserves the right to decline any sponsorship, and to omit any
+sponsor's name or logo from the
+[`Norconex/crawler` repository](https://github.com/Norconex/crawler) and the
+[crawler.norconex.com](https://crawler.norconex.com) website, at its sole
+discretion.
 
 Thank you to everyone who supports this work.

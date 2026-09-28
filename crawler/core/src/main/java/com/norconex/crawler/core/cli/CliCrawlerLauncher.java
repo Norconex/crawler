@@ -17,6 +17,7 @@ package com.norconex.crawler.core.cli;
 import java.io.PrintWriter;
 
 import com.norconex.crawler.core.CrawlerDriver;
+import com.norconex.crawler.core.cmd.crawl.RunProgressWriter;
 
 import lombok.NonNull;
 import picocli.CommandLine;
@@ -36,6 +37,14 @@ public final class CliCrawlerLauncher {
     public static int launch(
             @NonNull CrawlerDriver crawlDriver, String... args) {
         System.setProperty("org.jboss.logging.provider", "slf4j");
+
+        // Optional machine-readable progress, for whatever launched this JVM.
+        // Registered on the driver rather than through the crawl
+        // configuration: a supervising process can ask for it without the
+        // configuration mentioning it, and the crawler's configurable surface
+        // is unchanged. Does nothing unless the system property is set.
+        RunProgressWriter.registerIfRequested(crawlDriver.eventManager());
+
         var cmdLine = new CommandLine(new CliRunner(crawlDriver));
 
         // Eagerly bind picocli I/O streams to the current System.out/System.err

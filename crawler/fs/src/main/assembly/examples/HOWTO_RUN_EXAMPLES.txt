@@ -1,0 +1,42 @@
+The Norconex File System Crawler examples crawl a small set of sample files
+shipped inside this distribution, so they run offline with no setup.
+
+Run them from the directory where you unpacked the distribution ZIP.
+
+
+Minimum example
+===============
+
+  Windows:      crawl-fs.bat  start -config=examples\minimum\minimum-config.xml
+  Unix/Linux:   ./crawl-fs.sh start -config=examples/minimum/minimum-config.xml
+
+Reads examples/minimum/sample-files/ and writes what it extracted to
+examples-output/minimum/committed/. One of the files it collects tells you
+the run worked.
+
+
+Complex example
+===============
+
+  Windows:      crawl-fs.bat  start -config=examples\complex\complex-config.xml
+  Unix/Linux:   ./crawl-fs.sh start -config=examples/complex/complex-config.xml
+
+Adds configuration variables, an included importer fragment, and profile
+switching. Run it with the production profile to see the conditional
+section activate (a second committer, writing JSON):
+
+  ./crawl-fs.sh start -config=examples/complex/complex-config.xml \
+      -variables=examples/complex/production.variables
+
+See what the configuration resolves to, without crawling:
+
+  ./crawl-fs.sh configrender -config=examples/complex/complex-config.xml
+
+
+Crawling your own files
+=======================
+
+Edit <startReferences> in minimum-config.xml, or set "sourceDir" in a
+variables file for the complex example, to an absolute path. A start
+reference must be absolute (or a file:// URL); forward slashes work on
+Windows too, e.g. C:/data/documents.

@@ -37,6 +37,7 @@ public class FsCrawlerDriverFactory implements Supplier<CrawlerDriver> {
     public CrawlerDriver get() {
         return CrawlerDriver.builder()
                 .fetchDriver(createFetchDriver())
+                .crawlerConfigClass(FsCrawlerConfig.class)
                 .callbacks(CrawlerCallbacks.builder()
                         .beforeCommand(new BeforeFsCommand())
                         .build())

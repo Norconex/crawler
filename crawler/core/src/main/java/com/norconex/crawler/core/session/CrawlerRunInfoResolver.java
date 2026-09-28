@@ -17,6 +17,7 @@ package com.norconex.crawler.core.session;
 import java.util.Objects;
 import java.util.Optional;
 
+import com.norconex.crawler.core.metrics.CrawlerMetricsImpl;
 import com.norconex.crawler.core.util.SerialUtil;
 
 import de.huxhorn.sulky.ulid.ULID;
@@ -87,6 +88,20 @@ public final class CrawlerRunInfoResolver {
         }
 
         // We are the elected creator for this run. Perform one-time init.
+        if (info.getCrawlResumeState() == CrawlerResumeState.NEW) {
+            // A new session's numbers are its own. Event counts are meant to
+            // span the runs of one session -- a crawl stopped and resumed did
+            // the work once -- but the store outlives sessions, so without
+            // this every recrawl of a source reported its own counts plus
+            // those of every crawl before it.
+            //
+            // Note this covers two ways of arriving at a new session: nothing
+            // persisted at all, and a previously COMPLETED session followed
+            // by another crawl. The clear below only covers the first.
+            CrawlerMetricsImpl.clearPersistedEventCounts(
+                    session.getCluster().getCacheManager());
+        }
+
         if (prior == null) {
             LOG.info(
                     "Clearing any previous session-specific cache information");

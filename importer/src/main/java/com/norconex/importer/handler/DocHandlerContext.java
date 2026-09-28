@@ -84,6 +84,17 @@ public class DocHandlerContext {
     @EqualsAndHashCode.Exclude
     private final EventManager eventManager;
 
+    /**
+     * Cache available to handlers for results expensive to obtain more than
+     * once for the same input. Defaults to {@link DocHandlerCache#NOOP} so a
+     * handler never has to check for {@code null}.
+     */
+    @NonNull
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @Default
+    private DocHandlerCache cache = DocHandlerCache.NOOP;
+
     private Object rejectedBy;
 
     public Properties metadata() {

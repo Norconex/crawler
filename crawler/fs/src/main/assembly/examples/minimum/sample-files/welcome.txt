@@ -1,0 +1,12 @@
+You successfully ran the Norconex File System Crawler minimum example.
+
+This file was read straight from the sample-files folder that ships inside
+the distribution. Look under examples-output/minimum/committed/ to see what
+the crawler extracted from it and the other files beside it.
+
+Next steps:
+  - Point <startReferences> in minimum-config.xml at a folder of your own.
+  - Try the complex example for configuration variables, an included
+    importer fragment, and profile switching:
+        crawl-fs.sh start -config=./examples/complex/complex-config.xml
+  - Browse the configuration reference at https://crawler.norconex.com/docs/

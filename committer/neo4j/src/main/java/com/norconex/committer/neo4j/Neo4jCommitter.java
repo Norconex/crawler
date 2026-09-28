@@ -34,9 +34,7 @@ import lombok.ToString;
  * Basic authentication is supported for password-protected
  * Solr installations.
  * </p>
- *
- * @author Sylvain Roussy
- * @author Pascal Essiembre
+
  */
 @EqualsAndHashCode
 @ToString

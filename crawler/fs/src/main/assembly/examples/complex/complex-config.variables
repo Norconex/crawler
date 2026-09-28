@@ -1,0 +1,16 @@
+# Implicit variable file: same base name as complex-config.xml, so it is
+# picked up automatically with no command-line argument.
+#
+# Keys are matched ignoring case and non-alphanumeric characters, and values
+# are taken literally after trimming surrounding spaces.
+
+profile     = development
+crawlerId   = fs-complex-example
+workdir     = ./examples-output/complex
+crawlDepth  = 2
+numThreads  = 1
+
+# To crawl a folder of your own instead of the bundled sample-files, set an
+# absolute path here (forward slashes are fine on Windows):
+#
+#   sourceDir = C:/data/documents

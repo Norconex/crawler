@@ -63,7 +63,6 @@ import lombok.extern.slf4j.Slf4j;
  * <p>
  * Simple Microsoft Azure Search client.
  * </p>
- * @author Pascal Essiembre
  */
 @Slf4j
 class AzureSearchClient {
@@ -157,7 +156,7 @@ class AzureSearchClient {
             throw e;
         } catch (Exception e) {
             throw new CommitterException(
-                    "Could not commit JSON batch to CloudSearch.", e);
+                    "Could not commit JSON batch to Azure Search.", e);
         }
     }
 

@@ -1,0 +1,85 @@
+---
+component: TextChunkSplitter
+module: importer
+locale: en
+propertyCoverage: all
+---
+
+# TextChunkSplitter
+
+## Summary
+
+Splits a document's text into chunks sized for embedding models.
+
+## Notes
+
+Runs on the document's extracted text, so the same configuration chunks a
+PDF, an HTML page, or a Word document alike — no per-format splitter needed.
+Should be used as a post-parse handler.
+
+Each chunk is capped at `maxChunkSize` characters, but the cut point within
+that limit is chosen to avoid breaking content awkwardly: the last paragraph
+break is preferred, falling back to the last sentence, then the last word,
+and only cutting mid-word if none of those are found.
+
+Consecutive chunks can repeat a few trailing characters of the previous one
+via `chunkOverlap`, so a passage spanning a chunk boundary is not lost from
+either side's context.
+
+A document short enough to fit in a single chunk is left untouched — no
+child documents are created, and the original passes through as-is.
+
+Each chunk produced carries a `document.chunk.index` field (1-based) and a
+`document.chunk.count` field with the total number of chunks. Unlike other
+splitters, the original document is discarded by default once it has been
+split: a document long enough to need chunking is too long to embed whole,
+so passing it along next to its chunks would make the embedding step fail.
+Set `discardOriginal` to `false` if you do want to keep it.
+
+## Properties
+
+### chunkOverlap
+
+The number of characters from the end of a chunk to repeat at the start of
+the next one. Default is 100. Set to 0 to disable.
+
+### discardOriginal
+
+Discard the original document after the split is performed. Default is
+`true` for this splitter.
+
+### label
+
+An optional, user-supplied label for this step in the importer pipeline. It has no effect on processing — it exists purely to help identify this step, for example in large configurations or in the visual configurator.
+
+### maxChunkSize
+
+The maximum number of characters a chunk should have. A chunk may be
+shorter when a clean break (paragraph, sentence, or word) is found before
+this limit. Must be at least 1; anything lower is rejected. Default is 1000.
+
+### referenceChunkPrefix
+
+Defines the prefix added before the chunk number in a document reference.
+Blank means the default, "#chunk", so chunk references never collide with
+the reference of a real document. For example:
+
+- https://norconex.com/tests/page.html#chunk1
+- https://norconex.com/tests/page.html#chunk2
+- https://norconex.com/tests/page.html#chunk3
+
+## Examples
+
+The following example chunks documents into roughly 500-character pieces
+with 50 characters of overlap between consecutive chunks, ready to be
+embedded by `TextEmbeddingTransformer`.
+
+<ConfigBlock
+  json={{
+    "handler": {
+      "class": "TextChunkSplitter",
+      "maxChunkSize": 500,
+      "chunkOverlap": 50
+    }
+  }}
+/>

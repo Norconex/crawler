@@ -1,0 +1,5 @@
+path,kind,note
+handbook.txt,text,top-level file
+notes.md,markdown,top-level file
+inventory.csv,csv,this file
+archive/2024-summary.txt,text,one folder deep - needs crawlDepth of at least 2

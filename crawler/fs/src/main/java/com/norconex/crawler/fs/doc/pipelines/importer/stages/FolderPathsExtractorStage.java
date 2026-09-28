@@ -88,6 +88,14 @@ public class FolderPathsExtractorStage extends AbstractImporterStage {
 
         // On some file systems, a folder could also be a file, so we
         // continue if it is a file, regardless of folder logic above.
+        if (fsEntry.isFolder() && !fsEntry.isFile()) {
+            // Say so explicitly rather than letting the pipeline halt be
+            // read as a rejection. A folder that yielded its children was
+            // processed exactly as intended; it simply is not a document.
+            // Left unsaid, it is labelled REJECTED, which also means "remove
+            // it from the target if it is there" -- and a folder never was.
+            fsEntry.setProcessingOutcome(ProcessingOutcome.NON_DOCUMENT);
+        }
         return fsEntry.isFile();
     }
 

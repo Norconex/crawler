@@ -26,6 +26,7 @@ import static org.mockito.Mockito.when;
 
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -432,12 +433,20 @@ class PlaywrightFetcherTest {
         // Uses a fetcher that runs the real getOrCreateBrowser() so the
         // recycle + navCount reset logic is actually exercised.
         var fetcher = createFetcherForRecycleTest(page);
-        // Tiny max age to force recycle on the second fetch
         fetcher.getConfiguration()
-                .setBrowserMaxAge(Duration.ofNanos(1));
+                .setBrowserMaxAge(Duration.ofMinutes(5));
 
+        // First fetch — browser is created; nav count becomes 1
         fetcher.fetch(new WebFetchRequest(doc, HttpMethod.GET));
-        // browser start time is in the past; next getOrCreate should recycle
+
+        // Age the browser past its limit explicitly. Setting a tiny max age
+        // and fetching twice instead would be a race: both fetches hit mocks
+        // microseconds apart, and Instant.now() need not advance between
+        // them, in which case nothing is ever older than its max age.
+        fetcher.browserStartTimeLocal.set(
+                Instant.now().minus(Duration.ofMinutes(10)));
+
+        // Second fetch — browser is stale; recycled and count reset
         fetcher.fetch(new WebFetchRequest(doc, HttpMethod.GET));
 
         // After recycle the counter was reset to 0 then incremented once → 1

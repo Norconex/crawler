@@ -27,7 +27,6 @@ import lombok.experimental.Accessors;
  * <p>
  * Azure Search Committer configuration.
  * </p>
- * @author Pascal Essiembre
  */
 @Data
 @Accessors(chain = true)

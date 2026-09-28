@@ -47,8 +47,7 @@ import com.norconex.commons.lang.map.Properties;
 
 /**
  * IdolCommitter main tests.
- *
- * @author Harinder Hanjan
+
  */
 @Isolated
 @MockServerSettings

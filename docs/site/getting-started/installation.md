@@ -75,6 +75,58 @@ The File System Crawler is installed identically — substitute `web` with `fs` 
 and command (e.g. `nx-crawler-fs-4.0.0-standard.zip`, `crawl-fs.sh`).
 :::
 
+## Run the bundled examples
+
+Every distribution ships an `examples/` folder with two ready-to-run
+configurations and a `HOWTO_RUN_EXAMPLES.txt`. Run them from the folder you
+unpacked, before writing a config of your own.
+
+- **`minimum/`** — the smallest configuration that does something, plus a
+  couple of recommended settings.
+- **`complex/`** — the same crawl with configuration variables, an included
+  importer fragment, and a `production` profile that activates extra
+  configuration sections. A `complex-config.variables` file supplies the
+  defaults; pass `-variables=examples/complex/production.variables` to
+  switch profile.
+
+The **Web Crawler** examples crawl pages published at
+`https://crawler.norconex.com/examples/`, so they need internet access. The
+**File System Crawler** examples crawl a small set of sample files shipped
+inside the ZIP, so they run offline.
+
+```bash
+# Web Crawler (Linux/macOS; use crawl-web.bat and \ on Windows)
+./crawl-web.sh start -config=examples/minimum/minimum-config.xml
+
+# File System Crawler
+./crawl-fs.sh start -config=examples/minimum/minimum-config.xml
+```
+
+What to expect:
+
+- Log lines as each document is fetched, imported, and committed, ending
+  with a `Total processed:` summary.
+- Collected documents under `examples-output/minimum/committed/` as XML
+  files. Open one — the text the crawler extracted includes a line
+  confirming the run worked.
+- Re-running does nothing until you change a source document or run
+  `clean` first: the crawler only commits what changed since last time.
+
+To see what the templated `complex` configuration resolves to without
+crawling, use `configrender`:
+
+```bash
+./crawl-web.sh configrender -config=examples/complex/complex-config.xml
+./crawl-web.sh configrender -config=examples/complex/complex-config.xml \
+    -variables=examples/complex/production.variables
+```
+
+To point an example at your own content, edit `startReferences` in
+`minimum-config.xml` (or set `startUrl` / `sourceDir` in a variables file
+for the `complex` example). File System Crawler start references must be an
+absolute path or a `file://` URL — the shipped example uses `${user.dir}`
+to resolve the bundled folder's absolute path at runtime.
+
 ## Install external committers when using ZIP distributions
 
 ZIP distributions include built-in committer support from `nx-committer-core`

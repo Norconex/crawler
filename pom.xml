@@ -48,7 +48,7 @@
     <!-- === Dependencies ================================================== -->
 
     <!-- Norconex dependencies -->
-    <norconex-commons-lang.version>3.0.0</norconex-commons-lang.version>
+    <norconex-commons-lang.version>3.1.0</norconex-commons-lang.version>
 
     <!-- Apache Commons dependencies -->
     <commons-cli.version>1.11.0</commons-cli.version>
@@ -70,14 +70,13 @@
          artifact). Must satisfy the newest Jackson on the classpath; see the
          dependencyManagement note. Match to the Jackson 3 line: 3.0.x -> 2.20, 3.2.x -> 2.22. -->
     <jackson-annotations.version>2.22</jackson-annotations.version>
-    <!-- Jackson 2.x line, used ONLY by transitive test/benchmark deps (MockServer,
-         benchmark harness). Keep aligned with the Jackson 3 line's annotations
+    <!-- Jackson 2.x line, used ONLY by transitive test deps (MockServer).
+         Keep aligned with the Jackson 3 line's annotations
          generation: Jackson 3.0.x -> 2.20.x; 3.2.x -> 2.22.x. -->
     <jackson2.version>2.22.0</jackson2.version>
     <jakarta-activation.version>2.1.4</jakarta-activation.version>
     <jakarta-el-api.version>6.0.1</jakarta-el-api.version>
     <jaxb-runtime.version>2.3.5</jaxb-runtime.version>
-    <java-cup.version>10k</java-cup.version>
     <jetty.version>11.0.25</jetty.version>
     <json.version>1.8</json.version>
     <!-- 1.17.1+ required by Tika 3.x JSoupParser (TagSet class) -->
@@ -86,9 +85,7 @@
     <picocli.version>4.7.7</picocli.version>
     <slf4j.version>2.0.17</slf4j.version>
     <velocity-engine.version>2.4.1</velocity-engine.version>
-    <xerces.version>2.12.2</xerces.version>
     <xml-bind-api.version>4.0.5</xml-bind-api.version>
-    <xpath2.version>2.1.100</xpath2.version>
 
     <!-- Compile-time annotation processors -->
     <lombok.version>1.18.46</lombok.version>
@@ -151,13 +148,20 @@
     repository), which is why release deploys failed with a misleading
     "Could not find artifact ... in central".
 
-    Snapshots are different and DO use a real repository URL — the Nexus-backed
-    endpoint below is the documented Central Portal snapshot target.
+    Snapshots go to GitHub Packages, not Sonatype. A snapshot is thrown away
+    the moment a newer one exists — it has no business consuming the same
+    metered, permanent-storage service that public releases publish through.
+    Every push to main deploys one (see maven-ci-cd.yaml), which on Sonatype's
+    Central Portal was quietly the dominant contributor to the org's
+    Publisher quota: a single module's build number was already past 100
+    before anyone noticed. GitHub Packages costs nothing extra for a public
+    repo and needs no Sonatype credentials at all — just GITHUB_TOKEN, which
+    every workflow run already has.
   -->
   <distributionManagement>
     <snapshotRepository>
-      <id>central</id>
-      <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+      <id>github</id>
+      <url>https://maven.pkg.github.com/Norconex/crawler</url>
     </snapshotRepository>
   </distributionManagement>
 
@@ -413,7 +417,7 @@
       </dependency>
 
       <!-- Jackson 2 (com.fasterxml.jackson) - NOT used by our code; pulled in only
-           transitively by test/benchmark deps (e.g. MockServer, benchmark harness).
+           transitively by test deps (e.g. MockServer).
            Pinned to one consistent 2.x line so those deps don't drift into mismatched
            versions (which crashes ObjectMapper static init). See jackson2.version. -->
       <dependency>
@@ -549,39 +553,6 @@
         <artifactId>commons-cli</artifactId>
         <version>${commons-cli.version}</version>
       </dependency>
-
-      
-      <!-- For XSD 1.1 support until Apache releases their Xerces version
-           with 1.1 support to Maven central. -->
-      <!-- TODO: Still needed???? -->
-     <dependency>
-        <groupId>org.exist-db.thirdparty.xerces</groupId>
-        <artifactId>xercesImpl</artifactId>
-        <version>${xerces.version}</version>
-        <classifier>xml-schema-1.1</classifier>
-        <exclusions>
-          <!-- This exclusion is to fix: 
-               "The package javax.xml.namespace is accessible from more than 
-               one module: <unnamed>, java.xml" -->
-          <exclusion>
-            <groupId>xml-apis</groupId>
-            <artifactId>xml-apis</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      
-      <!-- xpath2 and java-cup are needed at runtime
-           for xercesImpl Schema 1.1 support with above dep. -->
-      <dependency>
-        <groupId>com.rackspace.eclipse.webtools.sourceediting</groupId>
-        <artifactId>org.eclipse.wst.xml.xpath2.processor</artifactId>
-        <version>${xpath2.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>edu.princeton.cup</groupId>
-        <artifactId>java-cup</artifactId>
-        <version>${java-cup.version}</version>
-      </dependency>      
 
       <dependency>
         <groupId>com.tdunning</groupId>
@@ -821,6 +792,16 @@
               <additionalJOption>-Xmaxerrs</additionalJOption>
               <additionalJOption>10000</additionalJOption>
             </additionalJOptions>
+            <!-- A single year, not a range. The default bottom renders
+                 {inceptionYear}-{currentYear}, and inceptionYear is set once on
+                 the parent, so every module inherited 2022 regardless of its own
+                 history: amazoncloudsearch's own file headers start at 2016, and
+                 newer modules did not exist in 2022. The start year was
+                 therefore inherited rather than observed, and wrong for most
+                 modules. A single year states the publication year and asserts
+                 nothing about a span. Per-file headers keep their real ranges:
+                 those are accurate and maintained by the copyright workflow. -->
+            <bottom><![CDATA[Copyright &#169; {currentYear} <a href="https://norconex.com">Norconex Inc.</a> Licensed under the Apache License, Version 2.0.]]></bottom>
             <show>protected</show>
             <nodeprecated>false</nodeprecated>
             <detectLinks>false</detectLinks>
@@ -836,11 +817,19 @@
                  finding the links.
               -->
 
-              <!-- Norconex dependencies -->
+              <!-- Norconex dependencies.
+                   The three importer/committer/crawler entries that used to sit
+                   here pointed at v4 apidocs on opensource.norconex.com, which
+                   were never published there - all three 404'd, so the links
+                   they were meant to produce silently went nowhere. V4 ships a
+                   single AGGREGATE Javadoc covering every module, so one entry
+                   replaces all three.
+                   The commons-lang link stays on the old site deliberately: it
+                   resolves, and serves the element-list that <link> requires.
+                   javadoc.io does not (404 for both element-list and
+                   package-list), so it is not a usable replacement. -->
               <link>https://opensource.norconex.com/commons/lang/v3/apidocs</link>
-              <link>https://opensource.norconex.com/importer/v4/apidocs</link>
-              <link>https://opensource.norconex.com/committers/core/v4/apidocs</link>
-              <link>https://opensource.norconex.com/crawlers/core/v4/apidocs</link>
+              <link>https://crawler.norconex.com/apidocs/latest</link>
 
               <!-- Regular dependencies -->
               <link>https://commons.apache.org/proper/commons-lang/javadocs/api-release</link>
@@ -852,7 +841,7 @@
               <link>https://picocli.info/apidocs</link>
               <link>https://velocity.apache.org/engine/${velocity-engine.version}/apidocs</link>
               <link>https://www.slf4j.org/apidocs</link>
-              <!-- Missing: xerces (1.1 schema), xpath2, java-cup, jackson/fasterxml --> 
+              <!-- Missing: jackson/fasterxml -->
 
               <!-- Test dependencies -->
               <link>https://junit.org/junit5/docs/${junit-jupiter.version}/api</link>
@@ -1422,7 +1411,7 @@
     <name>Norconex Inc.</name>
     <url>https://norconex.com</url>
   </organization>
-  <url>https://opensource.norconex.com/crawlers</url>
+  <url>https://crawler.norconex.com</url>
   <scm>
     <url>https://github.com/Norconex/crawler</url>
     <connection>scm:git:git@github.com:Norconex/crawler.git</connection>

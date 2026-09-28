@@ -30,8 +30,7 @@ import com.norconex.commons.lang.text.TextMatcher;
 
 /**
  * SolrCommitter configuration tests.
- *
- * @author Pascal Essiembre
+
  */
 @Timeout(30)
 class SolrCommitterConfigTest {

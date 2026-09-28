@@ -1,0 +1,17 @@
+# Explicit variable file, passed with -variables to override the implicit one:
+#
+#   crawl-fs.sh start -config=./examples/complex/complex-config.xml \
+#       -variables=./examples/complex/production.variables
+#
+# Switching the profile also flips the conditional section in
+# complex-config.xml: a second committer is added.
+#
+# crawlDepth and numThreads are raised here to show variable overrides in
+# `configrender`; the bundled sample folder is only two levels deep, so the
+# run itself collects the same documents either way.
+
+profile     = production
+crawlerId   = fs-complex-example-prod
+workdir     = ./examples-output/complex-prod
+crawlDepth  = 5
+numThreads  = 4

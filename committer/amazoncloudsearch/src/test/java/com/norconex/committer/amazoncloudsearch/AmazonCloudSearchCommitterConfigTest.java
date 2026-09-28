@@ -30,9 +30,6 @@ import com.norconex.commons.lang.net.Host;
 import com.norconex.commons.lang.security.Credentials;
 import com.norconex.commons.lang.text.TextMatcher;
 
-/**
- * @author Pascal Essiembre
- */
 @Timeout(30)
 class AmazonCloudSearchCommitterConfigTest {
 

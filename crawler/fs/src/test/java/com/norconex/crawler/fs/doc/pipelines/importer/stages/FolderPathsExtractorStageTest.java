@@ -169,11 +169,21 @@ class FolderPathsExtractorStageTest {
         boolean result = new FolderPathsExtractorStage(
                 FetchDirective.DOCUMENT).test(ctx);
         assertThat(result).isFalse();
+
+        // ...and says why. Left unsaid, halting the pipeline is read as a
+        // rejection, which also means "delete it from the target" -- and a
+        // folder was never sent there.
+        assertThat(entry.getProcessingOutcome())
+                .isEqualTo(ProcessingOutcome.NON_DOCUMENT);
     }
 
     @Test
     void testFolderAndFileEntryReturnsContinue() {
-        // An entry that is both a folder and a file should return true
+        // An entry that is both a folder and a file should return true.
+        // No current fetcher produces this combination -- they all derive the
+        // two flags from mutually exclusive sources -- but the model allows
+        // it, as Commons VFS once did with FILE_OR_FOLDER, so it must not be
+        // marked NON_DOCUMENT: it does yield a document.
         var entry = new FsCrawlerEntry("file:///some/folderfile");
         entry.setFolder(true);
         entry.setFile(true);
@@ -197,6 +207,8 @@ class FolderPathsExtractorStageTest {
         boolean result = new FolderPathsExtractorStage(
                 FetchDirective.DOCUMENT).test(ctx);
         assertThat(result).isTrue();
+        assertThat(entry.getProcessingOutcome())
+                .isNotEqualTo(ProcessingOutcome.NON_DOCUMENT);
     }
 
     @Test

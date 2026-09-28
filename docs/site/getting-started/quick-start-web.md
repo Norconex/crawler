@@ -6,6 +6,12 @@ title: Web Crawler Quick Start
 
 This guide gets you from zero to a running web crawl in under 5 minutes.
 
+:::tip[Just want to see it run?]
+The distribution ZIP ships ready-to-run examples. See
+[Run the bundled examples](./installation.md#run-the-bundled-examples) to
+try one before writing your own config.
+:::
+
 :::tip[Built-in baseline, not a hard limit]
 The source scope and examples in this guide represent built-in support in
 Norconex Crawler v4. They are practical defaults, not a fixed ceiling.

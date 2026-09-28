@@ -29,6 +29,25 @@ public class ClusterConfig {
     public static final int DEFAULT_ADMIN_PORT = 27295;
 
     /**
+     * {@link #setAdminBindAddress(String)} value binding the administrative
+     * server to the loopback interface only, reachable from the host running
+     * the crawler and nowhere else.
+     */
+    public static final String ADMIN_BIND_LOOPBACK = "loopback";
+
+    /**
+     * {@link #setAdminBindAddress(String)} value binding the administrative
+     * server to every network interface, so other hosts can reach it.
+     */
+    public static final String ADMIN_BIND_ANY = "any";
+
+    /**
+     * Default administrative server bind address: loopback only.
+     */
+    public static final String DEFAULT_ADMIN_BIND_ADDRESS =
+            ADMIN_BIND_LOOPBACK;
+
+    /**
      * The connector to the cluster implementation used to run the crawler.
      * Default is an MVStore file-backed connector with no external
      * infrastructure. For clustered mode, set this to a
@@ -49,6 +68,36 @@ public class ClusterConfig {
      * Default is 27295 (mnemonic: ‘CRAWL’ on a phone keypad).
      */
     private int adminPort = DEFAULT_ADMIN_PORT;
+
+    /**
+     * <p>
+     * Network interface the administrative server binds to. Accepted values:
+     * </p>
+     * <ul>
+     *   <li>
+     *     {@value #ADMIN_BIND_LOOPBACK} (default) &mdash; the loopback
+     *     interface only. The administrative endpoints are then reachable
+     *     from the host running the crawler and from nowhere else.
+     *   </li>
+     *   <li>
+     *     {@value #ADMIN_BIND_ANY} &mdash; every interface. Required for
+     *     clustered mode, where nodes and the <code>stop</code> command may
+     *     run on other hosts.
+     *   </li>
+     *   <li>
+     *     any host name or IP address &mdash; that interface only.
+     *   </li>
+     * </ul>
+     * <p>
+     * The default is deliberately the restrictive one. The administrative
+     * endpoints include stopping the crawl, and they are guarded only by a
+     * <code>crawler-id</code> request header, which is an identifier taken
+     * from the configuration rather than a secret. Exposing them beyond the
+     * host means anyone who can reach the port and name the crawler can halt
+     * a crawl, so widening this is an explicit decision.
+     * </p>
+     */
+    private String adminBindAddress = DEFAULT_ADMIN_BIND_ADDRESS;
 
     /**
      * Whether the crawler should run in stand-alone or cluster mode.

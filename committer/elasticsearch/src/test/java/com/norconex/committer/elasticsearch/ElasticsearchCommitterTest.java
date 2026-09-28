@@ -16,6 +16,7 @@ package com.norconex.committer.elasticsearch;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.commons.io.IOUtils.toInputStream;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.mockito.ArgumentMatchers.any;
@@ -31,6 +32,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
 import org.apache.http.StatusLine;
+import org.apache.http.util.EntityUtils;
 import org.elasticsearch.client.Request;
 import org.elasticsearch.client.Response;
 import org.elasticsearch.client.RestClient;
@@ -40,6 +42,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -241,6 +244,67 @@ class ElasticsearchCommitterTest {
         committer.commitBatch(iteratorOf(upsert));
 
         verify(mockRestClient).performRequest(any(Request.class));
+    }
+
+    // A vector (for a dense_vector field) is a multi-valued field of numbers.
+    // Every value is a string internally, so unless the field is declared a
+    // JSON field it goes out quoted, which is not a valid vector.
+
+    @Test
+    void testCommitBatch_vectorIsQuotedUnlessDeclaredAJsonField()
+            throws Exception {
+        stubSuccessResponse("{\"errors\":false}");
+
+        var metadata = new Properties();
+        metadata.set("embedding", "0.1", "0.2", "0.3");
+        committer.initBatchCommitter();
+        committer.commitBatch(iteratorOf(
+                new UpsertRequest("doc1", metadata, new NullInputStream(0))));
+
+        assertThat(sentBody())
+                .contains("\"embedding\":[\"0.1\",\"0.2\",\"0.3\"]");
+    }
+
+    @Test
+    void testCommitBatch_jsonFieldsPatternSendsVectorAsNumbers()
+            throws Exception {
+        stubSuccessResponse("{\"errors\":false}");
+        committer.getConfiguration().setJsonFieldsPattern("embedding");
+
+        var metadata = new Properties();
+        metadata.set("embedding", "0.1", "0.2", "0.3");
+        metadata.set("title", "A title");
+        committer.initBatchCommitter();
+        committer.commitBatch(iteratorOf(
+                new UpsertRequest("doc1", metadata, new NullInputStream(0))));
+
+        assertThat(sentBody())
+                .contains("\"embedding\":[0.1,0.2,0.3]")
+                .contains("\"title\":\"A title\"");
+    }
+
+    @Test
+    void testCommitBatch_jsonFieldsPatternIsARegularExpression()
+            throws Exception {
+        stubSuccessResponse("{\"errors\":false}");
+        committer.getConfiguration().setJsonFieldsPattern("embed.*");
+
+        var metadata = new Properties();
+        metadata.set("embedding", "0.1", "0.2");
+        metadata.set("title", "A title");
+        committer.initBatchCommitter();
+        committer.commitBatch(iteratorOf(
+                new UpsertRequest("doc1", metadata, new NullInputStream(0))));
+
+        assertThat(sentBody())
+                .contains("\"embedding\":[0.1,0.2]")
+                .contains("\"title\":\"A title\"");
+    }
+
+    private String sentBody() throws Exception {
+        var captor = ArgumentCaptor.forClass(Request.class);
+        verify(mockRestClient).performRequest(captor.capture());
+        return EntityUtils.toString(captor.getValue().getEntity());
     }
 
     @Test

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE xml>
-<!-- 
-   Copyright 2010-2024 Norconex Inc.
+<!--
+   Copyright 2010-2026 Norconex Inc.
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -15,16 +15,36 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 -->
-<importer>
+<!--
+  A reusable fragment, pulled into complex-config.xml by a parse directive
+  rather than an include directive. That distinction matters: being parsed,
+  it is treated as a template in its own right, so the ${siteName} and
+  ${fieldsToDelete} variables below resolve from the importer-config.properties
+  file sitting beside it. Several crawler configurations can therefore share
+  this fragment while each supplies its own values.
 
-  <postParseHandlers>
-     <handler class="ConstantTagger">
-       <constant name="SITE">Norconex Test Site</constant>
-     </handler>
-     <handler class="DeleteTagger">
-       <fieldMatcher method="regex">
-         ${fieldsToDelete}
-       </fieldMatcher>
-     </handler>
-  </postParseHandlers>
-</importer>           
+  Note the directive names are deliberately spelled out in words here.
+  Velocity runs before any XML parsing, so writing one literally inside an
+  XML comment would execute it.
+  -->
+<importer>
+  <handlers>
+
+    <!-- Stamp every document with the source it came from. -->
+    <handler class="ConstantTransformer">
+      <constants>
+        <constant name="site">
+          <values>
+            <value>${siteName|'Unknown site'}</value>
+          </values>
+        </constant>
+      </constants>
+    </handler>
+
+    <!-- Drop noisy fields that are of no use downstream. -->
+    <handler class="DeleteTransformer">
+      <fieldMatcher method="regex" pattern="${fieldsToDelete}"/>
+    </handler>
+
+  </handlers>
+</importer>

@@ -13,13 +13,13 @@ Commit documents to Amazon CloudSearch.
 
 ## Notes
 
-Commits crawled documents to an Amazon CloudSearch index. Supports field mappings, optional ID normalization for CloudSearch compatibility, and AWS credential configuration via explicit keys or environment variables.
+Commits crawled documents to an Amazon CloudSearch index. Supports field mappings, optional ID normalization for Amazon CloudSearch compatibility, and AWS credential configuration via explicit keys or environment variables.
 
 ## Properties
 
 ### accessKey
 
-CloudSearch access key. Leave blank to take it from the environment.
+Amazon CloudSearch access key. Leave blank to take it from the environment.
 
 ### fieldMappings
 
@@ -27,7 +27,7 @@ Mapping of source fields to target ones (index field name).
 
 ### fixBadIds
 
-Forces references to fit into a CloudSearch id field. Truncate references that are too long and append a hash code to it to keep uniqueness. It will also convert invalid characters to  underscore.  This approach is not 100% collision-free (uniqueness),  but it should safely cover the vast majority of cases.
+Forces references to fit into an Amazon CloudSearch id field. Truncate references that are too long and append a hash code to it to keep uniqueness. It will also convert invalid characters to  underscore.  This approach is not 100% collision-free (uniqueness),  but it should safely cover the vast majority of cases.
 
 ### proxySettings
 
@@ -43,23 +43,23 @@ Defines filter conditions that restrict which documents this committer processes
 
 ### secretKey
 
-CloudSearch secret key. Leave blank to take it from the environment.
+Amazon CloudSearch secret key. Leave blank to take it from the environment.
 
 ### serviceEndpoint
 
-CloudSearch service endpoint.
+Amazon CloudSearch service endpoint.
 
 ### signingRegion
 
-CloudSearch signing region.
+Amazon CloudSearch signing region.
 
 ### sourceIdField
 
-Document field name containing the value that will be stored in CloudSearch "id" field. Default is the document reference.
+Document field name containing the value that will be stored in the Amazon CloudSearch "id" field. Default is the document reference.
 
 ### targetContentField
 
-CloudSearch field name to store the document content. Default is "content".
+Amazon CloudSearch field name to store the document content. Default is "content".
 
 ## Examples
 
@@ -67,12 +67,12 @@ The following example uses the minimum required settings to configure the Amazon
 
 <ConfigBlock
   json={{
-    "class": "CloudSearchCommitter",
+    "class": "AmazonCloudSearchCommitter",
     "serviceEndpoint": "search-example-xyz.some-region.cloudsearch.amazonaws.com"
   }}
   xml={`
     <committer>
-      <class>CloudSearchCommitter</class>
+      <class>AmazonCloudSearchCommitter</class>
       <serviceEndpoint>search-example-xyz.some-region.cloudsearch.amazonaws.com</serviceEndpoint>
     </committer>`}
 />

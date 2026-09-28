@@ -1,0 +1,9 @@
+This file is one folder deep, under archive/.
+
+The crawler only reaches it when the folder depth allows descending at
+least one level below the start folder. Both example profiles do (the
+development profile uses crawlDepth = 2, production uses 5), so this file
+should appear in the committed output alongside the top-level ones.
+
+Lower crawlDepth to 1 and run again: this file drops out, the top-level
+files stay.

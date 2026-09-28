@@ -153,11 +153,13 @@ public class PlaywrightFetcher
     final ThreadLocal<AtomicInteger> navCountLocal =
             ThreadLocal.withInitial(AtomicInteger::new);
 
-    // Per-thread browser start time for browserMaxAge
+    // Per-thread browser start time for browserMaxAge.
+    // Package-private, like browserLocal and navCountLocal above, so a test
+    // can age a browser deliberately instead of waiting for the wall clock.
     @JsonIgnore
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
-    private final ThreadLocal<Instant> browserStartTimeLocal =
+    final ThreadLocal<Instant> browserStartTimeLocal =
             new ThreadLocal<>();
 
     // All Playwright instances created — tracked for shutdown

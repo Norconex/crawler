@@ -33,8 +33,7 @@ import com.norconex.commons.lang.map.Properties;
 
 /**
  * SolrCommitter main tests.
- *
- * @author Pascal Essiembre
+
  */
 @Timeout(30)
 class SolrCommitterIT extends AbstractSolrIT {

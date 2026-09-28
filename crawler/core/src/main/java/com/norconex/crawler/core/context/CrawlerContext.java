@@ -41,6 +41,7 @@ import com.norconex.crawler.core.CrawlerConfig;
 import com.norconex.crawler.core.cmd.crawl.pipeline.bootstrap.CrawlerBootstrapper;
 import com.norconex.crawler.core.doc.pipelines.CrawlerDocPipelines;
 import com.norconex.crawler.core.doc.pipelines.DedupService;
+import com.norconex.crawler.core.doc.pipelines.importer.ClusterDocHandlerCache;
 import com.norconex.crawler.core.event.CrawlerEvent;
 import com.norconex.crawler.core.fetch.Fetcher;
 import com.norconex.crawler.core.ledger.CrawlerEntry;
@@ -160,6 +161,9 @@ public class CrawlerContext implements Closeable {
                 .build());
         //        getCrawlEntryLedger().init(session);
         getDedupService().init(session);
+        getImporter().setCache(
+                new ClusterDocHandlerCache(session.getCluster()
+                        .getCacheManager()));
         getImporter().init();
     }
 

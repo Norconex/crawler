@@ -33,8 +33,7 @@ import lombok.ToString;
  * Framework Server (CFS). Specifying either the index port or the cfs port
  * determines which of the two will be the documents target.
  * </p>
- *
- * @author Pascal Essiembre
+
  */
 @EqualsAndHashCode
 @ToString

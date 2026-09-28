@@ -46,7 +46,6 @@ import lombok.NonNull;
  * <p>
  * Simple Neo4j client.
  * </p>
- * @author Pascal Essiembre
  */
 class Neo4jClient {
 

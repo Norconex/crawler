@@ -127,7 +127,10 @@ public final class ApacheHttpUtil {
      * @param response the HTTP response
      * @param prefix optional metadata prefix for all HTTP response headers
      * @param doc document to apply headers on
-     * @param crawlEntry crawl ledger entry
+     * @param crawlEntry crawl ledger entry, or <code>null</code> for fetches
+     *     that have no ledger entry (robots.txt, sitemaps, and other
+     *     infrastructure requests made outside the document pipeline).
+     *     Caching headers are then simply not recorded.
      */
     public static void applyResponseHeaders(
             HttpResponse response, String prefix, Doc doc,
@@ -148,12 +151,14 @@ public final class ApacheHttpUtil {
             }
 
             // ETag
-            if (HttpHeaders.ETAG.equalsIgnoreCase(name)) {
+            if (crawlEntry != null
+                    && HttpHeaders.ETAG.equalsIgnoreCase(name)) {
                 crawlEntry.setEtag(value);
             }
 
             // Last Modified
-            if (HttpHeaders.LAST_MODIFIED.equalsIgnoreCase(name)) {
+            if (crawlEntry != null
+                    && HttpHeaders.LAST_MODIFIED.equalsIgnoreCase(name)) {
                 try {
                     crawlEntry.setLastModified(
                             ZonedDateTime.parse(

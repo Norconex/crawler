@@ -80,7 +80,6 @@ import lombok.extern.slf4j.Slf4j;
  * collision-free (uniqueness), but it should safely cover the vast
  * majority of cases.
  * </p>
- * @author Pascal Essiembre
  */
 @EqualsAndHashCode
 @ToString
