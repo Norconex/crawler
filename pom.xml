@@ -101,6 +101,9 @@
     <bytebuddy.version>1.18.10</bytebuddy.version>
     <mockserver.version>7.2.0</mockserver.version>
     <testcontainers.version>2.0.5</testcontainers.version>
+    <!-- S3-compatible server for S3FetcherIT. Its own transitive testcontainers
+         dependency is overridden by testcontainers.version above via the BOM. -->
+    <s3mock-testcontainers.version>4.11.0</s3mock-testcontainers.version>
     <!--
     <testcontainers-junit4-mock.version>1.0.1</testcontainers-junit4-mock.version>
     -->

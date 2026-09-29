@@ -25,12 +25,10 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
 
+import com.adobe.testing.s3mock.testcontainers.S3MockContainer;
 import com.norconex.crawler.core.fetch.Fetcher;
 import com.norconex.crawler.fs.FsTestUtil;
 import com.norconex.crawler.fs.fetch.impl.AbstractFileFetcherTest;
@@ -47,31 +45,27 @@ class S3FetcherIT extends AbstractFileFetcherTest {
     Path tempDir;
 
     private static final String BUCKET = "test-bucket";
-    private static final String ACCESS_KEY = "minioadmin";
-    private static final String SECRET_KEY = "minioadmin";
+    // S3Mock does not validate credentials; any values will do.
+    private static final String ACCESS_KEY = "test-access-key";
+    private static final String SECRET_KEY = "test-secret-key";
 
+    // S3Mock replaces minio/minio here: MinIO's own images are no longer
+    // freely pullable (gone from Docker Hub, gated on quay.io). S3Mock is a
+    // small (~80MB vs LocalStack's ~430MB), actively maintained, S3-only test
+    // double built for exactly this. The container's own wait strategy
+    // (GET /favicon.ico) covers readiness, so that doesn't need doing by
+    // hand here — but withInitialBuckets(BUCKET) proved racy against it
+    // (NoSuchBucket on the very first upload), so the bucket is still
+    // created explicitly below, same as the old MinIO version did.
     @SuppressWarnings("resource")
     @Container
-    static final GenericContainer<?> MINIO =
-            new GenericContainer<>(DockerImageName
-                    .parse("minio/minio:latest"))
-                            .withCommand("server",
-                                    "/data")
-                            .withEnv("MINIO_ROOT_USER",
-                                    ACCESS_KEY)
-                            .withEnv("MINIO_ROOT_PASSWORD",
-                                    SECRET_KEY)
-                            .withExposedPorts(9000)
-                            .waitingFor(
-                                    Wait.forHttp("/minio/health/ready")
-                                            .forPort(9000));
+    static final S3MockContainer S3MOCK = new S3MockContainer("latest");
 
     private static String endpoint;
 
     @BeforeAll
     static void uploadTestFiles() throws IOException {
-        endpoint = "http://%s:%s".formatted(
-                MINIO.getHost(), MINIO.getFirstMappedPort());
+        endpoint = S3MOCK.getHttpEndpoint();
         try (var client = S3Client.builder()
                 .endpointOverride(URI.create(endpoint))
                 .region(Region.US_EAST_1)
