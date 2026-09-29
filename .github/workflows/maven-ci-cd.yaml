@@ -124,13 +124,19 @@ jobs:
           # Env variable name for GPG private key passphrase
           gpg-passphrase: MAVEN_GPG_PASSPHRASE
 
-      # A second invocation, not a replacement of the one above: setup-java
-      # writes server credentials into the same ~/.m2/settings.xml on each
-      # call, so this adds the "github" server (used for snapshots) alongside
-      # "central" (used for releases) rather than overwriting it. JDK/cache
-      # setup is idempotent, so re-running it here costs nothing.
-      # GITHUB_ACTOR is provided by the runner already; GITHUB_TOKEN is set
-      # below since secrets are not auto-exposed as plain env vars.
+      # A second invocation, not a replacement of the one above. setup-java's
+      # own default (overwrite-settings: true) regenerates ~/.m2/settings.xml
+      # from scratch on every call, which silently dropped the "central"
+      # server the first call above just wrote — this call added "github"
+      # but discarded "central" in the same breath, and every release
+      # attempt since the Sep 9 snapshot-deploy change that introduced this
+      # step failed at the Central Portal step with a null server, until now.
+      # overwrite-settings: false makes this one merge into the existing
+      # settings.xml instead, so "github" joins "central" rather than
+      # replacing it. JDK/cache setup is idempotent, so re-running it here
+      # costs nothing. GITHUB_ACTOR is provided by the runner already;
+      # GITHUB_TOKEN is set below since secrets are not auto-exposed as plain
+      # env vars.
       - name: Add GitHub Packages credentials (for snapshot deploys)
         uses: actions/setup-java@v5
         with:
@@ -139,6 +145,7 @@ jobs:
           server-id: github
           server-username: GITHUB_ACTOR
           server-password: GITHUB_TOKEN
+          overwrite-settings: false
 
       - run: mvn --version
 
