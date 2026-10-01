@@ -34,8 +34,14 @@ beta.1.
   a hash of the text, model, and endpoint, so the same content is never
   billed twice — whether it recurs on a later crawl or as boilerplate
   shared by many pages in the same crawl.
-- File System Crawler: added runnable examples, and it now defaults to
-  `LocalFetcher` so a minimal configuration works out of the box.
+- Example configurations, fixed. The bundled web crawler `minimum` example
+  was still V3-shaped and failed `configcheck` outright — the first thing
+  a new user runs, broken. Both `minimum` and `complex` are rewritten for
+  V4 and now point at dedicated pages built for the purpose, instead of
+  crawling the corporate site with only `maxDepth` as a brake. The File
+  System Crawler had no examples at all before this release; it now ships
+  runnable ones alongside a refreshed HOWTO, and defaults to `LocalFetcher`
+  so a minimal configuration works out of the box.
 - Crawlers can write a machine-readable run summary on request, for
   whoever launched the JVM rather than assuming a fixed location.
 
