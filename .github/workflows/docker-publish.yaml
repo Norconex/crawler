@@ -4,11 +4,20 @@ name: Publish Docker Images
 #
 # Event                      Trigger              Registries        Tags
 # ─────────────────────────  ──────────────────   ──────────────    ──────────────────────────────
-# Release tag (final)        git push v4.0.1      DockerHub + GHCR  4.0.1, 4.0, 4, latest
-# Release tag (pre-release)  git push v4.0.0-beta DockerHub + GHCR  4.0.0-beta ONLY (no moving tags)
+# Release tag (final)        dispatch, see below  DockerHub + GHCR  4.0.1, 4.0, 4, latest
+# Release tag (pre-release)  dispatch, see below  DockerHub + GHCR  4.0.0-beta ONLY (no moving tags)
 # Main branch push           git push main        GHCR only         edge
 # Scheduled (Monday 04:00)   cron                 DockerHub + GHCR  latest stable (multi-arch rebuild)
 # Manual dispatch            workflow_dispatch    DockerHub + GHCR  (version param) or edge (empty)
+#
+# "Release tag" is listed as a trigger below (`on.push.tags`) and the pattern
+# does match a real version tag -- but checked across every release this repo
+# has made, it has never once actually fired: every image ever published here
+# went out through workflow_dispatch instead, including every beta. The
+# release workflow (maven-ci-cd.yaml's "Publish Docker images for this
+# release" step) now dispatches this workflow explicitly rather than relying
+# on that tag-push trigger, which stays declared below only as a (so far
+# theoretical) fallback.
 #
 # "Final" means a bare X.Y.Z version. Anything with a qualifier (-beta, -rc1,
 # -M1, …) is treated as a pre-release: it is published under its exact version

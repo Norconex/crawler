@@ -566,6 +566,37 @@ jobs:
 
       #--- Step ------------------------------------------------------------------
 
+      # The tag push above, in principle, should also trigger
+      # docker-publish.yaml's own "on: push: tags" filter. In practice it
+      # never has: checked across every run of that workflow in this repo's
+      # history (back through the 4.0.0-beta.1 release) and not one was ever
+      # triggered by a tag push -- every Docker image this project has ever
+      # published went out through a one-off manual workflow_dispatch run
+      # instead. Rather than keep relying on an implicit trigger with a 0%
+      # track record (and no clear single cause -- the tag pattern itself
+      # checks out against GitHub's documented glob rules), dispatch it
+      # explicitly here, the same call that already works for an ad-hoc
+      # re-publish. Uses RELEASE_PAT, not GITHUB_TOKEN: dispatching another
+      # workflow via the API needs "actions: write", which this workflow
+      # does not grant GITHUB_TOKEN (no permissions: block = repo default,
+      # which is read-only for Actions).
+      - name: Publish Docker images for this release
+        if: |
+          github.ref != 'refs/heads/main' &&
+          startsWith(github.ref, 'refs/heads/release/') &&
+          steps.get_version.outputs.version != '' &&
+          !endsWith(steps.get_version.outputs.version, '-SNAPSHOT') &&
+          steps.release_guard.outputs.already_released != 'true' &&
+          success()
+        run: |
+          gh workflow run docker-publish.yaml \
+            --repo "${GITHUB_REPOSITORY}" \
+            -f "version=${{ steps.get_version.outputs.version }}"
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
+
+      #--- Step ------------------------------------------------------------------
+
       #--- Step ------------------------------------------------------------------
 
       - name: Package distribution zips
