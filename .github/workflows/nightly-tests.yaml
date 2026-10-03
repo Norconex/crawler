@@ -111,4 +111,4 @@ jobs:
       # critical path lean.
       - name: Update Maven dependency graph
         if: github.repository == 'Norconex/crawler'
-        uses: advanced-security/maven-dependency-submission-action@v5
+        uses: advanced-security/maven-dependency-submission-action@v6
