@@ -519,7 +519,7 @@ public class HttpClientFetcher
         ofNullable(configuration.getSocketTimeout()).ifPresent(
                 d -> tlsBuilder.setHandshakeTimeout(
                         d.toMillis(),
-                        TimeUnit.MINUTES));
+                        TimeUnit.MILLISECONDS));
         if (!configuration.getSslProtocols().isEmpty()) {
             tlsBuilder.setSupportedProtocols(
                     configuration
