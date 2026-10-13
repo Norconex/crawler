@@ -124,28 +124,22 @@ jobs:
           # Env variable name for GPG private key passphrase
           gpg-passphrase: MAVEN_GPG_PASSPHRASE
 
-      # A second invocation, not a replacement of the one above. setup-java's
-      # own default (overwrite-settings: true) regenerates ~/.m2/settings.xml
-      # from scratch on every call, which silently dropped the "central"
-      # server the first call above just wrote — this call added "github"
-      # but discarded "central" in the same breath, and every release
-      # attempt since the Sep 9 snapshot-deploy change that introduced this
-      # step failed at the Central Portal step with a null server, until now.
-      # overwrite-settings: false makes this one merge into the existing
-      # settings.xml instead, so "github" joins "central" rather than
-      # replacing it. JDK/cache setup is idempotent, so re-running it here
-      # costs nothing. GITHUB_ACTOR is provided by the runner already;
-      # GITHUB_TOKEN is set below since secrets are not auto-exposed as plain
-      # env vars.
+      # setup-java can only write ONE server per invocation, and a second call
+      # cannot add to the first one's settings.xml: with the default
+      # (overwrite-settings: true) it replaces the file, dropping "central";
+      # with overwrite-settings: false it skips generation entirely when the
+      # file exists ("Skipping generation ... already exists"), so "github"
+      # never gets written and the snapshot deploy fails with a 401. So the
+      # "github" server is appended to the settings.xml the call above wrote.
+      # Maven expands ${env.*} at runtime; GITHUB_ACTOR is provided by the
+      # runner and GITHUB_TOKEN is exposed at job level.
       - name: Add GitHub Packages credentials (for snapshot deploys)
-        uses: actions/setup-java@v5
-        with:
-          distribution: "temurin"
-          java-version: "21"
-          server-id: github
-          server-username: GITHUB_ACTOR
-          server-password: GITHUB_TOKEN
-          overwrite-settings: false
+        run: |
+          SETTINGS="$HOME/.m2/settings.xml"
+          GITHUB_SERVER='<server><id>github</id><username>${env.GITHUB_ACTOR}</username><password>${env.GITHUB_TOKEN}</password></server>'
+          grep -q '</servers>' "$SETTINGS"
+          sed -i "s#</servers>#${GITHUB_SERVER}</servers>#" "$SETTINGS"
+          grep -c '<id>' "$SETTINGS"
 
       - run: mvn --version
 
