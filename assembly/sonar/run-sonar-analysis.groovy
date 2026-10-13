@@ -76,6 +76,7 @@ def modules = [
     [dir: "committer/apachekafka",          key: "com.norconex.crawler:nx-committer-apachekafka"],
     [dir: "committer/azurecognitivesearch", key: "com.norconex.crawler:nx-committer-azurecognitivesearch"],
     [dir: "committer/elasticsearch",        key: "com.norconex.crawler:nx-committer-elasticsearch"],
+    [dir: "committer/googlecloudsearch",    key: "com.norconex.crawler:nx-committer-googlecloudsearch"],
     [dir: "committer/idol",                 key: "com.norconex.crawler:nx-committer-idol"],
     [dir: "committer/neo4j",               key: "com.norconex.crawler:nx-committer-neo4j"],
     [dir: "committer/solr",                key: "com.norconex.crawler:nx-committer-solr"],
@@ -90,7 +91,8 @@ println "[Sonar] Skipping committer/amazoncloudsearch from Sonar orchestration: 
 
 def allCommitters = [
     "committer/core", "committer/apachekafka",
-    "committer/azurecognitivesearch", "committer/elasticsearch", "committer/idol",
+    "committer/azurecognitivesearch", "committer/elasticsearch",
+    "committer/googlecloudsearch", "committer/idol",
     "committer/neo4j", "committer/solr", "committer/sql"
 ]
 def downstreamOf = [
