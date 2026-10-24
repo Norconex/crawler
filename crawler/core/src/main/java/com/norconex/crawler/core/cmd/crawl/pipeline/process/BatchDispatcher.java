@@ -37,12 +37,46 @@ public class BatchDispatcher {
      */
     private final int lowWatermark;
     private final CrawlerSession session;
+    /**
+     * How many times in a row reading the queue may fail before the failure
+     * is rethrown (and the crawler stops). A single failed read is often
+     * transient (e.g., a store read racing with background compaction),
+     * while a persistent one would otherwise loop forever.
+     */
+    @Builder.Default
+    private final int maxReadAttempts = 5;
+    /** Base pause between failed queue reads (multiplied per attempt). */
+    @Builder.Default
+    private final long readRetryPauseMs = 200;
 
     private final BlockingQueue<CrawlerEntry> localQueue =
             new LinkedBlockingQueue<>();
     private final Object refillLock = new Object();
 
-    public CrawlerEntry take() {
+    /**
+     * Takes the next entry to process, or <code>null</code> if none are
+     * available. A failure reading the queue is retried a few times before
+     * being rethrown.
+     * @return next entry or <code>null</code>
+     * @throws InterruptedException if interrupted while waiting to retry
+     */
+    public CrawlerEntry take() throws InterruptedException {
+        for (var attempt = 1;; attempt++) {
+            try {
+                return doTake();
+            } catch (RuntimeException e) {
+                if (attempt >= maxReadAttempts) {
+                    throw e;
+                }
+                LOG.warn("Could not read the crawl queue (attempt {} of {}); "
+                        + "retrying: {}", attempt, maxReadAttempts,
+                        e.toString());
+                Thread.sleep(readRetryPauseMs * attempt);
+            }
+        }
+    }
+
+    private CrawlerEntry doTake() {
         var ledger = session.getCrawlContext().getCrawlEntryLedger();
         var nodeName = session.getCluster().getLocalNode().getNodeName();
         while (true) {
