@@ -45,6 +45,17 @@
     <sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
     <sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
     
+    <!-- === Build output ================================================== -->
+
+    <!-- Where each module writes its build output. Defaults to the usual
+         target/ folder. Override to build somewhere an IDE (e.g., VS Code's
+         Java extension, which compiles into target/classes with ecj) is not
+         also writing, e.g. from bash:
+           mvn -Dnx.buildDir='C:/tmp/nxbuild/${project.artifactId}' verify
+         Single quotes matter: ${project.artifactId} must reach Maven as-is
+         so each module gets its own folder. -->
+    <nx.buildDir>${project.basedir}/target</nx.buildDir>
+
     <!-- === Dependencies ================================================== -->
 
     <!-- Norconex dependencies -->
@@ -688,6 +699,7 @@
   </dependencies>
 
   <build>
+    <directory>${nx.buildDir}</directory>
     <resources>
       <resource>
         <filtering>false</filtering>
