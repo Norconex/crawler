@@ -1,0 +1,22 @@
+---
+component: ColorScheme
+module: shared
+locale: en
+propertyCoverage: all
+---
+
+# ColorScheme
+
+## Summary
+
+The color scheme a Playwright-driven browser tells pages its user prefers.
+
+## Notes
+
+Used by the `colorScheme` property of `PlaywrightFetcher`. Pages that adapt to
+the visitor's preference (through the `prefers-color-scheme` media query) show
+their `LIGHT` or `DARK` design accordingly, which can change what content is
+rendered and captured. `NO_PREFERENCE` tells the page the visitor has none. When
+the property is not set, the browser's own setting is used.
+
+## Properties

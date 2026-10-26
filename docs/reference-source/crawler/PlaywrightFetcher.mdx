@@ -35,6 +35,12 @@ after `browserMaxNavigations` navigations or after they exceed
 Optional command-line arguments passed to the browser at launch
 (e.g., `--disable-extensions`).
 
+### blockServiceWorkers
+
+When `true`, service workers are kept from registering. A service worker can
+answer requests itself, so what is read may not be what the site serves.
+Default is `false`.
+
 ### browser
 
 The browser engine to use for crawling. Supported values are
@@ -53,6 +59,11 @@ Maximum number of page navigations per thread browser instance before it
 is automatically restarted. Helps prevent memory accumulation.
 Default is `-1` (unlimited).
 
+### bypassCsp
+
+When `true`, the page's Content-Security-Policy is ignored, so scripts added by
+`earlyPageScript` or `latePageScript` are not blocked by it. Default is `false`.
+
 ### channel
 
 Optional browser channel that instructs Playwright to use a
@@ -65,6 +76,12 @@ default) to use Playwright's bundled browser binaries.
 How often idle (unused) per-thread browser instances are checked and
 closed. Defaults to 10 seconds.
 
+### colorScheme
+
+The preferred color scheme pages are told about (the `prefers-color-scheme`
+media query). Supported values: `LIGHT`, `DARK`, `NO_PREFERENCE`. When not set,
+the browser's own is used.
+
 ### earlyPageScript
 
 Optional JavaScript snippet executed immediately after page navigation,
@@ -76,21 +93,47 @@ Useful for dismissing popups or injecting page-level state.
 Optional path to a custom browser executable. When not set, Playwright
 uses the bundled browser binary it downloaded.
 
+### extraHttpHeaders
+
+Extra HTTP headers sent with every request, as header names and values.
+
 ### headless
 
 Whether to run the browser in headless (no visible window) mode.
 Default is `true`.
+
+### httpCredentials
+
+The username and password the browser answers HTTP Basic or Digest
+authentication challenges with. They are sent only if the site asks.
 
 ### ignoreHttpsErrors
 
 When `true`, HTTPS certificate errors (e.g., self-signed or expired
 certificates) are ignored. Default is `false`.
 
+### javaScriptEnabled
+
+Whether the browser runs the page's JavaScript. Turn it off to read pages as
+they are served, without any script changing them. Default is `true`.
+
 ### latePageScript
 
 Optional JavaScript snippet executed after all wait conditions have been
 satisfied. Useful for final page manipulation before the content is
 captured.
+
+### locale
+
+The locale the browser reports (for example `fr-CA`). It sets the
+`Accept-Language` header and the page's `navigator.language`. When not set, the
+browser's own is used.
+
+### mobile
+
+When `true`, the browser behaves as a mobile device: the page is told it is
+mobile and the screen is touch-enabled. Combine it with a mobile `userAgent` and
+a small `windowSize`. Default is `false`.
 
 ### pageLoadTimeout
 
@@ -119,6 +162,23 @@ local directory).
 
 Optional slow-motion delay applied between Playwright operations.
 Useful for debugging or visually tracing a crawl. Default is no delay.
+
+### storageStatePath
+
+Path to a file Playwright wrote of a signed-in session (cookies and local
+storage, as saved by `context.storageState()`). The browser starts with that
+session. When not set, it starts with none.
+
+### timezoneId
+
+The timezone the browser reports, as an IANA name (for example
+`America/Toronto`). When not set, the system's is used.
+
+### userAgent
+
+The user agent the browser sends, in place of its own. It applies both to the
+requests and to the page's own `navigator.userAgent`, so the two agree. When not
+set, the browser's own is used.
 
 ### waitForElementSelector
 
@@ -195,4 +255,33 @@ referenceFilters:
     </valueMatcher>
   </referenceFilter>
 </referenceFilters>`}
+/>
+
+### Reading a site as a mobile visitor, in French
+
+<ConfigBlock
+  json={`{
+  "class": "PlaywrightFetcher",
+  "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1 (operator: Acme Corp; +https://acme.example/bot)",
+  "mobile": true,
+  "windowSize": "390x844",
+  "locale": "fr-CA",
+  "timezoneId": "America/Toronto",
+  "blockServiceWorkers": true
+}`}
+  yaml={`class: PlaywrightFetcher
+userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1 (operator: Acme Corp; +https://acme.example/bot)"
+mobile: true
+windowSize: 390x844
+locale: fr-CA
+timezoneId: America/Toronto
+blockServiceWorkers: true`}
+  xml={`
+<class>PlaywrightFetcher</class>
+<userAgent>Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1 (operator: Acme Corp; +https://acme.example/bot)</userAgent>
+<mobile>true</mobile>
+<windowSize>390x844</windowSize>
+<locale>fr-CA</locale>
+<timezoneId>America/Toronto</timezoneId>
+<blockServiceWorkers>true</blockServiceWorkers>`}
 />
