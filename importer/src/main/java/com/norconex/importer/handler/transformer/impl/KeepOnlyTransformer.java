@@ -18,9 +18,7 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.regex.Pattern;
 
-import com.norconex.commons.lang.config.Configurable;
 import com.norconex.importer.handler.ConfigurableDocHandler;
-import com.norconex.importer.handler.DocHandler;
 import com.norconex.importer.handler.DocHandlerContext;
 
 import lombok.Data;

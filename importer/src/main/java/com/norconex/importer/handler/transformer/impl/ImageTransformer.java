@@ -21,13 +21,11 @@ import java.awt.Dimension;
 import java.awt.Rectangle;
 import java.io.IOException;
 
-import com.norconex.commons.lang.config.Configurable;
 import com.norconex.importer.handler.ConfigurableDocHandler;
 import com.norconex.commons.lang.convert.DimensionConverter;
 import com.norconex.commons.lang.img.MutableImage;
 import com.norconex.importer.ImporterConfig;
 import com.norconex.importer.handler.CommonRestrictions;
-import com.norconex.importer.handler.DocHandler;
 import com.norconex.importer.handler.DocHandlerContext;
 import com.norconex.importer.util.MatchUtil;
 

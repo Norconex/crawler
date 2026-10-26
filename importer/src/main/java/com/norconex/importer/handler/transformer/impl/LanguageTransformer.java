@@ -24,10 +24,8 @@ import org.apache.tika.language.detect.LanguageDetector;
 import org.apache.tika.language.detect.LanguageResult;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.norconex.commons.lang.config.Configurable;
 import com.norconex.importer.handler.ConfigurableDocHandler;
 import com.norconex.importer.doc.DocMetaConstants;
-import com.norconex.importer.handler.DocHandler;
 import com.norconex.importer.handler.DocHandlerContext;
 import com.norconex.importer.util.chunk.ChunkedTextReader;
 

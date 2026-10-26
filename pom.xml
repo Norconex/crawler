@@ -252,6 +252,26 @@
         <jacocoArgLine>@{argLine}</jacocoArgLine>
       </properties>
     </profile>
+    <!-- Surfaces javac lint warnings (-Xlint:all) for review. Off by default.
+         Run from the root, one module at a time (-pl), e.g.
+           mvn -Plint -pl committer/core -Dnx.buildDir='C:/tmp/nxbuild/${project.artifactId}' compile
+         -->
+    <profile>
+      <id>lint</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <compilerArgs>
+                <arg>-Xlint:all</arg>
+              </compilerArgs>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
     <!-- Activating this profile produces an aggregate Javadoc for all modules
          in one shot. Delombok sources are needed so that Lombok-generated types
          (builders, etc.) are visible to the Javadoc tool.

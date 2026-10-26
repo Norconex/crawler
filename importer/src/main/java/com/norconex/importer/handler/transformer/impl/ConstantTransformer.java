@@ -16,10 +16,8 @@ package com.norconex.importer.handler.transformer.impl;
 
 import static java.util.Optional.ofNullable;
 
-import com.norconex.commons.lang.config.Configurable;
 import com.norconex.importer.handler.ConfigurableDocHandler;
 import com.norconex.commons.lang.map.PropertySetter;
-import com.norconex.importer.handler.DocHandler;
 import com.norconex.importer.handler.DocHandlerContext;
 
 import lombok.Data;

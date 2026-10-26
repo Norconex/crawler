@@ -17,9 +17,7 @@ package com.norconex.importer.handler.parser.impl;
 import java.io.IOException;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.norconex.commons.lang.config.Configurable;
 import com.norconex.importer.handler.ConfigurableDocHandler;
-import com.norconex.importer.handler.DocHandler;
 import com.norconex.importer.handler.DocHandlerContext;
 import com.norconex.importer.handler.parser.ParseState;
 import com.norconex.importer.handler.transformer.impl.ExternalTransformer;

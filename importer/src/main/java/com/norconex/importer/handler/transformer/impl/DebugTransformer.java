@@ -27,9 +27,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.event.Level;
 
 import com.norconex.commons.lang.Slf4jUtil;
-import com.norconex.commons.lang.config.Configurable;
 import com.norconex.importer.handler.ConfigurableDocHandler;
-import com.norconex.importer.handler.DocHandler;
 import com.norconex.importer.handler.DocHandlerContext;
 
 import lombok.Data;
