@@ -38,6 +38,7 @@ import com.microsoft.playwright.Playwright;
 import com.microsoft.playwright.Response;
 import com.microsoft.playwright.options.Proxy;
 import com.microsoft.playwright.options.WaitUntilState;
+import com.norconex.commons.lang.encrypt.EncryptionUtil;
 import com.norconex.commons.lang.file.ContentType;
 import com.norconex.crawler.core.fetch.AbstractFetcher;
 import com.norconex.crawler.core.fetch.FetchException;
@@ -334,9 +335,7 @@ public class PlaywrightFetcher
 
         var contextOpts = new Browser.NewContextOptions()
                 .setIgnoreHTTPSErrors(cfg.isIgnoreHttpsErrors());
-        if (StringUtils.isNotBlank(cfg.getUserAgent())) {
-            contextOpts.setUserAgent(cfg.getUserAgent());
-        }
+        applyContextOptions(contextOpts, cfg);
         if (cfg.getWindowSize() != null) {
             contextOpts.setViewportSize(
                     cfg.getWindowSize().width,
@@ -415,6 +414,52 @@ public class PlaywrightFetcher
                     .reasonPhrase("Playwright fetch error: " + e.getMessage())
                     .exception(e)
                     .build();
+        }
+    }
+
+    /**
+     * What the configuration says of the browser's identity and behavior:
+     * who it says it is, where and in which language, and how it treats
+     * scripts, service workers and authentication.
+     */
+    static void applyContextOptions(
+            Browser.NewContextOptions opts, PlaywrightFetcherConfig cfg) {
+        if (StringUtils.isNotBlank(cfg.getUserAgent())) {
+            opts.setUserAgent(cfg.getUserAgent());
+        }
+        if (StringUtils.isNotBlank(cfg.getLocale())) {
+            opts.setLocale(cfg.getLocale());
+        }
+        if (StringUtils.isNotBlank(cfg.getTimezoneId())) {
+            opts.setTimezoneId(cfg.getTimezoneId());
+        }
+        if (!cfg.isJavaScriptEnabled()) {
+            opts.setJavaScriptEnabled(false);
+        }
+        if (cfg.isBypassCsp()) {
+            opts.setBypassCSP(true);
+        }
+        if (cfg.isBlockServiceWorkers()) {
+            opts.setServiceWorkers(
+                    com.microsoft.playwright.options.ServiceWorkerPolicy.BLOCK);
+        }
+        if (cfg.isMobile()) {
+            opts.setIsMobile(true).setHasTouch(true);
+        }
+        if (cfg.getColorScheme() != null) {
+            opts.setColorScheme(com.microsoft.playwright.options.ColorScheme
+                    .valueOf(cfg.getColorScheme().name()));
+        }
+        var user = cfg.getHttpCredentials().getUsername();
+        if (StringUtils.isNotBlank(user)) {
+            opts.setHttpCredentials(user, EncryptionUtil.decryptPassword(
+                    cfg.getHttpCredentials()));
+        }
+        if (!cfg.getExtraHttpHeaders().isEmpty()) {
+            opts.setExtraHTTPHeaders(cfg.getExtraHttpHeaders());
+        }
+        if (cfg.getStorageStatePath() != null) {
+            opts.setStorageStatePath(cfg.getStorageStatePath());
         }
     }
 

@@ -19,10 +19,13 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.norconex.commons.lang.collection.CollectionUtil;
 import com.norconex.commons.lang.net.ProxySettings;
+import com.norconex.commons.lang.security.Credentials;
 import com.norconex.crawler.core.fetch.BaseFetcherConfig;
 
 import lombok.Data;
@@ -119,6 +122,79 @@ public class PlaywrightFetcherConfig extends BaseFetcherConfig {
     private String userAgent;
 
     /**
+     * The preferred color scheme pages are told about (the
+     * {@code prefers-color-scheme} media query). Default is {@code null}
+     * (the browser's own).
+     */
+    public enum ColorScheme {
+        LIGHT, DARK, NO_PREFERENCE;
+    }
+
+    /**
+     * The locale the browser reports (e.g., {@code fr-CA}). It sets the
+     * {@code Accept-Language} header and the page's {@code navigator.language}.
+     * Default is {@code null} (the browser's own).
+     */
+    private String locale;
+
+    /**
+     * The timezone the browser reports (an IANA name, e.g.,
+     * {@code America/Toronto}). Default is {@code null} (the system's).
+     */
+    private String timezoneId;
+
+    /**
+     * Whether the browser runs the page's JavaScript. Turn off to read pages
+     * as they are served, without any script changing them. Default is
+     * {@code true}.
+     */
+    private boolean javaScriptEnabled = true;
+
+    /**
+     * Whether to ignore the page's Content-Security-Policy, so scripts added
+     * by {@link #getEarlyPageScript()} or {@link #getLatePageScript()} are
+     * not blocked by it. Default is {@code false}.
+     */
+    private boolean bypassCsp;
+
+    /**
+     * Whether to keep service workers from registering. A service worker can
+     * answer requests itself, so what is read may not be what the site
+     * serves. Default is {@code false}.
+     */
+    private boolean blockServiceWorkers;
+
+    /**
+     * Whether to behave as a mobile device: the page is told it is mobile
+     * and the screen is touch-enabled. Combine with a mobile user agent and a
+     * small window size. Default is {@code false}.
+     */
+    private boolean mobile;
+
+    /**
+     * The preferred color scheme. Default is {@code null}.
+     */
+    private ColorScheme colorScheme;
+
+    /**
+     * The credentials the browser answers HTTP Basic or Digest
+     * authentication challenges with. Not sent unless the site asks.
+     */
+    private final Credentials httpCredentials = new Credentials();
+
+    /**
+     * Extra HTTP headers sent with every request.
+     */
+    private final Map<String, String> extraHttpHeaders = new HashMap<>();
+
+    /**
+     * A file Playwright wrote of a signed-in session (cookies and local
+     * storage, as saved by {@code context.storageState()}). The browser starts
+     * with that session. Default is {@code null}.
+     */
+    private Path storageStatePath;
+
+    /**
      * Optional slow-motion delay applied between Playwright operations.
      * Useful for debugging. Default is {@code null} (no delay).
      */
@@ -205,6 +281,43 @@ public class PlaywrightFetcherConfig extends BaseFetcherConfig {
      * local directory).
      */
     private PlaywrightScreenshotHandler screenshotHandler;
+
+    /**
+     * Gets the credentials for HTTP authentication challenges.
+     * @return credentials
+     */
+    public Credentials getHttpCredentials() {
+        return httpCredentials;
+    }
+
+    /**
+     * Sets the credentials for HTTP authentication challenges.
+     * @param credentials the credentials
+     * @return this config
+     */
+    public PlaywrightFetcherConfig setHttpCredentials(Credentials credentials) {
+        httpCredentials.copyFrom(credentials);
+        return this;
+    }
+
+    /**
+     * Returns an unmodifiable view of the extra HTTP headers.
+     * @return headers by name
+     */
+    public Map<String, String> getExtraHttpHeaders() {
+        return Collections.unmodifiableMap(extraHttpHeaders);
+    }
+
+    /**
+     * Sets the extra HTTP headers sent with every request.
+     * @param headers header names and values
+     * @return this config
+     */
+    public PlaywrightFetcherConfig
+            setExtraHttpHeaders(Map<String, String> headers) {
+        CollectionUtil.setAll(extraHttpHeaders, headers);
+        return this;
+    }
 
     /**
      * Returns an unmodifiable view of the browser launch arguments.

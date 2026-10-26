@@ -44,6 +44,15 @@ class PlaywrightFetcherConfigTest {
         c.setExecutablePath(Paths.get("/some/browser/path"));
         c.setIgnoreHttpsErrors(true);
         c.setUserAgent("TestBot/1.0 (+https://example.com/bot)");
+        c.setLocale("fr-CA");
+        c.setTimezoneId("America/Toronto");
+        c.setJavaScriptEnabled(false);
+        c.setBypassCsp(true);
+        c.setBlockServiceWorkers(true);
+        c.setMobile(true);
+        c.setColorScheme(PlaywrightFetcherConfig.ColorScheme.DARK);
+        c.setExtraHttpHeaders(java.util.Map.of("X-Test", "yes"));
+        c.setStorageStatePath(Paths.get("/some/session.json"));
         c.setSlowMo(Duration.ofMillis(100));
         c.setPageLoadTimeout(Duration.ofSeconds(15));
         c.setEarlyPageScript("document.title = 'early';");
@@ -94,5 +103,60 @@ class PlaywrightFetcherConfigTest {
             assertThatNoException().isThrownBy(
                     () -> BeanMapper.DEFAULT.assertWriteRead(f));
         }
+    }
+
+    @Test
+    void testContextOptionsFromConfig() {
+        var c = new PlaywrightFetcherConfig()
+                .setUserAgent("TestBot/1.0")
+                .setLocale("fr-CA")
+                .setTimezoneId("America/Toronto")
+                .setJavaScriptEnabled(false)
+                .setBypassCsp(true)
+                .setBlockServiceWorkers(true)
+                .setMobile(true)
+                .setColorScheme(PlaywrightFetcherConfig.ColorScheme.DARK)
+                .setExtraHttpHeaders(java.util.Map.of("X-Test", "yes"));
+        c.getHttpCredentials().setUsername("me").setPassword("secret");
+        var opts = new com.microsoft.playwright.Browser.NewContextOptions();
+
+        PlaywrightFetcher.applyContextOptions(opts, c);
+
+        org.assertj.core.api.Assertions.assertThat(opts.userAgent)
+                .isEqualTo("TestBot/1.0");
+        org.assertj.core.api.Assertions.assertThat(opts.locale)
+                .isEqualTo("fr-CA");
+        org.assertj.core.api.Assertions.assertThat(opts.timezoneId)
+                .isEqualTo("America/Toronto");
+        org.assertj.core.api.Assertions.assertThat(opts.javaScriptEnabled)
+                .isFalse();
+        org.assertj.core.api.Assertions.assertThat(opts.bypassCSP).isTrue();
+        org.assertj.core.api.Assertions.assertThat(opts.serviceWorkers)
+                .isEqualTo(
+                        com.microsoft.playwright.options.ServiceWorkerPolicy.BLOCK);
+        org.assertj.core.api.Assertions.assertThat(opts.isMobile).isTrue();
+        org.assertj.core.api.Assertions.assertThat(opts.hasTouch).isTrue();
+        org.assertj.core.api.Assertions.assertThat(opts.colorScheme)
+                .contains(com.microsoft.playwright.options.ColorScheme.DARK);
+        org.assertj.core.api.Assertions
+                .assertThat(opts.httpCredentials.username).isEqualTo("me");
+        org.assertj.core.api.Assertions.assertThat(opts.extraHTTPHeaders)
+                .containsEntry("X-Test", "yes");
+    }
+
+    @Test
+    void testContextOptionsLeftAloneByDefault() {
+        var opts = new com.microsoft.playwright.Browser.NewContextOptions();
+
+        PlaywrightFetcher.applyContextOptions(opts,
+                new PlaywrightFetcherConfig());
+
+        org.assertj.core.api.Assertions.assertThat(opts.userAgent).isNull();
+        org.assertj.core.api.Assertions.assertThat(opts.javaScriptEnabled)
+                .isNull();
+        org.assertj.core.api.Assertions.assertThat(opts.serviceWorkers)
+                .isNull();
+        org.assertj.core.api.Assertions.assertThat(opts.httpCredentials)
+                .isNull();
     }
 }
