@@ -29,7 +29,6 @@ import com.norconex.commons.lang.map.Properties;
 import com.norconex.crawler.core.fetch.FetchRequest;
 import com.norconex.crawler.core.session.CrawlerSession;
 import com.norconex.crawler.fs.doc.FsDocMetadata;
-import com.norconex.crawler.fs.fetch.FileFetchRequest;
 import com.norconex.crawler.fs.fetch.impl.AbstractNioFetcher;
 import com.norconex.importer.doc.Doc;
 

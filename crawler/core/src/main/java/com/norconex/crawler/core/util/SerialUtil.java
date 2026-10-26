@@ -24,7 +24,6 @@ import java.nio.charset.StandardCharsets;
 import org.apache.commons.lang3.SerializationException;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
 import lombok.NonNull;
 import tools.jackson.core.JacksonException;
