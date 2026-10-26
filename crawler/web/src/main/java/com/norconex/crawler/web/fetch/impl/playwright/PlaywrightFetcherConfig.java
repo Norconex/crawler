@@ -111,6 +111,14 @@ public class PlaywrightFetcherConfig extends BaseFetcherConfig {
     private boolean ignoreHttpsErrors;
 
     /**
+     * The user agent the browser sends, in place of its own. It is set on the
+     * browser context, so both the requests and the page's own
+     * {@code navigator.userAgent} carry it. Default is {@code null} (the
+     * browser's own).
+     */
+    private String userAgent;
+
+    /**
      * Optional slow-motion delay applied between Playwright operations.
      * Useful for debugging. Default is {@code null} (no delay).
      */

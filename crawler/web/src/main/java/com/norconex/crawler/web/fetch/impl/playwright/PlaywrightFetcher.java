@@ -334,6 +334,9 @@ public class PlaywrightFetcher
 
         var contextOpts = new Browser.NewContextOptions()
                 .setIgnoreHTTPSErrors(cfg.isIgnoreHttpsErrors());
+        if (StringUtils.isNotBlank(cfg.getUserAgent())) {
+            contextOpts.setUserAgent(cfg.getUserAgent());
+        }
         if (cfg.getWindowSize() != null) {
             contextOpts.setViewportSize(
                     cfg.getWindowSize().width,
@@ -424,6 +427,7 @@ public class PlaywrightFetcher
                 doc.setContentType(ContentType.HTML);
             }
             return b.processingOutcome(ProcessingOutcome.NEW)
+                    .userAgent(configuration.getUserAgent())
                     .statusCode(200)
                     .reasonPhrase("OK")
                     .build();
@@ -461,7 +465,8 @@ public class PlaywrightFetcher
             doc.setContentType(ContentType.HTML);
         }
 
-        b.statusCode(statusCode).reasonPhrase(reasonPhrase);
+        b.statusCode(statusCode).reasonPhrase(reasonPhrase)
+                .userAgent(configuration.getUserAgent());
         if (statusCode >= 200 && statusCode < 300) {
             b.processingOutcome(ProcessingOutcome.NEW);
         } else {

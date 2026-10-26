@@ -43,6 +43,7 @@ class PlaywrightFetcherConfigTest {
         c.setHeadless(false);
         c.setExecutablePath(Paths.get("/some/browser/path"));
         c.setIgnoreHttpsErrors(true);
+        c.setUserAgent("TestBot/1.0 (+https://example.com/bot)");
         c.setSlowMo(Duration.ofMillis(100));
         c.setPageLoadTimeout(Duration.ofSeconds(15));
         c.setEarlyPageScript("document.title = 'early';");
