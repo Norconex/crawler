@@ -31,6 +31,25 @@ An optional, user-supplied label for this step in the importer pipeline. It has 
 
 Path to a [Tika configuration file](https://tika.apache.org/3.2.3/configuring.html), giving you Tika's own parser selection and settings. Without it, Tika's defaults apply.
 
+### poolSize
+
+Number of independent Apache Tika parser instances created when this handler
+initializes. The default, `0`, preserves the shared parser used in earlier
+releases. Set a positive integer to enable pooling. Negative values are invalid.
+
+Each instance handles one top-level document at a time. When all instances are
+busy, parsing waits until one becomes available. Embedded documents reuse the
+parent's instance, so `1` also supports nested documents. Instances return to
+the pool after successful or failed parsing. Closing the handler wakes waiting
+callers with an error and releases idle parser references.
+
+For example, `"poolSize": 2` allows up to two documents to parse concurrently
+per handler (and per importer/node). More crawler threads can still fetch and
+run other handlers. Each pool entry has its own parser graph and configuration;
+a larger pool increases initialization time and memory use. The setting is
+captured at handler initialization; apply configuration changes before starting
+the importer.
+
 ## Examples
 
 The following example defined a TikaParser with a custom configuration file.
@@ -39,6 +58,7 @@ The following example defined a TikaParser with a custom configuration file.
   json={{
     "handler": {
       "class": "TikaParser",
+      "poolSize": 2,
       "tikaConfigFile": "/path/to/tika-config.xml"
     }
   }}

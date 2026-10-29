@@ -74,6 +74,25 @@ whether it is ever used, so leaving it off avoids startup delays or failures
 when that network call cannot complete. See
 [SentimentConfig](./SentimentConfig).
 
+### poolSize
+
+Number of independent Apache Tika parser instances created when this handler
+initializes. The default, `0`, preserves the shared parser used in earlier
+releases. Set a positive integer to enable pooling. Negative values are invalid.
+
+Each instance handles one top-level document at a time. When all instances are
+busy, parsing waits until one becomes available. Embedded documents reuse the
+parent's instance, so `1` also supports nested documents. Instances return to
+the pool after successful or failed parsing. Closing the handler wakes waiting
+callers with an error and releases idle parser references.
+
+For example, `"poolSize": 2` allows up to two documents to parse concurrently
+per handler (and per importer/node). More crawler threads can still fetch and
+run other handlers. Each pool entry has its own parser graph and configuration;
+a larger pool increases initialization time and memory use. The setting is
+captured at handler initialization; apply configuration changes before starting
+the importer.
+
 ## Examples
 
 Saves documents that fail to parse into a directory for inspection.
@@ -82,6 +101,7 @@ Saves documents that fail to parse into a directory for inspection.
   json={{
     "handler": {
       "class": "DefaultParser",
+      "poolSize": 2,
       "errorsSaveDir": "C:\\reports\\errors"
     }
   }}

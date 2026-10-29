@@ -45,6 +45,7 @@ class DefaultParserTest {
                         .setContentTypeMatcher(TextMatcher.regex(".*blah.*"))
                         .setLanguage("eng+fra")
                         .setTesseractPath(Path.of("/tmp/blah")),
+                cfg -> cfg.setPoolSize(2),
                 cfg -> cfg.setErrorsSaveDir(Path.of("/tmp/saveDir")));
 
         assertThatNoException()

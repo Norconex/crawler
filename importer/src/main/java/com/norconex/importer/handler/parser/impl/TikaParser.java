@@ -31,10 +31,8 @@ import org.apache.tika.sax.BodyContentHandler;
 import org.xml.sax.SAXException;
 
 import com.norconex.commons.lang.EqualsUtil;
-import com.norconex.commons.lang.config.Configurable;
 import com.norconex.importer.handler.ConfigurableDocHandler;
 import com.norconex.commons.lang.map.Properties;
-import com.norconex.importer.handler.DocHandler;
 import com.norconex.importer.handler.DocHandlerContext;
 import com.norconex.importer.handler.parser.ParseState;
 
@@ -54,15 +52,29 @@ public class TikaParser
     @Getter
     private final TikaParserConfig configuration = new TikaParserConfig();
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private Parser parser;
 
     @Override
     public void init() throws IOException {
+        parser = TikaParserPool.create(
+                configuration.getPoolSize(), this::createTikaParser);
+    }
+
+    private Parser createTikaParser() throws IOException {
         try {
-            parser = new AutoDetectParser(
+            return new AutoDetectParser(
                     new TikaConfig(configuration.getTikaConfigFile()));
         } catch (TikaException | IOException | SAXException e) {
             throw new IOException("Could not initialize TikaParser.", e);
+        }
+    }
+
+    @Override
+    public void close() {
+        if (parser instanceof TikaParserPool pool) {
+            pool.close();
         }
     }
 
