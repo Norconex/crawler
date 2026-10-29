@@ -107,8 +107,13 @@ class ParserPoolIntegrationTest {
     }
 
     private void checkConcurrentHtml(DocHandler parser) throws Exception {
+        checkConcurrentHtml(parser, 6);
+    }
+
+    private void checkConcurrentHtml(DocHandler parser, int workers)
+            throws Exception {
         parser.init();
-        try (var executor = Executors.newFixedThreadPool(6)) {
+        try (var executor = Executors.newFixedThreadPool(workers)) {
             var results = new ArrayList<Future<?>>();
             for (int i = 0; i < 12; i++) {
                 var id = i;

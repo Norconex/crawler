@@ -93,6 +93,21 @@ a larger pool increases initialization time and memory use. The setting is
 captured at handler initialization; apply configuration changes before starting
 the importer.
 
+### xmlParserPoolSize
+
+Optional positive size of Tika's JVM-wide reusable SAX parser and DOM builder
+pools. For example, `16` provides headroom for a 12-worker HTML crawl. Omission
+preserves Tika's current size (normally 10). This is independent of `poolSize`,
+which controls complete document parser instances.
+
+Configure this before starting the importer. The first initialized
+`DefaultParser` fixes the XML pool size for the JVM; later omitted values inherit
+that size, matching explicit values reuse it, and conflicting explicit values
+fail initialization. A default parser initialized first with no value also fixes
+the existing size. Restart the JVM to change it. The effective size is logged
+once at startup. Raw Tika configuration files must not resize these shared pools
+after initialization.
+
 ## Examples
 
 Saves documents that fail to parse into a directory for inspection.
@@ -102,6 +117,7 @@ Saves documents that fail to parse into a directory for inspection.
     "handler": {
       "class": "DefaultParser",
       "poolSize": 2,
+      "xmlParserPoolSize": 16,
       "errorsSaveDir": "C:\\reports\\errors"
     }
   }}

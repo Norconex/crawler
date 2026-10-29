@@ -84,6 +84,7 @@ public class DefaultParser
     @Override
     public void init() throws IOException {
 
+        TikaXmlParserPool.configure(configuration.getXmlParserPoolSize());
         fixTikaInitWarning();
         tikaParser = TikaParserPool.create(
                 configuration.getPoolSize(), this::createTikaParser);
