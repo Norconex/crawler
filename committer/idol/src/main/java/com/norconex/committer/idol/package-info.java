@@ -16,4 +16,7 @@
  * Provides the classes necessary to commit to
  * an IDOL server.
  */
+@ClassIndex
 package com.norconex.committer.idol;
+
+import com.norconex.commons.lang.ClassIndex;
