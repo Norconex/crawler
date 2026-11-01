@@ -331,7 +331,9 @@ public class RunProgressWriter implements EventListener<Event> {
                 counts.processed(),
                 counts.baseline(),
                 counts.sessionEventCounts(),
-                counts.runEventCounts());
+                counts.runEventCounts(),
+                session.getCrawlSessionId(),
+                session.isResumed());
         writer.write(jsonMapper.writeValueAsString(record));
         writer.write('\n');
         // Flushed per record on purpose: these are seconds apart at most, and
@@ -412,6 +414,12 @@ public class RunProgressWriter implements EventListener<Event> {
      * @param runEventCounts the share of those totals belonging to this run,
      *                   which differs from the session's only when a crawl
      *                   was stopped and resumed
+     * @param crawlSessionId which begin-to-end crawl this run is part of. It
+     *                   stays the same across the runs of a stopped and
+     *                   resumed crawl, and a new crawl gets a new one, so a
+     *                   consumer can group runs by it instead of guessing
+     * @param resumed    whether this run continued an earlier one of the same
+     *                   session rather than starting it
      */
     public record ProgressRecord(
             String type,
@@ -423,6 +431,8 @@ public class RunProgressWriter implements EventListener<Event> {
             long processed,
             long baseline,
             Map<String, Long> sessionEventCounts,
-            Map<String, Long> runEventCounts) {
+            Map<String, Long> runEventCounts,
+            String crawlSessionId,
+            boolean resumed) {
     }
 }

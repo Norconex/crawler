@@ -111,7 +111,9 @@ public final class RunSummaryWriter {
         var summary = new RunSummary(
                 session.getCrawlContext().getId(),
                 finalState == null ? null : finalState.name(),
-                countByOutcome(session));
+                countByOutcome(session),
+                session.getCrawlSessionId(),
+                session.isResumed());
 
         var json = JsonMapper.builder().build()
                 .writerWithDefaultPrettyPrinter()
@@ -161,10 +163,15 @@ public final class RunSummaryWriter {
      * @param crawlerId the crawler that ran
      * @param state     the state it ended in
      * @param counts    number of documents per processing outcome
+     * @param crawlSessionId which begin-to-end crawl this run is part of; the
+     *                  same across the runs of a stopped and resumed crawl
+     * @param resumed   whether this run continued an earlier one of the session
      */
     public record RunSummary(
             String crawlerId,
             String state,
-            Map<String, Long> counts) {
+            Map<String, Long> counts,
+            String crawlSessionId,
+            boolean resumed) {
     }
 }

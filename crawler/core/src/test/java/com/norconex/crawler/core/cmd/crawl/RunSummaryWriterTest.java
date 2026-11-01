@@ -69,6 +69,7 @@ class RunSummaryWriterTest {
 
         var session = mock(CrawlerSession.class);
         when(session.getCrawlContext()).thenReturn(ctx);
+        when(session.getCrawlSessionId()).thenReturn("cs-test");
         return session;
     }
 
@@ -107,6 +108,10 @@ class RunSummaryWriterTest {
         assertThat(counts.get("MODIFIED").asLong()).isEqualTo(2);
         assertThat(counts.get("UNMODIFIED").asLong()).isEqualTo(1);
         assertThat(counts.propertyNames()).hasSize(3);
+
+        // So a reader can tell which crawl session the run belonged to.
+        assertThat(json.get("crawlSessionId").asString()).isEqualTo("cs-test");
+        assertThat(json.get("resumed").asBoolean()).isFalse();
     }
 
     @Test

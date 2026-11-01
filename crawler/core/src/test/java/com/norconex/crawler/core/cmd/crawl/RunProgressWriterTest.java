@@ -59,6 +59,7 @@ class RunProgressWriterTest {
         when(ctx.getMetrics()).thenReturn(metrics);
         var session = mock(CrawlerSession.class);
         when(session.getCrawlContext()).thenReturn(ctx);
+        when(session.getCrawlSessionId()).thenReturn("cs-test");
         return session;
     }
 
@@ -204,6 +205,22 @@ class RunProgressWriterTest {
         assertThat(eventCounts.get("SOME_FUTURE_EVENT").asLong())
                 .as("an event this build never heard of still gets through")
                 .isEqualTo(7);
+    }
+
+    @Test
+    void eachLineSaysWhichCrawlSessionItBelongsToAndWhetherItResumedOne() {
+        var file = tempDir.resolve("progress.ndjson");
+        var writer = new RunProgressWriter(file, NEVER, NEVER);
+        counts(5, 1, 20);
+        var resumedSession = session();
+        when(resumedSession.isResumed()).thenReturn(true);
+
+        writer.start(resumedSession);
+        writer.sample();
+
+        var json = JsonMapper.builder().build().readTree(lines(file).get(0));
+        assertThat(json.get("crawlSessionId").asString()).isEqualTo("cs-test");
+        assertThat(json.get("resumed").asBoolean()).isTrue();
     }
 
     @Test
