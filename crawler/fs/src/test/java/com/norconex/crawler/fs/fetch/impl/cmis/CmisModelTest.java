@@ -285,11 +285,12 @@ class CmisModelTest {
           """);
         var mockSession = mock(CmisAtomSession.class);
         when(mockSession.getDocumentByPath("/unknown")).thenReturn(unknownXml);
-        var fakeFs = new CmisFileSystem(provider, "http://localhost/fake",
-                mockSession);
-        assertThatThrownBy(
-                () -> provider.checkAccess(fakeFs.getPath("/unknown")))
-                        .isInstanceOf(NoSuchFileException.class);
+        try (var fakeFs = new CmisFileSystem(
+                provider, "http://localhost/fake", mockSession)) {
+            assertThatThrownBy(
+                    () -> provider.checkAccess(fakeFs.getPath("/unknown")))
+                            .isInstanceOf(NoSuchFileException.class);
+        }
 
         assertThat(provider.isHidden(doc)).isFalse();
         assertThat(provider.isSameFile(doc, doc)).isTrue();

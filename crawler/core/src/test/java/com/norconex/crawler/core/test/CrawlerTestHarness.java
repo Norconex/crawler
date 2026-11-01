@@ -59,6 +59,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class CrawlerTestHarness implements Closeable {
 
     private record SchemaDropResult(

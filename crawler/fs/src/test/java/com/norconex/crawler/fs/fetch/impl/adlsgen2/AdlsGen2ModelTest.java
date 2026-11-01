@@ -31,6 +31,7 @@ import java.nio.file.AccessMode;
 import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.nio.file.WatchEvent;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
@@ -54,6 +55,7 @@ import com.azure.storage.file.datalake.models.PathItem;
 import com.azure.storage.file.datalake.models.PathProperties;
 import com.norconex.crawler.fs.doc.FsDocMetadata;
 
+@SuppressWarnings("null")
 class AdlsGen2ModelTest {
 
     @Test
@@ -229,8 +231,9 @@ class AdlsGen2ModelTest {
         assertThat(child).isNotEqualTo(cousin);
         assertThatThrownBy(() -> child.relativize(otherFs.getPath("/a/b")))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> root.register(null, null))
-                .isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(
+                () -> root.register(null, (WatchEvent.Kind<?>[]) null))
+                        .isInstanceOf(UnsupportedOperationException.class);
         assertThatThrownBy(fs::getUserPrincipalLookupService)
                 .isInstanceOf(UnsupportedOperationException.class);
         assertThatThrownBy(fs::newWatchService)
@@ -254,7 +257,8 @@ class AdlsGen2ModelTest {
                 new PathItem("etag2", OffsetDateTime.now(), 0L,
                         null, true, "root/folder", null, null));
         @SuppressWarnings("unchecked")
-        var iterable = mock(PagedIterable.class);
+        PagedIterable<PathItem> iterable =
+                mock(PagedIterable.class);
         when(iterable.iterator()).thenReturn(items.iterator());
         when(client.listPaths(any(ListPathsOptions.class), isNull()))
                 .thenReturn(iterable);
@@ -413,7 +417,8 @@ class AdlsGen2ModelTest {
                 .hasMessageContaining("Could not read ADLS Gen2 file");
 
         @SuppressWarnings("unchecked")
-        var iterable = mock(PagedIterable.class);
+        PagedIterable<PathItem> iterable =
+                mock(PagedIterable.class);
         when(iterable.iterator()).thenReturn(
                 java.util.Arrays.<PathItem>asList(
                         null,

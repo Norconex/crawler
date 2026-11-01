@@ -45,6 +45,7 @@ import com.norconex.crawler.fs.fetch.FsPath;
 import com.norconex.importer.doc.Doc;
 
 @Timeout(30)
+@SuppressWarnings("null")
 class ArchiveFetcherTest {
 
     @TempDir

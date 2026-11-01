@@ -53,11 +53,11 @@ class DriverSessionTest {
     }
 
     @Test
-    void testDriverReturnsWrappedDriver() {
+    void testDriverReturnsWrappedDriver() throws Exception {
         var driver = mock(WebDriver.class);
-        var session = new DriverSession(driver, () -> {});
-
-        assertThat(session.driver()).isSameAs(driver);
+        try (var session = new DriverSession(driver, () -> {})) {
+            assertThat(session.driver()).isSameAs(driver);
+        }
     }
 
     @Test
@@ -87,8 +87,8 @@ class DriverSessionTest {
         var driver1 = mock(WebDriver.class);
         var driver2 = mock(WebDriver.class);
         // Create sessions so they register in OPEN_SESSIONS
-        var session1 = DriverSession.of(driver1);
-        var session2 = DriverSession.of(driver2);
+        DriverSession.of(driver1);
+        DriverSession.of(driver2);
 
         DriverSession.closeAllOpenSessions();
 

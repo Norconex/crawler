@@ -35,6 +35,7 @@ import com.norconex.crawler.fs.fetch.FsPath;
 import com.norconex.importer.doc.Doc;
 
 @Timeout(30)
+@SuppressWarnings("null")
 class M365GraphFetcherIT {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();

@@ -15,7 +15,6 @@
 package com.norconex.crawler.core.ledger;
 
 import java.io.Serializable;
-import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -61,10 +60,12 @@ public enum ProcessingStatus implements Serializable {
         if (status == null) {
             return null;
         }
-        return Stream.of(ProcessingStatus.values())
-                .filter(st -> st.name().equals(status))
-                .findFirst()
-                .orElse(null);
+        for (var st : values()) {
+            if (st.name().equals(status)) {
+                return st;
+            }
+        }
+        return null;
     }
 
 }

@@ -63,7 +63,7 @@ public class WebCrawlingExtension implements ParameterResolver {
     public Object resolveParameter(
             ParameterContext paramCtx, ExtensionContext extCtx)
             throws ParameterResolutionException {
-        var config = extCtx.getStore(NAMESPACE).getOrComputeIfAbsent(
+        var config = extCtx.getStore(NAMESPACE).computeIfAbsent(
                 CONFIG_KEY, k -> buildConfig(extCtx), WebCrawlerConfig.class);
         var type = paramCtx.getParameter().getType();
 
@@ -90,7 +90,7 @@ public class WebCrawlingExtension implements ParameterResolver {
         // Register temp directory cleanup after the test method completes
         extCtx.getStore(NAMESPACE).put(
                 CONFIG_KEY + ".workDir",
-                (ExtensionContext.Store.CloseableResource) () -> {
+                (AutoCloseable) () -> {
                     try (var walk = Files.walk(tempDir)) {
                         walk.sorted(Comparator.reverseOrder())
                                 .forEach(p -> p.toFile().delete());

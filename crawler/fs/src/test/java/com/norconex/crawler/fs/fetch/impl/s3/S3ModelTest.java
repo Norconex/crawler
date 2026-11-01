@@ -48,6 +48,7 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Iterable;
 
+@SuppressWarnings("null")
 class S3ModelTest {
 
     private S3FileSystemProvider provider;
@@ -310,7 +311,6 @@ class S3ModelTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void testNon404ErrorsAreWrapped() {
         var notPermitted = S3Exception.builder().statusCode(403).build();
         when(client.getObject(any(

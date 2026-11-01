@@ -53,6 +53,7 @@ import com.azure.storage.blob.models.BlobStorageException;
 import com.azure.storage.blob.models.ListBlobsOptions;
 import com.azure.storage.blob.specialized.BlobInputStream;
 
+@SuppressWarnings("null")
 class AzureBlobModelTest {
 
     private AzureBlobFileSystemProvider provider;
@@ -292,7 +293,8 @@ class AzureBlobModelTest {
         assertThatThrownBy(() -> provider.newInputStream(notFoundPath))
                 .isInstanceOf(NoSuchFileException.class);
 
-        var listing = mock(PagedIterable.class);
+        @SuppressWarnings("unchecked")
+        PagedIterable<BlobItem> listing = mock(PagedIterable.class);
         var dirItem = mock(BlobItem.class);
         when(dirItem.isPrefix()).thenReturn(true);
         when(dirItem.getName()).thenReturn("folder/");
@@ -353,7 +355,8 @@ class AzureBlobModelTest {
     void testDirectoryListingBranchCasesAndReadAttributesErrorPaths()
             throws Exception {
         var dirPath = fs.getPath("/dir");
-        var listing = mock(PagedIterable.class);
+        @SuppressWarnings("unchecked")
+        PagedIterable<BlobItem> listing = mock(PagedIterable.class);
 
         var blankPrefix = mock(BlobItem.class);
         when(blankPrefix.isPrefix()).thenReturn(true);
@@ -473,7 +476,7 @@ class AzureBlobModelTest {
     @SafeVarargs
     private static PagedIterable<BlobItem> mockPagedOf(BlobItem... items) {
         @SuppressWarnings("unchecked")
-        var paged = mock(PagedIterable.class);
+        PagedIterable<BlobItem> paged = mock(PagedIterable.class);
         when(paged.iterator())
                 .thenReturn(Arrays.asList(items).iterator());
         return paged;

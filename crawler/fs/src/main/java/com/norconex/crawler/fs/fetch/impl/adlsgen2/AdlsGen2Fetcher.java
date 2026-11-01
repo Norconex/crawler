@@ -22,6 +22,7 @@ import java.nio.file.Path;
 import java.util.Locale;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 
 import com.azure.storage.common.StorageSharedKeyCredential;
 import com.azure.storage.file.datalake.DataLakeFileSystemClient;
@@ -113,7 +114,7 @@ public class AdlsGen2Fetcher extends AbstractNioFetcher<AdlsGen2FetcherConfig> {
         var account = location.account();
         if (creds.isSet()
                 && StringUtils.isNotBlank(creds.getUsername())
-                && !StringUtils.equalsIgnoreCase(creds.getUsername(),
+                && !Strings.CI.equals(creds.getUsername(),
                         account)) {
             throw new IllegalArgumentException(
                     "ADLS Gen2 credentials username must match the "
@@ -125,7 +126,7 @@ public class AdlsGen2Fetcher extends AbstractNioFetcher<AdlsGen2FetcherConfig> {
                 .fileSystemName(location.fileSystem());
 
         if (StringUtils.isNotBlank(cfg.getSasToken())) {
-            builder.sasToken(StringUtils.removeStart(cfg.getSasToken(), "?"));
+            builder.sasToken(Strings.CS.removeStart(cfg.getSasToken(), "?"));
         } else if (creds.isSet()) {
             builder.credential(new StorageSharedKeyCredential(
                     account,

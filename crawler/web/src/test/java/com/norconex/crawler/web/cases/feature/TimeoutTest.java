@@ -40,6 +40,7 @@ import org.junit.jupiter.api.Timeout;
 // Test for https://github.com/Norconex/collector-http/issues/316
 @MockServerSettings
 @Timeout(30)
+@SuppressWarnings("null")
 class TimeoutTest {
 
     private final String basePath = "/timeout";

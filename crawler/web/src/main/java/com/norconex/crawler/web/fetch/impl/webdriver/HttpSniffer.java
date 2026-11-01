@@ -18,9 +18,9 @@ import static io.netty.handler.codec.http.HttpHeaderNames.USER_AGENT;
 import static java.util.Optional.ofNullable;
 
 import java.net.InetSocketAddress;
+import java.time.Duration;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -87,7 +87,7 @@ public class HttpSniffer implements Configurable<HttpSnifferConfig> {
     private final Cache<String,
             CompletableFuture<SniffedResponseHeaders>> sniffedHeaders =
                     CacheBuilder.newBuilder()
-                            .expireAfterWrite(5, TimeUnit.MINUTES)
+                            .expireAfterWrite(Duration.ofMinutes(5))
                             .build();
 
     @Getter

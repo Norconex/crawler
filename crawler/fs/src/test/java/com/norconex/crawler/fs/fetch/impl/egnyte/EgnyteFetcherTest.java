@@ -48,6 +48,7 @@ import com.norconex.crawler.fs.fetch.FolderPathsFetchResponse;
 import com.norconex.importer.doc.Doc;
 
 @Timeout(30)
+@SuppressWarnings("null")
 class EgnyteFetcherTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();

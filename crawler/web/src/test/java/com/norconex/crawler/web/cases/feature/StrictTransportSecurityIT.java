@@ -50,6 +50,7 @@ import com.norconex.crawler.web.stubs.CrawlerConfigStubs;
 @MockServerSettings
 @Timeout(180)
 @Isolated
+@SuppressWarnings("null")
 class StrictTransportSecurityIT {
 
     @TempDir

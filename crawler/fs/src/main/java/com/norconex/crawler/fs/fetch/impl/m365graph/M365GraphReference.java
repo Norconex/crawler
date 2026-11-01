@@ -21,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 
 record M365GraphReference(
         Kind kind,
@@ -323,7 +324,7 @@ record M365GraphReference(
             }
             var k = pair.substring(0, idx);
             var v = pair.substring(idx + 1);
-            if (StringUtils.equals(k, key)) {
+            if (Strings.CS.equals(k, key)) {
                 return URLDecoder.decode(v, StandardCharsets.UTF_8);
             }
         }

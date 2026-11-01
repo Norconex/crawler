@@ -21,6 +21,7 @@ import java.net.URI;
 import java.util.Locale;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobContainerClientBuilder;
@@ -93,7 +94,7 @@ public class AzureBlobFetcher
         var account = location.account();
         if (creds.isSet()
                 && StringUtils.isNotBlank(creds.getUsername())
-                && !StringUtils.equalsIgnoreCase(creds.getUsername(),
+                && !Strings.CI.equals(creds.getUsername(),
                         account)) {
             throw new IllegalArgumentException(
                     "Azure Blob credentials username must match the "
@@ -105,7 +106,7 @@ public class AzureBlobFetcher
                 .containerName(location.container());
 
         if (StringUtils.isNotBlank(cfg.getSasToken())) {
-            builder.sasToken(StringUtils.removeStart(cfg.getSasToken(), "?"));
+            builder.sasToken(Strings.CS.removeStart(cfg.getSasToken(), "?"));
         } else if (creds.isSet()) {
             builder.credential(new StorageSharedKeyCredential(
                     account,

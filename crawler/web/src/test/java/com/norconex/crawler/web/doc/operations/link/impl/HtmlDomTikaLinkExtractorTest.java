@@ -45,6 +45,7 @@ import com.norconex.crawler.web.stubs.CrawlDocStubs;
  * Tests {@link LinkExtractor} implementations that focuses on HTML or
  * HTML-like web pages.
  */
+@SuppressWarnings("null")
 class HtmlDomTikaLinkExtractorTest {
 
     @Target(ElementType.METHOD)

@@ -62,6 +62,7 @@ import com.norconex.importer.doc.Doc;
 import com.norconex.importer.doc.DocMetaConstants;
 
 @Timeout(30)
+@SuppressWarnings("null")
 class M365GraphFetcherTest {
 
     private static final ObjectMapper JSON = new ObjectMapper();

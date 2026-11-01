@@ -39,6 +39,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -178,7 +179,7 @@ public class GoogleDriveFetcher
                         .build();
             }
             var mimeType = item.path("mimeType").asText(null);
-            var isFolder = StringUtils.equals(mimeType, GOOGLE_FOLDER_MIME);
+            var isFolder = Strings.CS.equals(mimeType, GOOGLE_FOLDER_MIME);
             var isFile = !isFolder;
             var contentPlan = isFile ? resolveContentPlan(ref, item) : null;
 
@@ -317,7 +318,7 @@ public class GoogleDriveFetcher
                 } else {
                     var file = change.path("file");
                     var mimeType = file.path("mimeType").asText(null);
-                    var isFolder = StringUtils.equals(
+                    var isFolder = Strings.CS.equals(
                             mimeType, GOOGLE_FOLDER_MIME);
                     fsPath.setFolder(isFolder);
                     fsPath.setFile(!isFolder);
@@ -390,7 +391,7 @@ public class GoogleDriveFetcher
                     null);
         }
         if (!sourceMime.startsWith(GOOGLE_NATIVE_MIME_PREFIX)
-                || StringUtils.equals(sourceMime, GOOGLE_FOLDER_MIME)) {
+                || Strings.CS.equals(sourceMime, GOOGLE_FOLDER_MIME)) {
             return new ContentPlan(
                     ref.itemApiPath() + "?alt=media",
                     sourceMime,
@@ -505,7 +506,7 @@ public class GoogleDriveFetcher
 
     private HttpResponse<byte[]> executeGet(String pathOrUrl)
             throws IOException {
-        var url = StringUtils.startsWithAny(pathOrUrl, "http://", "https://")
+        var url = Strings.CS.startsWithAny(pathOrUrl, "http://", "https://")
                 ? pathOrUrl
                 : "https://www.googleapis.com" + pathOrUrl;
         var request = HttpRequest.newBuilder()
@@ -696,9 +697,9 @@ public class GoogleDriveFetcher
     }
 
     private static PrivateKey parsePrivateKey(String pem) throws IOException {
-        var sanitized = StringUtils.remove(pem,
+        var sanitized = Strings.CS.remove(pem,
                 "-----BEGIN PRIVATE KEY-----");
-        sanitized = StringUtils.remove(sanitized,
+        sanitized = Strings.CS.remove(sanitized,
                 "-----END PRIVATE KEY-----");
         sanitized = StringUtils.deleteWhitespace(sanitized);
         try {
@@ -772,7 +773,7 @@ public class GoogleDriveFetcher
         for (String startRef : crawler.getCrawlContext().getCrawlConfig()
                 .getStartReferences()) {
             if (StringUtils.isBlank(startRef)
-                    || !StringUtils.startsWith(startRef, "gdrive://")) {
+                    || !Strings.CS.startsWith(startRef, "gdrive://")) {
                 continue;
             }
             validateConfiguredSourceDeltaRoot(

@@ -27,6 +27,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 
 import com.norconex.crawler.core.junit.WithLogLevel.WithLogLevels;
 
+@SuppressWarnings("null")
 public class WithLogLevelExtension
         implements BeforeEachCallback, AfterEachCallback {
     private final Map<String, Level> originalLevels = new HashMap<>();

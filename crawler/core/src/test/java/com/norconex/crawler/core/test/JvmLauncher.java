@@ -46,6 +46,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Builder
 @Slf4j
+@SuppressWarnings("null")
 public class JvmLauncher {
 
     // to make triple-certain that the debug port is not reused on nodes

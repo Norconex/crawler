@@ -331,8 +331,9 @@ class HdfsModelTest {
         var provider = new HdfsFileSystemProvider();
         var client = mock(CloseableHttpClient.class);
         var resp = mock(CloseableHttpResponse.class);
-        when(client.execute(any(HttpHost.class), any(HttpGet.class)))
-                .thenReturn(resp);
+        when(client.executeOpen(
+                any(HttpHost.class), any(HttpGet.class), any()))
+                        .thenReturn(resp);
 
         var fs = provider.getOrCreateFileSystem(
                 URI.create("webhdfs://node.example.com:9870/"),
@@ -369,8 +370,9 @@ class HdfsModelTest {
         var provider = new HdfsFileSystemProvider();
         var client = mock(CloseableHttpClient.class);
         var resp = mock(CloseableHttpResponse.class);
-        when(client.execute(any(HttpHost.class), any(HttpGet.class)))
-                .thenReturn(resp);
+        when(client.executeOpen(
+                any(HttpHost.class), any(HttpGet.class), any()))
+                        .thenReturn(resp);
         when(resp.getCode()).thenReturn(200);
         when(resp.getEntity()).thenReturn(new StringEntity(
                 """

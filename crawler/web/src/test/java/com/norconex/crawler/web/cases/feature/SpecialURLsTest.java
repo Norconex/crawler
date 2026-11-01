@@ -36,6 +36,7 @@ import com.norconex.crawler.web.junit.WebCrawlingTestCapturer;
  */
 @MockServerSettings
 @Timeout(30)
+@SuppressWarnings("null")
 class SpecialURLsTest {
 
     @WebCrawlingTest

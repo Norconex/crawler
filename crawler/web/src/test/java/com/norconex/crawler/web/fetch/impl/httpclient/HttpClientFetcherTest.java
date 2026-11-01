@@ -57,6 +57,7 @@ import com.norconex.crawler.web.fetch.WebFetchResponse;
 import com.norconex.crawler.web.stubs.CrawlDocStubs;
 
 @Timeout(30)
+@SuppressWarnings("null")
 class HttpClientFetcherTest {
 
     @Test
@@ -354,6 +355,7 @@ class HttpClientFetcherTest {
     // leaving <host> unset must not disable authentication. A null host
     // means "any host", per HttpAuthConfig#getHost() Javadoc.
     @Test
+    @SuppressWarnings("deprecation")
     void testCreateCredentialsProviderNtlmCredsWithoutHost() {
         var fetcher = new HttpClientFetcher();
         var authCfg = new HttpAuthConfig();
@@ -377,6 +379,7 @@ class HttpClientFetcherTest {
     // credentials must still apply to the real (any) port used by the site,
     // not be pinned to a literal port 0.
     @Test
+    @SuppressWarnings("deprecation")
     void testCreateCredentialsProviderHostNameOnlyNoPortFromXml()
             throws IOException {
         var fetcher = new HttpClientFetcher();
@@ -544,7 +547,6 @@ class HttpClientFetcherTest {
                 org.mockito.ArgumentMatchers
                         .<HttpClientResponseHandler<WebFetchResponse>>any()))
                                 .thenAnswer(invocation -> {
-                                    @SuppressWarnings("unchecked")
                                     HttpClientResponseHandler<
                                             WebFetchResponse> handler =
                                                     invocation.getArgument(2);

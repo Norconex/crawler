@@ -185,8 +185,8 @@ final class HdfsFileSystemProvider extends ReadOnlyFileSystemProvider {
     private static ClassicHttpResponse execute(
             HdfsFileSystem fs, HttpGet request) throws IOException {
         try {
-            return fs.httpClient().execute(
-                    RoutingSupport.determineHost(request), request);
+            return fs.httpClient().executeOpen(
+                    RoutingSupport.determineHost(request), request, null);
         } catch (HttpException e) {
             throw new IOException(
                     "Could not determine target host for "

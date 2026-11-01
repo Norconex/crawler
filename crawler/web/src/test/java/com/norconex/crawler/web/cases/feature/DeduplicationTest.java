@@ -41,6 +41,7 @@ import org.junit.jupiter.api.Timeout;
  */
 @MockServerSettings
 @Timeout(30)
+@SuppressWarnings("null")
 class DeduplicationTest {
 
     @WebCrawlingTest

@@ -35,6 +35,7 @@ import com.norconex.importer.ImporterRuntimeException;
 import com.norconex.importer.TestUtil;
 
 @Timeout(30)
+@SuppressWarnings("null")
 class DocTest {
 
     @Test

@@ -355,7 +355,10 @@ class WebDriverBrowserTest {
                 break;
             }
         }
-        assertThat(method).isNotNull();
+        if (method == null) {
+            throw new AssertionError("No builder method '%s' accepts %s"
+                    .formatted(methodName, arg.getClass()));
+        }
         method.setAccessible(true);
         method.invoke(builder, arg);
     }

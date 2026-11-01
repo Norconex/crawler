@@ -38,6 +38,7 @@ import com.norconex.crawler.core.cluster.pipeline.StepRecord;
  * <p>Unsupported operations ({@code exportCaches}, {@code importCaches},
  * {@code getCacheSet}) throw {@link UnsupportedOperationException}.
  */
+@SuppressWarnings("null")
 public class InMemoryCacheManager implements CacheManager {
 
     private final Map<String, InMemoryCacheMap<?>> maps = new HashMap<>();

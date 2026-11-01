@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 
 import com.google.cloud.NoCredentials;
 import com.google.cloud.storage.HttpStorageOptions;
@@ -84,7 +85,7 @@ public class GcsFetcher extends AbstractNioFetcher<GcsFetcherConfig> {
                 uri.getHost(), this::openFileSystem);
         var path = uri.getPath();
         if (StringUtils.isNotBlank(path) && !"/".equals(path)) {
-            path = StringUtils.removeStart(path, "/");
+            path = Strings.CS.removeStart(path, "/");
         }
         return fs.getPath(StringUtils.defaultIfBlank(path, "/"));
     }

@@ -35,6 +35,7 @@ import com.norconex.crawler.core.fetch.Fetcher;
 import com.norconex.crawler.fs.FsTestUtil;
 
 @Timeout(60)
+@SuppressWarnings("null")
 public abstract class AbstractFileFetcherTest {
 
     @TempDir

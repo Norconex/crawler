@@ -35,6 +35,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -342,7 +343,7 @@ public class M365GraphFetcher extends AbstractFetcher<M365GraphFetcherConfig> {
         // and reused below instead of calling driveDeltaApiPath() again.
         var deltaApiPath = ref.driveDeltaApiPath();
         var pagePathOrUrl = getDeltaCursor(ref).orElse(deltaApiPath);
-        if (!StringUtils.equals(pagePathOrUrl, deltaApiPath)) {
+        if (!Strings.CS.equals(pagePathOrUrl, deltaApiPath)) {
             usingStoredCursor = true;
         }
 
@@ -426,7 +427,7 @@ public class M365GraphFetcher extends AbstractFetcher<M365GraphFetcherConfig> {
             if (StringUtils.isBlank(startRef)) {
                 continue;
             }
-            if (!StringUtils.startsWithAny(startRef,
+            if (!Strings.CS.startsWithAny(startRef,
                     "m365sp://", "m365od://")) {
                 continue;
             }
@@ -578,7 +579,7 @@ public class M365GraphFetcher extends AbstractFetcher<M365GraphFetcherConfig> {
     private HttpResponse<byte[]> executeGet(String pathOrUrl)
             throws IOException {
         var url = pathOrUrl;
-        if (!StringUtils.startsWithAny(StringUtils.defaultString(pathOrUrl),
+        if (!Strings.CS.startsWithAny(StringUtils.defaultString(pathOrUrl),
                 "http://", "https://")) {
             url = normalizeBaseUrl(configuration.getGraphBaseUrl()) + pathOrUrl;
         }
@@ -660,7 +661,7 @@ public class M365GraphFetcher extends AbstractFetcher<M365GraphFetcherConfig> {
     private void validateTenant(M365GraphReference ref) {
         var configured = configuration.getTenantId();
         if (StringUtils.isNotBlank(configured)
-                && !StringUtils.equalsIgnoreCase(configured, ref.tenantId())) {
+                && !Strings.CI.equals(configured, ref.tenantId())) {
             throw new IllegalArgumentException(
                     "Reference tenant does not match configured tenantId: "
                             + ref.tenantId());
@@ -736,7 +737,7 @@ public class M365GraphFetcher extends AbstractFetcher<M365GraphFetcherConfig> {
     }
 
     private static String normalizeBaseUrl(String url) {
-        return StringUtils.removeEnd(StringUtils.defaultString(url), "/");
+        return Strings.CS.removeEnd(StringUtils.defaultString(url), "/");
     }
 
     boolean isSourceDeltaEnabled() {

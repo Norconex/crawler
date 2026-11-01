@@ -30,6 +30,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -329,11 +330,11 @@ public class BoxFetcher extends AbstractFetcher<BoxFetcherConfig> {
     }
 
     private URI buildUri(String pathOrUrl) {
-        if (StringUtils.startsWithIgnoreCase(pathOrUrl, "http://")
-                || StringUtils.startsWithIgnoreCase(pathOrUrl, "https://")) {
+        if (Strings.CI.startsWith(pathOrUrl, "http://")
+                || Strings.CI.startsWith(pathOrUrl, "https://")) {
             return URI.create(pathOrUrl);
         }
-        return URI.create(StringUtils.removeEnd(configuration.getApiBaseUrl(),
+        return URI.create(Strings.CS.removeEnd(configuration.getApiBaseUrl(),
                 "/")
                 + (pathOrUrl.startsWith("/") ? pathOrUrl : "/" + pathOrUrl));
     }

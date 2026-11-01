@@ -101,17 +101,19 @@ class CrawlerMetricsSessionScopeTest {
     private void countsFromAPreviousCrawl() {
         // Incremented through the real path, so the values land in the store
         // the same way a crawl would put them there.
-        var metrics = new CrawlerMetricsImpl();
-        metrics.init(session);
-        metrics.incrementCounter("COMMITTER_UPSERT_END", 400L);
-        metrics.incrementCounter("DOCUMENT_QUEUED", 403L);
+        try (var metrics = new CrawlerMetricsImpl()) {
+            metrics.init(session);
+            metrics.incrementCounter("COMMITTER_UPSERT_END", 400L);
+            metrics.incrementCounter("DOCUMENT_QUEUED", 403L);
+        }
     }
 
     /** What a later process would find in the store. */
     private Map<String, Long> countsInStore() {
-        var metrics = new CrawlerMetricsImpl();
-        metrics.init(session);
-        return metrics.getEventCounts();
+        try (var metrics = new CrawlerMetricsImpl()) {
+            metrics.init(session);
+            return metrics.getEventCounts();
+        }
     }
 
     /**
@@ -205,12 +207,13 @@ class CrawlerMetricsSessionScopeTest {
         CrawlerRunInfoResolver.resolve(session);
 
         // The new session then does a little work of its own.
-        var metrics = new CrawlerMetricsImpl();
-        metrics.init(session);
-        metrics.incrementCounter("COMMITTER_UPSERT_END", 5L);
+        try (var metrics = new CrawlerMetricsImpl()) {
+            metrics.init(session);
+            metrics.incrementCounter("COMMITTER_UPSERT_END", 5L);
 
-        assertThat(metrics.getEventCounts())
-                .as("this crawl committed 5 documents, not 405")
-                .containsEntry("COMMITTER_UPSERT_END", 5L);
+            assertThat(metrics.getEventCounts())
+                    .as("this crawl committed 5 documents, not 405")
+                    .containsEntry("COMMITTER_UPSERT_END", 5L);
+        }
     }
 }

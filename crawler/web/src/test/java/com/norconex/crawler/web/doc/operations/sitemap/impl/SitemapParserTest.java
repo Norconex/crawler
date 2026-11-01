@@ -34,6 +34,7 @@ import com.norconex.crawler.web.ledger.WebCrawlerEntry;
 import com.norconex.crawler.web.stubs.CrawlDocStubs;
 
 @Timeout(30)
+@SuppressWarnings("null")
 class SitemapParserTest {
 
     @Test

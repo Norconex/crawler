@@ -35,6 +35,7 @@ import com.norconex.importer.doc.DocMetaConstants;
 import com.norconex.importer.handler.parser.ParseState;
 
 @Timeout(30)
+@SuppressWarnings("null")
 class RegexTransformerTest {
 
     @Test

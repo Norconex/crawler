@@ -112,7 +112,7 @@ public class S3Fetcher extends AbstractNioFetcher<S3FetcherConfig> {
     private AwsCredentialsProvider buildCredentialsProvider() {
         var creds = configuration.getCredentials();
         if (!creds.isSet()) {
-            return DefaultCredentialsProvider.create();
+            return DefaultCredentialsProvider.builder().build();
         }
         return StaticCredentialsProvider.create(
                 AwsBasicCredentials.create(

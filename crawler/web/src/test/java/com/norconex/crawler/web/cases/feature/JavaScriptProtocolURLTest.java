@@ -36,6 +36,7 @@ import org.junit.jupiter.api.Timeout;
 // Related issue: https://github.com/Norconex/collector-http/issues/540
 @MockServerSettings
 @Timeout(30)
+@SuppressWarnings("null")
 class JavaScriptProtocolURLTest {
 
     @WebCrawlingTest

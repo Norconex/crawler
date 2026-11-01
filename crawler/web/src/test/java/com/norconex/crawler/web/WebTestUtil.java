@@ -110,6 +110,7 @@ import com.norconex.importer.doc.Doc;
 
 import lombok.NonNull;
 
+@SuppressWarnings("null")
 public final class WebTestUtil {
 
     public static final String TEST_CRAWLER_ID = "test-crawler";

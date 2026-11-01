@@ -32,6 +32,7 @@ import lombok.extern.slf4j.Slf4j;
 @Target({ ElementType.METHOD, ElementType.TYPE })
 @Retention(RetentionPolicy.RUNTIME)
 @ExtendWith(LoggingTestWatcher.class)
+@SuppressWarnings("null")
 public @interface WithTestWatcherLogging {
 
     @Slf4j(topic = "TEST")

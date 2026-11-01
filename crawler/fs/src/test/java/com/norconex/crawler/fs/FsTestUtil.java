@@ -72,6 +72,7 @@ import com.norconex.importer.doc.Doc;
 
 import lombok.NonNull;
 
+@SuppressWarnings("null")
 public final class FsTestUtil {
 
     public static final String TEST_CRAWLER_ID = "test-crawler";

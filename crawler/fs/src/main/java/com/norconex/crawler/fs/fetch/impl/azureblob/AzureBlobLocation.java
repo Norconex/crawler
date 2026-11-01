@@ -17,6 +17,7 @@ package com.norconex.crawler.fs.fetch.impl.azureblob;
 import java.net.URI;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 
 record AzureBlobLocation(
         String scheme, String account, String container, String path) {
@@ -29,7 +30,7 @@ record AzureBlobLocation(
         }
 
         var rawPath = StringUtils.defaultString(uri.getPath());
-        var trimmedPath = StringUtils.removeStart(rawPath, "/");
+        var trimmedPath = Strings.CS.removeStart(rawPath, "/");
         if (StringUtils.isBlank(trimmedPath)) {
             throw new IllegalArgumentException(
                     "Azure Blob reference must include a container path.");

@@ -37,108 +37,118 @@ import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig
 class GoogleCloudSearchCommitterTest {
 
     @Test
-    void initBatchCommitterRejectsMissingSecretKeyPath() {
-        var committer = new GoogleCloudSearchCommitter();
-        committer.getConfiguration().setDataSourceId("ds");
+    void initBatchCommitterRejectsMissingSecretKeyPath() throws Exception {
+        try (var committer = new GoogleCloudSearchCommitter()) {
+            committer.getConfiguration().setDataSourceId("ds");
 
-        assertThatThrownBy(committer::initBatchCommitter)
-                .isInstanceOf(CommitterException.class)
-                .hasMessageContaining("secretKeyPath");
+            assertThatThrownBy(committer::initBatchCommitter)
+                    .isInstanceOf(CommitterException.class)
+                    .hasMessageContaining("secretKeyPath");
+        }
     }
 
     @Test
-    void initBatchCommitterRejectsMissingDataSourceId() {
-        var committer = new GoogleCloudSearchCommitter();
-        committer.getConfiguration().setSecretKeyPath("missing.json");
+    void initBatchCommitterRejectsMissingDataSourceId() throws Exception {
+        try (var committer = new GoogleCloudSearchCommitter()) {
+            committer.getConfiguration().setSecretKeyPath("missing.json");
 
-        assertThatThrownBy(committer::initBatchCommitter)
-                .isInstanceOf(CommitterException.class)
-                .hasMessageContaining("dataSourceId");
+            assertThatThrownBy(committer::initBatchCommitter)
+                    .isInstanceOf(CommitterException.class)
+                    .hasMessageContaining("dataSourceId");
+        }
     }
 
     @Test
-    void initBatchCommitterRejectsMetadataMappingWithoutTargetField() {
-        var committer = new GoogleCloudSearchCommitter();
-        committer.getConfiguration()
-                .setSecretKeyPath("missing.json")
-                .setDataSourceId("ds")
-                .setMetadataMappings(List.of(new MetadataMapping()));
+    void initBatchCommitterRejectsMetadataMappingWithoutTargetField()
+            throws Exception {
+        try (var committer = new GoogleCloudSearchCommitter()) {
+            committer.getConfiguration()
+                    .setSecretKeyPath("missing.json")
+                    .setDataSourceId("ds")
+                    .setMetadataMappings(List.of(new MetadataMapping()));
 
-        assertThatThrownBy(committer::initBatchCommitter)
-                .isInstanceOf(CommitterException.class)
-                .hasMessageContaining("metadata mapping");
+            assertThatThrownBy(committer::initBatchCommitter)
+                    .isInstanceOf(CommitterException.class)
+                    .hasMessageContaining("metadata mapping");
+        }
     }
 
     @Test
-    void initBatchCommitterRejectsStructuredDataMappingWithoutField() {
-        var committer = new GoogleCloudSearchCommitter();
-        committer.getConfiguration()
-                .setSecretKeyPath("missing.json")
-                .setDataSourceId("ds")
-                .setStructuredDataMappings(
-                        List.of(new StructuredDataMapping()));
+    void initBatchCommitterRejectsStructuredDataMappingWithoutField()
+            throws Exception {
+        try (var committer = new GoogleCloudSearchCommitter()) {
+            committer.getConfiguration()
+                    .setSecretKeyPath("missing.json")
+                    .setDataSourceId("ds")
+                    .setStructuredDataMappings(
+                            List.of(new StructuredDataMapping()));
 
-        assertThatThrownBy(committer::initBatchCommitter)
-                .isInstanceOf(CommitterException.class)
-                .hasMessageContaining("structured data mapping");
+            assertThatThrownBy(committer::initBatchCommitter)
+                    .isInstanceOf(CommitterException.class)
+                    .hasMessageContaining("structured data mapping");
+        }
     }
 
     @Test
-    void initBatchCommitterDefaultsConnectorNameWhenBlank() {
-        var committer = new GoogleCloudSearchCommitter();
-        committer.getConfiguration()
-                .setSecretKeyPath("missing.json")
-                .setDataSourceId("ds")
-                .setApplicationName("My App")
-                .setConnectorName(" ");
+    void initBatchCommitterDefaultsConnectorNameWhenBlank() throws Exception {
+        try (var committer = new GoogleCloudSearchCommitter()) {
+            committer.getConfiguration()
+                    .setSecretKeyPath("missing.json")
+                    .setDataSourceId("ds")
+                    .setApplicationName("My App")
+                    .setConnectorName(" ");
 
-        assertThatThrownBy(committer::initBatchCommitter)
-                .isInstanceOf(CommitterException.class)
-                .hasMessageContaining(
-                        "Could not initialize Google Cloud Search client");
-        assertThat(committer.getConfiguration().getConnectorName())
-                .isEqualTo("My App");
+            assertThatThrownBy(committer::initBatchCommitter)
+                    .isInstanceOf(CommitterException.class)
+                    .hasMessageContaining(
+                            "Could not initialize Google Cloud Search client");
+            assertThat(committer.getConfiguration().getConnectorName())
+                    .isEqualTo("My App");
+        }
     }
 
     @Test
-    void initBatchCommitterRejectsInvalidHttpOption() {
-        var committer = new GoogleCloudSearchCommitter();
-        committer.getConfiguration()
-                .setSecretKeyPath("missing.json")
-                .setDataSourceId("ds")
-                .setHttpReadTimeoutMillis(-2);
+    void initBatchCommitterRejectsInvalidHttpOption() throws Exception {
+        try (var committer = new GoogleCloudSearchCommitter()) {
+            committer.getConfiguration()
+                    .setSecretKeyPath("missing.json")
+                    .setDataSourceId("ds")
+                    .setHttpReadTimeoutMillis(-2);
 
-        assertThatThrownBy(committer::initBatchCommitter)
-                .isInstanceOf(CommitterException.class)
-                .hasMessageContaining("httpReadTimeoutMillis");
+            assertThatThrownBy(committer::initBatchCommitter)
+                    .isInstanceOf(CommitterException.class)
+                    .hasMessageContaining("httpReadTimeoutMillis");
+        }
     }
 
     @Test
     void commitBatchDelegatesToClient() throws Exception {
-        var committer = new GoogleCloudSearchCommitter();
-        var client = new SpyClient();
-        setClient(committer, client);
+        try (var committer = new GoogleCloudSearchCommitter()) {
+            var client = new SpyClient();
+            setClient(committer, client);
 
-        Iterator<CommitterRequest> iterator = Collections.emptyIterator();
-        committer.commitBatch(iterator);
+            Iterator<CommitterRequest> iterator = Collections.emptyIterator();
+            committer.commitBatch(iterator);
 
-        assertThat(client.postCalled).isTrue();
-        assertThat(client.postIterator).isSameAs(iterator);
+            assertThat(client.postCalled).isTrue();
+            assertThat(client.postIterator).isSameAs(iterator);
+        }
     }
 
     @Test
     void closeBatchCommitterClosesClientAndClearsReference() throws Exception {
-        var committer = new GoogleCloudSearchCommitter();
-        var client = new SpyClient();
-        setClient(committer, client);
+        try (var committer = new GoogleCloudSearchCommitter()) {
+            var client = new SpyClient();
+            setClient(committer, client);
 
-        committer.closeBatchCommitter();
+            committer.closeBatchCommitter();
 
-        assertThat(client.closeCalled).isTrue();
-        assertThat(getClient(committer)).isNull();
+            assertThat(client.closeCalled).isTrue();
+            assertThat(getClient(committer)).isNull();
 
-        assertThatCode(committer::closeBatchCommitter)
-                .doesNotThrowAnyException();
+            assertThatCode(committer::closeBatchCommitter)
+                    .doesNotThrowAnyException();
+        }
     }
 
     private static void setClient(

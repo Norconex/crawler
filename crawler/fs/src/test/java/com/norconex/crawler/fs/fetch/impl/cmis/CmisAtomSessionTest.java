@@ -40,7 +40,7 @@ class CmisAtomSessionTest {
 
     @Test
     void test() throws IOException {
-        when(httpClient.execute(any(HttpHost.class), any()))
+        when(httpClient.executeOpen(any(HttpHost.class), any(), any()))
                 .thenReturn(httpResponse);
         when(httpResponse.getCode()).thenReturn(500);
         when(httpResponse.getReasonPhrase()).thenReturn("Too bad");

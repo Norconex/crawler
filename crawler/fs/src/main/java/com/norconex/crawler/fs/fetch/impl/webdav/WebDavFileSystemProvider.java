@@ -197,8 +197,8 @@ final class WebDavFileSystemProvider extends ReadOnlyFileSystemProvider {
         var get = new HttpGet(url(fs, wdPath.path()));
         ClassicHttpResponse resp;
         try {
-            resp = fs.httpClient().execute(
-                    RoutingSupport.determineHost(get), get);
+            resp = fs.httpClient().executeOpen(
+                    RoutingSupport.determineHost(get), get, null);
         } catch (HttpException e) {
             throw new IOException(
                     "Could not determine target host for "
@@ -321,8 +321,8 @@ final class WebDavFileSystemProvider extends ReadOnlyFileSystemProvider {
                         "application/xml", StandardCharsets.UTF_8)));
         ClassicHttpResponse resp;
         try {
-            resp = fs.httpClient().execute(
-                    RoutingSupport.determineHost(req), req);
+            resp = fs.httpClient().executeOpen(
+                    RoutingSupport.determineHost(req), req, null);
         } catch (HttpException e) {
             throw new IOException(
                     "Could not determine target host for "
@@ -421,8 +421,8 @@ final class WebDavFileSystemProvider extends ReadOnlyFileSystemProvider {
         var head = new HttpHead(url(fs, path));
         ClassicHttpResponse resp;
         try {
-            resp = fs.httpClient().execute(
-                    RoutingSupport.determineHost(head), head);
+            resp = fs.httpClient().executeOpen(
+                    RoutingSupport.determineHost(head), head, null);
         } catch (HttpException e) {
             throw new IOException(
                     "Could not determine target host for "

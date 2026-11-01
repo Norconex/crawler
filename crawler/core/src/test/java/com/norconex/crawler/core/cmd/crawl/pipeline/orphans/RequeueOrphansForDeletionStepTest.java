@@ -38,6 +38,7 @@ import com.norconex.crawler.core.session.CrawlerSession;
  * Tests for {@link RequeueOrphansForDeletionStep}.
  */
 @Timeout(30)
+@SuppressWarnings("null")
 class RequeueOrphansForDeletionStepTest {
 
     private CrawlerSession buildSession(CrawlerEntryLedger ledger) {

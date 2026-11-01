@@ -43,6 +43,7 @@ import com.norconex.crawler.web.stubs.CrawlDocStubs;
 import com.norconex.importer.doc.Doc;
 
 @Timeout(30)
+@SuppressWarnings("null")
 class RegexLinkExtractorTest {
 
     //TODO add a post import test for PDF with links.

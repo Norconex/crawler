@@ -142,8 +142,8 @@ class WebDavModelTest {
                 "Sun, 12 Jul 2026 10:00:00 GMT"))
                         .when(response).getFirstHeader("Last-Modified");
         doReturn(new StringEntity("")).when(response).getEntity();
-        doReturn(response).when(client).execute(
-                any(HttpHost.class), any(ClassicHttpRequest.class));
+        doReturn(response).when(client).executeOpen(
+                any(HttpHost.class), any(ClassicHttpRequest.class), any());
 
         var path = fs.getPath("/root/file.txt");
         var attrs = provider.readAttributes(path,
@@ -198,8 +198,8 @@ class WebDavModelTest {
                   </response>
                 </multistatus>
                 """)).when(propfind).getEntity();
-        doReturn(propfind).when(client).execute(
-                any(HttpHost.class), any(ClassicHttpRequest.class));
+        doReturn(propfind).when(client).executeOpen(
+                any(HttpHost.class), any(ClassicHttpRequest.class), any());
 
         var listing =
                 provider.newDirectoryStream(fs.getPath("/root"), p -> true);
@@ -285,8 +285,8 @@ class WebDavModelTest {
 
         var notFound = mock(CloseableHttpResponse.class);
         doReturn(404).when(notFound).getCode();
-        doReturn(notFound).when(client).execute(
-                any(HttpHost.class), any(ClassicHttpRequest.class));
+        doReturn(notFound).when(client).executeOpen(
+                any(HttpHost.class), any(ClassicHttpRequest.class), any());
 
         assertThatThrownBy(() -> provider.newInputStream(path))
                 .isInstanceOf(NoSuchFileException.class);
@@ -294,8 +294,8 @@ class WebDavModelTest {
         var ok = mock(CloseableHttpResponse.class);
         doReturn(200).when(ok).getCode();
         doReturn(new StringEntity("abc")).when(ok).getEntity();
-        doReturn(ok).when(client).execute(
-                any(HttpHost.class), any(ClassicHttpRequest.class));
+        doReturn(ok).when(client).executeOpen(
+                any(HttpHost.class), any(ClassicHttpRequest.class), any());
 
         try (var channel = provider.newByteChannel(path, Set.of())) {
             var dst = ByteBuffer.allocate(8);

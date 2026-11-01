@@ -35,6 +35,7 @@ import com.sun.net.httpserver.HttpServer;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@SuppressWarnings("null")
 public class CmisTestServer {
 
     public static final String WS_1_0 = "/services";

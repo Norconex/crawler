@@ -40,6 +40,7 @@ import com.norconex.crawler.core.session.CrawlerSession;
  */
 @ExtendWith(MockitoExtension.class)
 @Timeout(30)
+@SuppressWarnings("null")
 class CrawlerEntryLedgerTest {
 
     @Mock(strictness = Strictness.LENIENT)

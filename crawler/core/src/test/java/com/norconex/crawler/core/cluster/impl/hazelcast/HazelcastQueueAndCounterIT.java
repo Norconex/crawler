@@ -29,6 +29,7 @@ import com.hazelcast.core.HazelcastInstance;
 
 @Timeout(30)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@SuppressWarnings("null")
 class HazelcastQueueAndCounterIT {
 
     private HazelcastInstance hz;

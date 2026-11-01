@@ -31,6 +31,7 @@ import com.norconex.importer.TestUtil;
 import com.norconex.importer.handler.DocHandlerContext;
 
 @Timeout(30)
+@SuppressWarnings("null")
 class SaveDocumentTransformerTest {
 
     private static final String FLD_PATH = "file.path";

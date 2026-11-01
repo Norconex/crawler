@@ -222,7 +222,7 @@ public class HazelcastMapAdapter<T> implements CacheMap<T> {
 
     @Override
     public List<T> query(QueryFilter filter) {
-        return supplyIfCache(() -> {
+        return this.<List<T>>supplyIfCache(() -> {
             var objs = hzMap.values(toPredicate(filter));
             var out = new ArrayList<T>(objs.size());
             for (var o : objs) {

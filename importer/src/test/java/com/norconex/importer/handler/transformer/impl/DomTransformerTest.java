@@ -49,6 +49,7 @@ import com.norconex.importer.doc.DocMetaConstants;
 import com.norconex.importer.util.DomUtil;
 
 @Timeout(30)
+@SuppressWarnings("null")
 class DomTransformerTest {
 
     //--- Field tests ----------------------------------------------------------

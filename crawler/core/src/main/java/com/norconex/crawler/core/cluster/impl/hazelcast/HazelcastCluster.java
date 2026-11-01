@@ -23,7 +23,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.commons.lang3.StringUtils;
 
-import com.hazelcast.cluster.Member;
 import com.hazelcast.cluster.MembershipEvent;
 import com.hazelcast.cluster.MembershipListener;
 import com.hazelcast.config.Config;
@@ -449,8 +448,7 @@ public class HazelcastCluster implements Cluster {
             return nodeName != null ? List.of(nodeName) : List.of();
         }
         return hazelcastInstance.getCluster().getMembers().stream()
-                .map(Member::getUuid)
-                .map(UUID::toString)
+                .map(m -> m.getUuid().toString())
                 .toList();
     }
 

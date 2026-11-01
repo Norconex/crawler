@@ -18,6 +18,7 @@ import java.net.URI;
 import java.util.Locale;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 
 record AdlsGen2Location(
         String scheme, String fileSystem, String account, String host,
@@ -37,7 +38,7 @@ record AdlsGen2Location(
                     "ADLS Gen2 reference must include a storage account host.");
         }
 
-        var account = StringUtils.removeEndIgnoreCase(
+        var account = Strings.CI.removeEnd(
                 host, ".dfs.core.windows.net");
         if (StringUtils.isBlank(account)) {
             account = host;

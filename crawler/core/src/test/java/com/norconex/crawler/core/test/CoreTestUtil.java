@@ -34,6 +34,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
+@SuppressWarnings("null")
 public final class CoreTestUtil {
 
     public static final String CONTAINER_POSTGRESQL = "postgres:16";

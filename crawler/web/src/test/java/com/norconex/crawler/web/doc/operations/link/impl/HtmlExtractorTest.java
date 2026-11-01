@@ -38,6 +38,7 @@ import com.norconex.crawler.web.stubs.CrawlDocStubs;
  * Tests unique to {@link HtmlLinkExtractor}.
  */
 @Timeout(30)
+@SuppressWarnings("null")
 class HtmlExtractorTest {
 
     @Test

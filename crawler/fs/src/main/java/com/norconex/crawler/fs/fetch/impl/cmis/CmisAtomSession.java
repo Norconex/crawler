@@ -62,8 +62,8 @@ public class CmisAtomSession {
     public InputStream getStream(String fullURL) throws IOException {
         try {
             var request = new HttpGet(fullURL);
-            var resp = httpClient.execute(
-                    RoutingSupport.determineHost(request), request);
+            var resp = httpClient.executeOpen(
+                    RoutingSupport.determineHost(request), request, null);
             var statusCode = resp.getCode();
             var reasonPhrase = resp.getReasonPhrase();
             if (statusCode == HttpStatus.SC_NOT_FOUND) {

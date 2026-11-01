@@ -43,6 +43,7 @@ import com.norconex.importer.handler.ScriptRunner;
 import com.norconex.importer.handler.parser.ParseState;
 
 @Timeout(30)
+@SuppressWarnings("null")
 class ScriptTransformerTest {
 
     //--- Simple Transform Test ------------------------------------------------

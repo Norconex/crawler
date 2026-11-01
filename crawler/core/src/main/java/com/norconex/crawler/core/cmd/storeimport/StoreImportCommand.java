@@ -88,8 +88,8 @@ public class StoreImportCommand implements Command {
             List<SerializedCache> imports) throws IOException {
 
         var rootNode = SerialUtil.getMapper().readTree(in);
-        var cacheName = rootNode.get("store").asText();
-        var className = rootNode.get("type").asText();
+        var cacheName = rootNode.get("store").asString();
+        var className = rootNode.get("type").asString();
 
         LOG.info("Importing \"{}\" cache entries...", cacheName);
 
@@ -102,7 +102,7 @@ public class StoreImportCommand implements Command {
         var cacheTypeField = rootNode.get("cacheType");
         serializedCache.setCacheType(
                 cacheTypeField != null
-                        ? CacheType.valueOf(cacheTypeField.asText())
+                        ? CacheType.valueOf(cacheTypeField.asString())
                         : CacheType.MAP);
 
         var records = rootNode.get("records");
@@ -121,7 +121,7 @@ public class StoreImportCommand implements Command {
                     var rec = recordIterator.next();
                     try {
                         var idNode = rec.get("id");
-                        String id = idNode.isNull() ? null : idNode.asText();
+                        String id = idNode.isNull() ? null : idNode.asString();
                         var object = rec.get("object").toString();
                         return new SerializedCache.SerializedEntry(id, object);
                     } catch (Exception e) {

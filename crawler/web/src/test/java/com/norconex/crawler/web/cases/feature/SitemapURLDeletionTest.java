@@ -44,6 +44,7 @@ import org.junit.jupiter.api.Timeout;
 //Test for https://github.com/Norconex/collector-http/issues/390
 @MockServerSettings
 @Timeout(30)
+@SuppressWarnings("null")
 class SitemapURLDeletionTest {
 
     private final String sitemapPath = "/sitemapUrlDeletion/sitemap.xml";

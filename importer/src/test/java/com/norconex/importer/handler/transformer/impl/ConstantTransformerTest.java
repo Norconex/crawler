@@ -29,6 +29,7 @@ import com.norconex.importer.TestUtil;
 import java.io.IOException;
 
 @Timeout(30)
+@SuppressWarnings("null")
 class ConstantTransformerTest {
 
     @Test

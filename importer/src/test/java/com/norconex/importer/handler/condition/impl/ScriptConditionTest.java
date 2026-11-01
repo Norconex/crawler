@@ -40,6 +40,7 @@ import com.norconex.importer.doc.DocMetaConstants;
 import com.norconex.importer.handler.ScriptRunner;
 
 @Timeout(30)
+@SuppressWarnings("null")
 class ScriptConditionTest {
 
     @ParameterizedTest

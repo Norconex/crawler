@@ -160,7 +160,7 @@ public class TitleGeneratorTransformer
             }
 
             // If we got one, store it
-            if (StringUtils.isNotBlank(title)) {
+            if (title != null && StringUtils.isNotBlank(title)) {
                 if (configuration.getTitleMaxLength() >= 0
                         && title.length() > configuration.getTitleMaxLength()) {
                     title = StringUtils.substring(
@@ -190,7 +190,7 @@ public class TitleGeneratorTransformer
 
         // if more than one sentence, ignore
         // must match min/max lengths.
-        if (StringUtils.isBlank(firstLine)
+        if (firstLine == null || StringUtils.isBlank(firstLine)
                 || (StringUtils.split(firstLine, "?!.").length != 1)
                 || firstLine.length() < configuration
                         .getDetectHeadingMinLength()

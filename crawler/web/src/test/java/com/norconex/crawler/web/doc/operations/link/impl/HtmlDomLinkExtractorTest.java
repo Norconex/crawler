@@ -49,6 +49,7 @@ import com.norconex.importer.doc.Doc;
  * to HTML and DOM link extractors.
  */
 @Timeout(30)
+@SuppressWarnings("null")
 class HtmlDomLinkExtractorTest {
 
     @ParameterizedTest(name = "{0}")

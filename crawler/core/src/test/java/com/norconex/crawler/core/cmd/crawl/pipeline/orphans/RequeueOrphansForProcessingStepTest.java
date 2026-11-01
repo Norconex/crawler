@@ -40,6 +40,7 @@ import com.norconex.crawler.core.session.CrawlerSession;
  * Tests for {@link RequeueOrphansForProcessingStep}.
  */
 @Timeout(30)
+@SuppressWarnings("null")
 class RequeueOrphansForProcessingStepTest {
 
     private CrawlerSession buildSession(

@@ -32,6 +32,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -295,11 +296,11 @@ public class EgnyteFetcher extends AbstractFetcher<EgnyteFetcherConfig> {
 
                 var removed = event.path("removed").asBoolean(false)
                         || event.path("deleted").asBoolean(false)
-                        || StringUtils.equalsAnyIgnoreCase(
+                        || Strings.CI.equalsAny(
                                 event.path("event_type").asText(null),
                                 "removed",
                                 "deleted")
-                        || StringUtils.equalsAnyIgnoreCase(
+                        || Strings.CI.equalsAny(
                                 event.path("action").asText(null),
                                 "removed",
                                 "deleted");
@@ -495,12 +496,12 @@ public class EgnyteFetcher extends AbstractFetcher<EgnyteFetcherConfig> {
     }
 
     private URI buildUri(String domain, String pathOrUrl) {
-        if (StringUtils.startsWithIgnoreCase(pathOrUrl, "http://")
-                || StringUtils.startsWithIgnoreCase(pathOrUrl, "https://")) {
+        if (Strings.CI.startsWith(pathOrUrl, "http://")
+                || Strings.CI.startsWith(pathOrUrl, "https://")) {
             return URI.create(pathOrUrl);
         }
         var base = resolveApiBaseUrl(domain);
-        return URI.create(StringUtils.removeEnd(base, "/")
+        return URI.create(Strings.CS.removeEnd(base, "/")
                 + (pathOrUrl.startsWith("/") ? pathOrUrl : "/" + pathOrUrl));
     }
 
@@ -538,7 +539,7 @@ public class EgnyteFetcher extends AbstractFetcher<EgnyteFetcherConfig> {
         for (String startRef : crawler.getCrawlContext().getCrawlConfig()
                 .getStartReferences()) {
             if (StringUtils.isBlank(startRef)
-                    || !StringUtils.startsWith(startRef, "egnyte://")) {
+                    || !Strings.CS.startsWith(startRef, "egnyte://")) {
                 continue;
             }
             validateConfiguredSourceDeltaRoot(EgnyteReference.parse(startRef));

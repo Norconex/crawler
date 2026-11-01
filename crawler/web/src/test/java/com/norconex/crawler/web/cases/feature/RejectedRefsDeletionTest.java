@@ -46,6 +46,7 @@ import com.norconex.crawler.web.junit.WebCrawlingTestCapturer;
  */
 @MockServerSettings
 @Timeout(120)
+@SuppressWarnings("null")
 class RejectedRefsDeletionTest {
     private static final String PATH = "/rejectedRefsDeletion";
 

@@ -39,6 +39,7 @@ import com.norconex.crawler.core.session.CrawlerSession;
  * Tests for {@link RefFileEnqueuer}.
  */
 @Timeout(30)
+@SuppressWarnings("null")
 class RefFileEnqueuerTest {
 
     @TempDir

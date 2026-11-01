@@ -111,7 +111,10 @@ public class CrawlerRunCoordinator {
         if (stored == null) {
             return null;
         }
-        var rec = SerialUtil.fromJson(stored, SerializedRecord.class);
+        // Explicit type argument: without it the IDE infers a non-null result
+        // from the class literal and reports the null check as dead code.
+        var rec = SerialUtil.<SerializedRecord>fromJson(
+                stored, SerializedRecord.class);
         if (rec == null) {
             return null;
         }

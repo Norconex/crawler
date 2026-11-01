@@ -33,6 +33,7 @@ import com.norconex.importer.TestUtil;
 import com.norconex.importer.handler.parser.ParseState;
 
 @Timeout(30)
+@SuppressWarnings("null")
 class HierarchyTransformerTest {
 
     @Test

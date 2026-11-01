@@ -36,6 +36,7 @@ import com.norconex.crawler.core.session.CrawlerSession;
  * Tests for {@link RefProviderEnqueuer}.
  */
 @Timeout(30)
+@SuppressWarnings("null")
 class RefProviderEnqueuerTest {
 
     private QueueBootstrapContext buildCtx(

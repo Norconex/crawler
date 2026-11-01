@@ -16,7 +16,7 @@ package com.norconex.crawler.fs.doc.pipelines.importer.stages;
 
 import java.util.Set;
 
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 
 import com.norconex.crawler.core.CrawlerConfig.ChangeDiscovery;
 import com.norconex.crawler.core.CrawlerException;
@@ -116,7 +116,7 @@ public class FolderPathsExtractorStage extends AbstractImporterStage {
         var baselineEntries = new java.util.ArrayList<FsCrawlerEntry>();
         ledger.forEachBaseline(entry -> {
             if (entry instanceof FsCrawlerEntry fsBaseline
-                    && StringUtils.startsWith(
+                    && Strings.CS.startsWith(
                             fsBaseline.getReference(), descendantPrefix)) {
                 baselineEntries.add(fsBaseline);
             }

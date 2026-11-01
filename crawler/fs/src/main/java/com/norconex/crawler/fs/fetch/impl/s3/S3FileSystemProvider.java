@@ -37,6 +37,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 
 import com.norconex.crawler.fs.fetch.impl.ReadOnlyFileSystemProvider;
 
@@ -174,7 +175,7 @@ final class S3FileSystemProvider extends ReadOnlyFileSystemProvider {
                     }
                 }
                 for (var cp : page.commonPrefixes()) {
-                    var childKey = StringUtils.removeEnd(cp.prefix(), "/");
+                    var childKey = Strings.CS.removeEnd(cp.prefix(), "/");
                     if (StringUtils.isBlank(childKey)) {
                         continue;
                     }

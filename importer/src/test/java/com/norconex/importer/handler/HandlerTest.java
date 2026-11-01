@@ -31,6 +31,7 @@ import com.norconex.importer.handler.condition.impl.NumericCondition;
 import com.norconex.importer.mock.MockDocHandler;
 
 @Timeout(30)
+@SuppressWarnings("null")
 public class HandlerTest { //NOSONAR
 
     @Test

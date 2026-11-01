@@ -42,6 +42,7 @@ import com.norconex.importer.doc.Doc;
  * Tests for {@link DocumentPreProcessingStage}.
  */
 @Timeout(30)
+@SuppressWarnings("null")
 class DocumentPreProcessingStageTest {
 
     private ImporterPipelineContext buildCtx(

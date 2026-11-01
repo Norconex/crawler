@@ -532,31 +532,49 @@ class ElasticsearchCommitterTest {
     // -------------------------------------------------------------------------
 
     @Test
-    void testCreateRestClient_withApiKey_buildsClientWithoutException() {
-        var real = new ElasticsearchCommitter();
-        real.getConfiguration()
-                .setIndexName("idx")
-                .setApiKey("QWxhZGRpbjpvcGVuIHNlc2FtZQ==");
-        assertThatNoException().isThrownBy(() -> real.createRestClient());
+    void testCreateRestClient_withApiKey_buildsClientWithoutException()
+            throws Exception {
+        try (var real = new ElasticsearchCommitter()) {
+            real.getConfiguration()
+                    .setIndexName("idx")
+                    .setApiKey("QWxhZGRpbjpvcGVuIHNlc2FtZQ==");
+            assertThatNoException().isThrownBy(() -> {
+                try (var client = real.createRestClient()) {
+                    // Closing the client verifies it was created successfully.
+                }
+            });
+        }
     }
 
     @Test
-    void testCreateRestClient_withCredentials_buildsClientWithoutException() {
-        var real = new ElasticsearchCommitter();
-        real.getConfiguration()
-                .setIndexName("idx")
-                .setCredentials(
-                        new Credentials()
-                                .setUsername("user")
-                                .setPassword("pass"));
-        assertThatNoException().isThrownBy(() -> real.createRestClient());
+    void testCreateRestClient_withCredentials_buildsClientWithoutException()
+            throws Exception {
+        try (var real = new ElasticsearchCommitter()) {
+            real.getConfiguration()
+                    .setIndexName("idx")
+                    .setCredentials(
+                            new Credentials()
+                                    .setUsername("user")
+                                    .setPassword("pass"));
+            assertThatNoException().isThrownBy(() -> {
+                try (var client = real.createRestClient()) {
+                    // Closing the client verifies it was created successfully.
+                }
+            });
+        }
     }
 
     @Test
-    void testCreateRestClient_noAuth_buildsClientWithoutException() {
-        var real = new ElasticsearchCommitter();
-        real.getConfiguration().setIndexName("idx");
-        assertThatNoException().isThrownBy(() -> real.createRestClient());
+    void testCreateRestClient_noAuth_buildsClientWithoutException()
+            throws Exception {
+        try (var real = new ElasticsearchCommitter()) {
+            real.getConfiguration().setIndexName("idx");
+            assertThatNoException().isThrownBy(() -> {
+                try (var client = real.createRestClient()) {
+                    // Closing the client verifies it was created successfully.
+                }
+            });
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -564,27 +582,31 @@ class ElasticsearchCommitterTest {
     // -------------------------------------------------------------------------
 
     @Test
-    void testCreateSniffer_httpNode_buildsSnifferWithoutException() {
-        var real = new ElasticsearchCommitter();
-        real.getConfiguration().setNodes(List.of("http://localhost:9200"));
-        var client = real.createRestClient();
-        assertThatNoException().isThrownBy(() -> {
-            var sniffer = real.createSniffer(client);
-            sniffer.close();
-            client.close();
-        });
+    void testCreateSniffer_httpNode_buildsSnifferWithoutException()
+            throws Exception {
+        try (var real = new ElasticsearchCommitter()) {
+            real.getConfiguration().setNodes(List.of("http://localhost:9200"));
+            var client = real.createRestClient();
+            assertThatNoException().isThrownBy(() -> {
+                var sniffer = real.createSniffer(client);
+                sniffer.close();
+                client.close();
+            });
+        }
     }
 
     @Test
-    void testCreateSniffer_httpsNode_buildsHttpsSnifferWithoutException() {
-        var real = new ElasticsearchCommitter();
-        real.getConfiguration().setNodes(List.of("https://localhost:9243"));
-        var client = real.createRestClient();
-        assertThatNoException().isThrownBy(() -> {
-            var sniffer = real.createSniffer(client);
-            sniffer.close();
-            client.close();
-        });
+    void testCreateSniffer_httpsNode_buildsHttpsSnifferWithoutException()
+            throws Exception {
+        try (var real = new ElasticsearchCommitter()) {
+            real.getConfiguration().setNodes(List.of("https://localhost:9243"));
+            var client = real.createRestClient();
+            assertThatNoException().isThrownBy(() -> {
+                var sniffer = real.createSniffer(client);
+                sniffer.close();
+                client.close();
+            });
+        }
     }
 
     // -------------------------------------------------------------------------

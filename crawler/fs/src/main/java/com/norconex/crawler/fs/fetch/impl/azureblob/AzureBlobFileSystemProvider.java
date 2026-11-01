@@ -37,6 +37,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.models.BlobItem;
@@ -144,7 +145,7 @@ final class AzureBlobFileSystemProvider extends ReadOnlyFileSystemProvider {
                     null)) {
                 if (item.isPrefix()) {
                     var childPrefix =
-                            StringUtils.removeEnd(item.getName(), "/");
+                            Strings.CS.removeEnd(item.getName(), "/");
                     if (StringUtils.isBlank(childPrefix)) {
                         continue;
                     }

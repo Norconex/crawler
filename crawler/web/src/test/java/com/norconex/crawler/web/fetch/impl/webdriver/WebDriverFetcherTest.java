@@ -231,7 +231,6 @@ class WebDriverFetcherTest {
                 "return navigator.userAgent;"))
                         .thenReturn("DriverAgent/1.0");
         when(manager.safeCall(any())).thenAnswer(invocation -> {
-            @SuppressWarnings("unchecked")
             Function<WebDriver, WebFetchResponse> action =
                     invocation.getArgument(0);
             return action.apply(driver);
@@ -256,7 +255,6 @@ class WebDriverFetcherTest {
         var manager = mock(WebDriverManager.class);
         var driver = mock(WebDriver.class);
         when(manager.safeCall(any())).thenAnswer(invocation -> {
-            @SuppressWarnings("unchecked")
             Function<WebDriver, WebFetchResponse> action =
                     invocation.getArgument(0);
             return action.apply(driver);
@@ -319,7 +317,6 @@ class WebDriverFetcherTest {
                 "return navigator.userAgent;"))
                         .thenReturn("DriverAgent/1.0");
         when(manager.safeCall(any())).thenAnswer(invocation -> {
-            @SuppressWarnings("unchecked")
             Function<WebDriver, WebFetchResponse> action =
                     invocation.getArgument(0);
             return action.apply(driver);
@@ -361,7 +358,6 @@ class WebDriverFetcherTest {
         var manager = mock(WebDriverManager.class);
         var driver = mock(WebDriver.class);
         when(manager.safeCall(any())).thenAnswer(invocation -> {
-            @SuppressWarnings("unchecked")
             Function<WebDriver, WebFetchResponse> action =
                     invocation.getArgument(0);
             return action.apply(driver);
