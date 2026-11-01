@@ -89,13 +89,14 @@ public final class CommonAttributesResolver {
 
         // Metadata Content-Type
         var ct = doc.getContentType();
-        if (overwrite || (meta.getString(CONTENT_TYPE) == null && ct != null)) {
+        if (ct != null
+                && (overwrite || meta.getString(CONTENT_TYPE) == null)) {
             meta.set(CONTENT_TYPE, ct.toString());
         }
 
         // Metadata Content Family
-        if (overwrite
-                || (meta.getString(CONTENT_FAMILY) == null && ct != null)) {
+        if (ct != null
+                && (overwrite || meta.getString(CONTENT_FAMILY) == null)) {
             meta.set(CONTENT_FAMILY, ct.getContentFamily().toString());
         }
     }
