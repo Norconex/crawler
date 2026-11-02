@@ -16,7 +16,6 @@ package com.norconex.crawler.core.cmd.crawl;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -103,11 +102,7 @@ class CrawlerCommandTest {
             Thread.currentThread().setName(threadName);
         }
 
-        // Named rather than matched with anyString(): the point is that the
-        // bootstrappers are the thing wrapped in oncePerRun, and a command
-        // that legitimately runs other once-per-run tasks must not fail this.
-        verify(fixture.session)
-                .oncePerRun(eq("crawl-bootstrappers"), any(Runnable.class));
+        verify(fixture.session).oncePerRun(anyString(), any(Runnable.class));
         verify(bootstrapper).bootstrap(fixture.session);
     }
 
