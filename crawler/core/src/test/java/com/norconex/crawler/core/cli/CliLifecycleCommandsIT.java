@@ -20,8 +20,10 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -31,10 +33,13 @@ import org.junit.jupiter.api.io.TempDir;
 
 import com.norconex.committer.core.CommitterEvent;
 import com.norconex.committer.core.service.CommitterServiceEvent;
+import com.norconex.commons.lang.event.Event;
+import com.norconex.commons.lang.event.EventListener;
 import com.norconex.crawler.core.CrawlerConfig;
 import com.norconex.crawler.core.event.CrawlerEvent;
 import com.norconex.crawler.core.junit.CrawlerExecutionAssertions;
 import com.norconex.crawler.core.junit.WithTestWatcherLogging;
+import com.norconex.crawler.core.test.CrawlerTestDriver;
 import com.norconex.crawler.core.test.standalone.StandaloneCliCrawlerLauncher;
 import com.norconex.importer.ImporterEvent;
 import com.sun.net.httpserver.HttpServer;
@@ -379,6 +384,57 @@ class CliLifecycleCommandsIT {
                 CrawlerEvent.CRAWLER_CRAWL_BEGIN,
                 CrawlerEvent.DOCUMENT_QUEUED,
                 CrawlerEvent.DOCUMENT_PROCESSING_BEGIN);
+    }
+
+    /**
+     * The crawl session is what says a crawl began from scratch: a run that
+     * continues an unfinished crawl keeps its session id, and one started with
+     * <code>-clean</code> must get a new one. Events alone cannot tell the two
+     * apart (both crawl the start references), so this looks at the id itself.
+     */
+    @Test
+    void testStartCleanAfterAnUnfinishedCrawlBeginsANewSession()
+            throws IOException {
+        // Proof that one start leaves the crawl unfinished: a second one
+        // continues the same session. It uses its own folder, since that
+        // second start would finish the crawl.
+        var probe = Files.createDirectories(tempDir.resolve("probe"));
+        var unfinished = launchAndGetSessionId(probe, "start");
+        assertThat(launchAndGetSessionId(probe, "start"))
+                .as("a plain start continues the unfinished session")
+                .isEqualTo(unfinished);
+
+        var scratch = Files.createDirectories(tempDir.resolve("scratch"));
+        var first = launchAndGetSessionId(scratch, "start");
+        var fromScratch = launchAndGetSessionId(scratch, "start", "-clean");
+
+        assertThat(fromScratch)
+                .as("start -clean begins a new session")
+                .isNotEqualTo(first);
+    }
+
+    private String launchAndGetSessionId(Path workDir, String... args) {
+        var driver = CrawlerTestDriver.create();
+        var sessionIds = new ArrayList<String>();
+        driver.eventManager().addListener((EventListener<Event>) event -> {
+            if (event instanceof CrawlerEvent crawlerEvent
+                    && CrawlerEvent.CRAWLER_CRAWL_BEGIN
+                            .equals(crawlerEvent.getName())
+                    && crawlerEvent.getCrawlSession() != null) {
+                sessionIds.add(
+                        crawlerEvent.getCrawlSession().getCrawlSessionId());
+            }
+        });
+        var result = StandaloneCliCrawlerLauncher
+                .builder()
+                .crawlDriver(driver)
+                .args(List.of(args))
+                .workDir(workDir)
+                .build()
+                .launch(oneDocConfig());
+        assertThat(result.isOK()).isTrue();
+        assertThat(sessionIds).hasSize(1);
+        return sessionIds.get(0);
     }
 
     private CrawlerConfig oneDocConfig() {
