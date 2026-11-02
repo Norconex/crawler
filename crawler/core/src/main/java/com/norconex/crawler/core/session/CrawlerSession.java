@@ -127,6 +127,34 @@ public class CrawlerSession implements Closeable {
         return crawlRunInfo.getCrawlMode() == CrawlerMode.INCREMENTAL;
     }
 
+    /**
+     * Works out again what this run is (the crawl session it belongs to,
+     * whether it resumes one, its mode and how many documents it may process)
+     * after the stored history was cleared by a clean command that ran in this
+     * same session.
+     * <p>
+     * All of that is worked out once, when the session opens, from what is
+     * stored. A clean erases what it was worked out from, so a crawl that
+     * follows it in the same session, as <code>start -clean</code> does, would
+     * otherwise still believe it was resuming: it would skip its start
+     * references and be allowed extra documents for what was cleared.
+     * </p>
+     */
+    public void resolveRunInfoAfterClean() {
+        // Cached for the run so every node adopts the same one; this one
+        // describes the history that is gone.
+        cluster.getCacheManager().getCrawlRunCache()
+                .remove(CrawlerRunInfoResolver.CRAWL_RUN_INFO_KEY);
+        crawlRunInfo = CrawlerRunInfoResolver.resolve(this);
+        LOG.info("Crawl run info resolved again after clean: mode={}, "
+                + "resumeState={}", crawlRunInfo.getCrawlMode(),
+                crawlRunInfo.getCrawlResumeState());
+        if (cluster.getLocalNode().isCoordinator()) {
+            updateCrawlState(CrawlerState.RUNNING);
+        }
+        crawlContext.getCrawlEntryLedger().refreshMaxDocs();
+    }
+
     @ToString.Include(name = "resumed")
     public boolean isResumed() {
         return crawlRunInfo.getCrawlResumeState() == CrawlerResumeState.RESUMED;

@@ -349,6 +349,38 @@ class CliLifecycleCommandsIT {
         return config;
     }
 
+    /**
+     * What a session works out when it opens (is it resuming one, and how
+     * many more documents may this run process) is out of date once the
+     * history is cleared. A crawl that left work unfinished and is then
+     * started with <code>-clean</code> must begin again from its start
+     * references, not skip them as if it were resuming.
+     */
+    @Test
+    void testStartCleanAfterAnUnfinishedCrawlStartsOverInsteadOfResuming() {
+        var unfinished = StandaloneCliCrawlerLauncher
+                .builder()
+                .args(List.of("start"))
+                .workDir(tempDir)
+                .build()
+                .launch(oneDocConfig());
+        assertThat(unfinished.isOK()).isTrue();
+
+        var again = StandaloneCliCrawlerLauncher
+                .builder()
+                .args(List.of("start", "-clean"))
+                .workDir(tempDir)
+                .build()
+                .launch(oneDocConfig());
+
+        assertThat(again.isOK()).isTrue();
+        assertThat(again.getEventNames()).containsSubsequence(
+                CrawlerEvent.CRAWLER_CLEAN_END,
+                CrawlerEvent.CRAWLER_CRAWL_BEGIN,
+                CrawlerEvent.DOCUMENT_QUEUED,
+                CrawlerEvent.DOCUMENT_PROCESSING_BEGIN);
+    }
+
     private CrawlerConfig oneDocConfig() {
         var config = new CrawlerConfig();
         config.setNumThreads(1);

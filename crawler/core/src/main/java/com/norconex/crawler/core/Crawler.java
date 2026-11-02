@@ -114,7 +114,8 @@ public class Crawler {
                 .build());
 
         withCrawlSession(sess -> {
-            for (Command cmd : commands) {
+            for (int i = 0; i < commands.length; i++) {
+                var cmd = commands[i];
                 try {
                     LOG.info("Executing command: {}",
                             cmd.getClass().getSimpleName());
@@ -126,6 +127,12 @@ public class Crawler {
                             .build());
                     ExceptionSwallower
                             .runWithInterruptClear(() -> cmd.execute(sess));
+                    // What the session worked out about itself when it
+                    // opened came from the history this command just erased.
+                    if (cmd instanceof CleanCommand
+                            && i < commands.length - 1) {
+                        sess.resolveRunInfoAfterClean();
+                    }
                 } finally {
                     sess.fire(CrawlerEvent.builder()
                             .name(CrawlerEvent.CRAWLER_COMMAND_END)

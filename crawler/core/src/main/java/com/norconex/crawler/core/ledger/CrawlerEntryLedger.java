@@ -176,7 +176,20 @@ public final class CrawlerEntryLedger {
         queue = cacheManager.getCacheQueue(CacheNames.REFERENCE_QUEUE,
                 String.class);
 
-        // Max docs
+        refreshMaxDocs();
+
+        LOG.info("Done initializing crawl entry ledger. Queued entries: {}",
+                getQueuedEntryCount());
+    }
+
+    /**
+     * Works out how many documents may be processed in total by this run: the
+     * configured maximum, plus those already processed when the run resumes
+     * an earlier one of the same session. Called when the ledger is
+     * initialized, and again if what it was based on changed since (the stored
+     * history being cleared within the same session).
+     */
+    public void refreshMaxDocs() {
         long runMaxDocs =
                 session.getCrawlContext().getCrawlConfig().getMaxDocuments();
         totalMaxDocsThisRun = runMaxDocs;
@@ -191,9 +204,6 @@ public final class CrawlerEntryLedger {
                     """, runMaxDocs,
                     totalMaxDocsThisRun);
         }
-
-        LOG.info("Done initializing crawl entry ledger. Queued entries: {}",
-                getQueuedEntryCount());
     }
 
     /**
