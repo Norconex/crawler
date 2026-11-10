@@ -38,7 +38,7 @@ import org.junit.jupiter.api.Timeout;
  * Test detection of modified files.
  */
 @MockServerSettings
-@Timeout(30)
+@Timeout(60) // several crawls: hang guard with room for loaded CI
 class ModifiedFileDetectionTest {
 
     private static final ZonedDateTime twentyDaysAgo =

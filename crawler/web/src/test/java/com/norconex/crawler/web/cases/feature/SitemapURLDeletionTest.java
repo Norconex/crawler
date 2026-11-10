@@ -43,7 +43,7 @@ import org.junit.jupiter.api.Timeout;
  */
 //Test for https://github.com/Norconex/collector-http/issues/390
 @MockServerSettings
-@Timeout(30)
+@Timeout(60) // several crawls: hang guard with room for loaded CI
 @SuppressWarnings("null")
 class SitemapURLDeletionTest {
 

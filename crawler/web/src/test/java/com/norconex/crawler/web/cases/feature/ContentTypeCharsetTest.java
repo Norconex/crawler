@@ -41,7 +41,7 @@ import org.junit.jupiter.api.Timeout;
  */
 // Related ticket: https://github.com/Norconex/importer/issues/41
 @MockServerSettings
-@Timeout(30)
+@Timeout(60) // several crawls: hang guard with room for loaded CI
 class ContentTypeCharsetTest {
 
     @WebCrawlingTest

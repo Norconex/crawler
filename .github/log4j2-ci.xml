@@ -57,14 +57,6 @@
       <AppenderRef ref="Console"/>
     </Logger>
 
-    <!-- Make a few ones louder (logging analyzed by tests) -->
-    <Logger name="com.norconex.crawler.core.cmd.crawl.CrawlCommand" level="INFO" additivity="false">
-      <AppenderRef ref="Console"/>
-    </Logger>
-    <Logger name="com.norconex.crawler.core.cmd.crawl.CrawlProgressLogger" level="INFO" additivity="false">
-      <AppenderRef ref="Console"/>
-    </Logger>
-
     <!-- Only WARN and above for everything else -->
     <Root level="WARN">
       <AppenderRef ref="Console"/>

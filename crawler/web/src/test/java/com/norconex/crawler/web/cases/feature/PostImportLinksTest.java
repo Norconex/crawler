@@ -40,7 +40,7 @@ import org.junit.jupiter.api.Timeout;
  * Test that links can be specified for crawling after importing.
  */
 @MockServerSettings
-@Timeout(30)
+@Timeout(60) // hang guard with room for loaded CI
 class PostImportLinksTest {
 
     @WebCrawlingTest
