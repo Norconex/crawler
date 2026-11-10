@@ -165,7 +165,7 @@ class CrawlerProgressLoggerTest {
         var ctx = buildContext(Duration.ofSeconds(1));
         var logger = new CrawlerProgressLogger(ctx);
 
-        var future = CompletableFuture.runAsync(logger::start);
+        var future = startInOwnThread(logger);
         // Wait >1s so logProgress() body is executed by the scheduler
         Thread.sleep(1500);
         logger.stop();
@@ -186,7 +186,7 @@ class CrawlerProgressLoggerTest {
 
         var logger = new CrawlerProgressLogger(ctx, () -> progress);
 
-        var future = CompletableFuture.runAsync(logger::start);
+        var future = startInOwnThread(logger);
         Thread.sleep(1500);
         logger.stop();
         future.join();
@@ -204,7 +204,7 @@ class CrawlerProgressLoggerTest {
 
         var logger = new CrawlerProgressLogger(ctx, () -> progress);
 
-        var future = CompletableFuture.runAsync(logger::start);
+        var future = startInOwnThread(logger);
         Thread.sleep(1500);
         logger.stop();
         future.join();
@@ -216,7 +216,7 @@ class CrawlerProgressLoggerTest {
         var ctx = buildContext(Duration.ofSeconds(1));
         var logger = new CrawlerProgressLogger(ctx, () -> null);
 
-        var future = CompletableFuture.runAsync(logger::start);
+        var future = startInOwnThread(logger);
         Thread.sleep(1500);
         logger.stop();
         future.join();
@@ -231,7 +231,7 @@ class CrawlerProgressLoggerTest {
                     throw new RuntimeException("supplier failure");
                 });
 
-        var future = CompletableFuture.runAsync(logger::start);
+        var future = startInOwnThread(logger);
         Thread.sleep(1500);
         logger.stop();
         future.join();
@@ -251,9 +251,20 @@ class CrawlerProgressLoggerTest {
 
         var logger = new CrawlerProgressLogger(ctx, () -> progress);
 
-        var future = CompletableFuture.runAsync(logger::start);
+        var future = startInOwnThread(logger);
         Thread.sleep(1500);
         logger.stop();
         future.join();
+    }
+
+    // As in a crawl: start() blocks until stopped, so it must not hold a
+    // thread of the shared common pool (see CrawlerCommonPoolTest).
+    private static CompletableFuture<Void> startInOwnThread(
+            CrawlerProgressLogger logger) {
+        return CompletableFuture.runAsync(logger::start, task -> {
+            var thread = new Thread(task, "progress-logger-test");
+            thread.setDaemon(true);
+            thread.start();
+        });
     }
 }

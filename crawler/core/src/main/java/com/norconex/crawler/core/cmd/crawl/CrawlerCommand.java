@@ -17,7 +17,6 @@ package com.norconex.crawler.core.cmd.crawl;
 import static com.norconex.crawler.core.util.ExceptionSwallower.swallow;
 import static java.util.Optional.ofNullable;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -107,7 +106,13 @@ public class CrawlerCommand implements Command {
                 }
             };
             logger = new CrawlerProgressLogger(ctx, supplier);
-            CompletableFuture.runAsync(logger::start);
+            // On its own thread: start() lasts the whole crawl, and holding
+            // a common-pool thread that long can starve others using that
+            // pool (e.g., Hazelcast completes async map operations there).
+            var loggerThread = new Thread(logger::start,
+                    session.getCrawlerId() + "-progress");
+            loggerThread.setDaemon(true);
+            loggerThread.start();
         } else {
             logger = null;
         }
