@@ -48,7 +48,7 @@ class CompactSerializerTest {
                     .addSerializer(new StepRecordCompactSerializer())
                     .addSerializer(
                             new JacksonCompactSerializer<>(CrawlerEntry.class));
-            hz = HazelcastTestSupport.FACTORY.newHazelcastInstance(cfg);
+            hz = HazelcastTestSupport.newInstance(cfg);
         }
         return hz;
     }

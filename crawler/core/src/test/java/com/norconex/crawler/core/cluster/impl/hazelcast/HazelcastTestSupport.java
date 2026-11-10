@@ -14,7 +14,9 @@
  */
 package com.norconex.crawler.core.cluster.impl.hazelcast;
 
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.hazelcast.config.Config;
 import com.hazelcast.core.HazelcastInstance;
@@ -40,8 +42,29 @@ public final class HazelcastTestSupport {
      * they start on the same mock network; unique cluster names (UUIDs)
      * prevent accidental cluster formation across unrelated tests.
      */
-    static final TestHazelcastInstanceFactory FACTORY =
-            new TestHazelcastInstanceFactory();
+    private static final Map<String, TestHazelcastInstanceFactory> FACTORIES =
+            new ConcurrentHashMap<>();
+
+    /**
+     * Each cluster name gets its own factory, hence its own mock network.
+     * A single factory shared by all test classes put every node in the same
+     * address space (5701, 5702, ...). With TCP-IP discovery on 127.0.0.1,
+     * nodes of unrelated clusters probed and rejected each other, which
+     * starved operations and hung the build when classes ran in parallel.
+     */
+    private static TestHazelcastInstanceFactory factoryFor(Config cfg) {
+        return FACTORIES.computeIfAbsent(cfg.getClusterName(),
+                k -> new TestHazelcastInstanceFactory());
+    }
+
+    /**
+     * Starts an instance on the mock network of its cluster name.
+     * @param cfg instance configuration
+     * @return running instance
+     */
+    public static HazelcastInstance newInstance(Config cfg) {
+        return factoryFor(cfg).newHazelcastInstance(cfg);
+    }
 
     private HazelcastTestSupport() {
     }
@@ -96,7 +119,7 @@ public final class HazelcastTestSupport {
      * @return running instance
      */
     public static HazelcastInstance startNode() {
-        return FACTORY.newHazelcastInstance(buildTestConfig());
+        return newInstance(buildTestConfig());
     }
 
     /**
@@ -109,7 +132,7 @@ public final class HazelcastTestSupport {
      * @return running instance
      */
     public static HazelcastInstance startNode(String clusterName) {
-        return FACTORY.newHazelcastInstance(buildTestConfig(clusterName));
+        return newInstance(buildTestConfig(clusterName));
     }
 
     /**
@@ -127,7 +150,7 @@ public final class HazelcastTestSupport {
             @Override
             protected HazelcastInstance createHazelcastInstance(
                     Config hzConfig) {
-                return FACTORY.newHazelcastInstance(hzConfig);
+                return newInstance(hzConfig);
             }
         };
     }
@@ -137,6 +160,7 @@ public final class HazelcastTestSupport {
      * test factory.  Call from {@code @AfterEach} or {@code @AfterAll}.
      */
     public static void shutdownAll() {
-        FACTORY.shutdownAll();
+        FACTORIES.values().forEach(TestHazelcastInstanceFactory::shutdownAll);
+        FACTORIES.clear();
     }
 }
