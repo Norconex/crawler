@@ -75,6 +75,7 @@ public final class CrawlerContextFactory {
         return CrawlerContext.builder()
                 .beanMapper(driver.beanMapper())
                 .bootstrappers(driver.bootstrappers())
+                .referenceEnqueuers(driver.referenceEnqueuers())
                 .callbacks(driver.callbacks())
                 .committerService(CommitterService
                         .<Doc>builder()

@@ -20,7 +20,6 @@ import java.util.function.Supplier;
 import com.norconex.crawler.core.CrawlerDriver;
 import com.norconex.crawler.core.CrawlerDriver.FetchDriver;
 import com.norconex.crawler.core.cmd.crawl.pipeline.bootstrap.ledger.CrawlerEntryLedgerBootstrapper;
-import com.norconex.crawler.core.cmd.crawl.pipeline.bootstrap.queue.QueueBootstrapper;
 import com.norconex.crawler.core.cmd.crawl.pipeline.bootstrap.queue.RefFileEnqueuer;
 import com.norconex.crawler.core.cmd.crawl.pipeline.bootstrap.queue.RefListEnqueuer;
 import com.norconex.crawler.core.cmd.crawl.pipeline.bootstrap.queue.RefProviderEnqueuer;
@@ -42,12 +41,12 @@ public class WebCrawlerDriverFactory implements Supplier<CrawlerDriver> {
         return CrawlerDriver.builder()
                 .fetchDriver(createFetchDriver())
                 .bootstrappers(List.of(
-                        new CrawlerEntryLedgerBootstrapper(),
-                        new QueueBootstrapper(List.of(
-                                new SitemapEnqueuer(),
-                                new RefListEnqueuer(),
-                                new RefFileEnqueuer(),
-                                new RefProviderEnqueuer()))))
+                        new CrawlerEntryLedgerBootstrapper()))
+                .referenceEnqueuers(List.of(
+                        new SitemapEnqueuer(),
+                        new RefListEnqueuer(),
+                        new RefFileEnqueuer(),
+                        new RefProviderEnqueuer()))
                 .crawlerConfigClass(WebCrawlerConfig.class)
                 .callbacks(WebCrawlerCallbacks.get())
                 .docPipelines(WebDocPipelines.create())

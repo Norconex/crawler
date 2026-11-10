@@ -25,6 +25,10 @@ import com.norconex.crawler.core.cmd.crawl.pipeline.CrawlerPipelineFactory;
 import com.norconex.crawler.core.cmd.crawl.pipeline.DefaultCrawlPipelineFactory;
 import com.norconex.crawler.core.cmd.crawl.pipeline.bootstrap.CrawlerBootstrapper;
 import com.norconex.crawler.core.cmd.crawl.pipeline.bootstrap.ledger.CrawlerEntryLedgerBootstrapper;
+import com.norconex.crawler.core.cmd.crawl.pipeline.bootstrap.queue.RefFileEnqueuer;
+import com.norconex.crawler.core.cmd.crawl.pipeline.bootstrap.queue.RefListEnqueuer;
+import com.norconex.crawler.core.cmd.crawl.pipeline.bootstrap.queue.RefProviderEnqueuer;
+import com.norconex.crawler.core.cmd.crawl.pipeline.bootstrap.queue.ReferenceEnqueuer;
 import com.norconex.crawler.core.doc.pipelines.CrawlerDocPipelines;
 import com.norconex.crawler.core.fetch.MultiFetcher.ResponseAggregator;
 import com.norconex.crawler.core.fetch.MultiFetcher.UnsuccessfulResponseFactory;
@@ -55,6 +59,29 @@ public class CrawlerDriver {
     private final List<CrawlerBootstrapper> bootstrappers =
             new ArrayList<>(List.of(
                     new CrawlerEntryLedgerBootstrapper()));
+
+    /**
+     * Sources of start references. They are queued once per crawl, by the
+     * crawl pipeline (not by a bootstrapper). Crawlers with their own kinds
+     * of start references (e.g., sitemaps) provide them here, in addition to
+     * the defaults: references listed in the configuration, read from files,
+     * and obtained from providers.
+     */
+    @Default
+    private final List<ReferenceEnqueuer> referenceEnqueuers =
+            defaultReferenceEnqueuers();
+
+    /**
+     * Gets a new list of the default reference enqueuers: configured
+     * references, reference files and reference providers.
+     * @return default reference enqueuers
+     */
+    public static List<ReferenceEnqueuer> defaultReferenceEnqueuers() {
+        return new ArrayList<>(List.of(
+                new RefListEnqueuer(),
+                new RefFileEnqueuer(),
+                new RefProviderEnqueuer()));
+    }
 
     private final CrawlerDocPipelines docPipelines;
     @Default

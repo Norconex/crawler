@@ -39,6 +39,7 @@ import com.norconex.commons.lang.time.DurationFormatter;
 import com.norconex.crawler.core.CrawlerCallbacks;
 import com.norconex.crawler.core.CrawlerConfig;
 import com.norconex.crawler.core.cmd.crawl.pipeline.bootstrap.CrawlerBootstrapper;
+import com.norconex.crawler.core.cmd.crawl.pipeline.bootstrap.queue.ReferenceEnqueuer;
 import com.norconex.crawler.core.doc.pipelines.CrawlerDocPipelines;
 import com.norconex.crawler.core.doc.pipelines.DedupService;
 import com.norconex.crawler.core.doc.pipelines.importer.ClusterDocHandlerCache;
@@ -96,6 +97,12 @@ public class CrawlerContext implements Closeable {
     private final Importer importer;
     @Singular
     private final List<CrawlerBootstrapper> bootstrappers;
+    /**
+     * Sources of start references, queued once per crawl by the pipeline's
+     * initial queue step.
+     */
+    @Singular
+    private final List<ReferenceEnqueuer> referenceEnqueuers;
     private final CrawlerDocPipelines docPipelines;
     private final Fetcher fetcher;
     private final Path workDir;

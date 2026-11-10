@@ -17,6 +17,10 @@ package com.norconex.crawler.core.cmd.crawl.pipeline.bootstrap.queue;
 import com.norconex.crawler.core.cluster.pipeline.BaseStep;
 import com.norconex.crawler.core.session.CrawlerSession;
 
+/**
+ * Queues the start references, from the reference enqueuers the crawler
+ * driver provides. This is the only place start references are queued.
+ */
 public class StartRefsQueueStep extends BaseStep {
     public StartRefsQueueStep(String id) {
         super(id);
@@ -24,14 +28,12 @@ public class StartRefsQueueStep extends BaseStep {
 
     @Override
     public void execute(CrawlerSession session) {
-
-        new QueueBootstrapper().bootstrap(session);
-
-        //        var ctx = session.getCrawlContext();
-        //
-        //
-        //        if (CollectionUtils.isNotEmpty(ctx.getBootstrappers())) {
-        //            ctx.getBootstrappers().forEach(boot -> boot.bootstrap(session));
-        //        }
+        var enqueuers = session.getCrawlContext().getReferenceEnqueuers();
+        // A context built without enqueuers (e.g., in tests) gets the
+        // default ones.
+        var bootstrapper = enqueuers.isEmpty()
+                ? new QueueBootstrapper()
+                : new QueueBootstrapper(enqueuers);
+        bootstrapper.bootstrap(session);
     }
 }
