@@ -91,6 +91,25 @@
         </exclusion>
       </exclusions>
     </dependency>
+
+    <!-- Committers bundled in the distribution zips: the most common
+         targets, lightweight (they add few or no jars to the crawler's own
+         dependencies). Other committers are separate downloads. -->
+    <dependency>
+      <groupId>com.norconex.crawler</groupId>
+      <artifactId>nx-committer-elasticsearch</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.norconex.crawler</groupId>
+      <artifactId>nx-committer-solr</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.norconex.crawler</groupId>
+      <artifactId>nx-committer-sql</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
     <dependency>
       <groupId>commons-net</groupId>
       <artifactId>commons-net</artifactId>

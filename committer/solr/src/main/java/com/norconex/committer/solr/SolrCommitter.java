@@ -12,21 +12,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.norconex.committer.solr;
 
-import java.io.IOException;
 import java.util.Iterator;
-import java.util.Map.Entry;
-import java.util.Objects;
-
-import org.apache.commons.lang3.ObjectUtils;
-import org.apache.solr.client.solrj.SolrClient;
-import org.apache.solr.client.solrj.SolrServerException;
-import org.apache.solr.client.solrj.request.UpdateRequest;
-import org.apache.solr.client.solrj.response.UpdateResponse;
-import org.apache.solr.common.SolrInputDocument;
-import org.apache.solr.common.util.NamedList;
+import java.util.LinkedHashMap;
 
 import com.norconex.committer.core.CommitterException;
 import com.norconex.committer.core.CommitterRequest;
@@ -34,9 +23,6 @@ import com.norconex.committer.core.CommitterUtil;
 import com.norconex.committer.core.DeleteRequest;
 import com.norconex.committer.core.UpsertRequest;
 import com.norconex.committer.core.batch.AbstractBatchCommitter;
-import com.norconex.commons.lang.encrypt.EncryptionUtil;
-import com.norconex.commons.lang.io.IoUtil;
-import com.norconex.commons.lang.map.Properties;
 
 import lombok.AccessLevel;
 import lombok.EqualsAndHashCode;
@@ -47,55 +33,68 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * <p>
- * Commits documents to Apache Solr.
+ * Commits documents to Apache Solr (and Solr-based products, such as
+ * LucidWorks Fusion). It sends JSON update requests over HTTP and does
+ * not depend on the SolrJ library.
  * </p>
  *
- * <h2>Solr Client:</h2>
+ * <h2>Connection type</h2>
  * <p>
- * You can specify which type of
- * <a href="https://lucene.apache.org/solr/guide/8_1/using-solrj.html#types-of-solrclients">
- * Solr Client</a> to use.
- * The expected configuration value of "solrURL" is influenced
- * by the client type chosen.  Default client type is
- * <code>Http2SolrClient</code>. The clients are:
+ * The <code>solrClientType</code> influences what the expected
+ * <code>solrURL</code> value is. All URLs are Solr "core" or "collection"
+ * URLs, such as <code>http://localhost:8983/solr/mycollection</code>.
+ * Client types keep the name of the SolrJ client they replace so existing
+ * configurations remain valid. They are:
  * </p>
  * <dl>
- *   <dt>Http2SolrClient</dt>
- *     <dd>Default client. For direct access to a single Solr node. Ideal for
- *         local development or small setups. Expects a Solr URL.</dd>
+ *   <dt>HttpJettySolrClient</dt>
+ *     <dd>Default. For direct access to a single Solr node. Expects a
+ *         Solr URL. HTTP/2 is used when the URL starts with
+ *         <code>https</code>, else HTTP/1.1 is used.</dd>
  *   <dt>CloudSolrClient</dt>
- *     <dd>For use with a SolrCloud cluster. Expects a comma-separated list
- *         of Zookeeper hosts.</dd>
- *   <dt>LBHttp2SolrClient</dt>
- *     <dd>Simple load-balancing as an alternative to an external load balancer.
- *         Expects two or more Solr node URLs (comma-separated).</dd>
- *   <dt>ConcurrentUpdateHttp2SolrClient</dt>
- *     <dd>Optimized for mass upload on a single node.  Not best for queries.
- *         Expects a Solr URL.</dd>
- * </dl>
- *
- * <p>
- * The above client types are using the HTTP/2 protocol. They should be
- * favored over the following, which are using HTTP/1.x and are
- * considered <b>deprecated</b>:
- * </p>
- *
- * <dl>
- *   <dt>HttpSolrClient</dt>
- *     <dd>For direct access to a single Solr node. Ideal for
- *         local development. Expects a Solr URL.</dd>
- *   <dt>LBHttpSolrClient</dt>
- *     <dd>Simple load-balancing as an alternative to an external load balancer.
- *         Expects two or more Solr node URLs (comma-separated).</dd>
- *   <dt>ConcurrentUpdateSolrClient</dt>
- *     <dd>Optimized for mass upload on a single node.  Not best for queries.
- *         Expects a Solr URL.</dd>
+ *     <dd>For use with a SolrCloud cluster. Expects one or more Solr node
+ *         URLs (comma-separated), each ending with the collection name.
+ *         The nodes currently hosting the collection are discovered
+ *         over HTTP (Collections API <code>CLUSTERSTATUS</code>) and
+ *         refreshed periodically, so ZooKeeper does not have to be
+ *         reachable. Updates are spread across these nodes. If the cluster
+ *         state cannot be obtained (e.g., missing permission) or
+ *         discovered nodes are unreachable, the configured URLs are used.
+ *         <b>ZooKeeper connection strings are not supported.</b></dd>
+ *   <dt>LBJettySolrClient</dt>
+ *     <dd>Simple load-balancing as an alternative to an external load
+ *         balancer. Expects two or more Solr node URLs (comma-separated).
+ *         Updates are spread across nodes. A failing node is set aside
+ *         for a while and the request is sent to another one.</dd>
+ *   <dt>ConcurrentUpdateJettySolrClient, HttpJdkSolrClient</dt>
+ *     <dd>Same as <code>HttpJettySolrClient</code> (documents are already
+ *         sent in batches).</dd>
+ *   <dt>HttpSolrClient, LBHttpSolrClient, ConcurrentUpdateSolrClient</dt>
+ *     <dd><b>Deprecated.</b> Same as their HTTP/2 counterparts, but always
+ *         using HTTP/1.1.</dd>
  * </dl>
  *
  * <h2>Authentication</h2>
  * <p>
- * Basic authentication is supported for password-protected
- * Solr installations.
+ * The following are supported, and sent with every request to Solr:
+ * </p>
+ * <ul>
+ *   <li><b>Basic authentication</b>: with <code>credentials</code>
+ *       (password can be encrypted).</li>
+ *   <li><b>Bearer token</b>: with <code>bearerToken</code>
+ *       (e.g., for the Solr JWT authentication plugin).
+ *       Ignored when basic credentials are set.</li>
+ *   <li><b>Custom HTTP headers</b>: with <code>headers</code> (e.g., for an
+ *       API gateway or a reverse proxy). These can override the
+ *       <code>Authorization</code> header set by the above.</li>
+ *   <li><b>TLS</b>: for HTTPS, the JVM default trust store is used
+ *       (customizable with the standard <code>javax.net.ssl.*</code>
+ *       system properties, including for client certificates).</li>
+ * </ul>
+ * <p>
+ * HTTP proxies are those of the JVM (standard <code>http.proxyHost</code>
+ * and <code>https.proxyHost</code> system properties).
+ * Kerberos authentication is not supported.
  * </p>
  */
 @EqualsAndHashCode
@@ -108,7 +107,7 @@ public class SolrCommitter
     @ToString.Exclude
     @Getter(value = AccessLevel.NONE)
     @Setter(value = AccessLevel.NONE)
-    private SolrClient solrClient;
+    private SolrHttpClient solrClient;
 
     @Getter
     private final SolrCommitterConfig configuration =
@@ -116,47 +115,33 @@ public class SolrCommitter
 
     @Override
     protected void initBatchCommitter() throws CommitterException {
-        solrClient = ObjectUtils.getIfNull(
-                configuration.getSolrClientType(),
-                SolrClientType.HTTP2).create(configuration.getSolrURL());
+        solrClient = new SolrHttpClient(configuration);
     }
 
     @Override
     protected void commitBatch(Iterator<CommitterRequest> it)
             throws CommitterException {
 
-        // Add to request all operations in batch, and force a commit
-        // whenever we do a "delete" after an "add" to eliminate the
-        // risk of the delete being a no-op since added documents are
-        // not visible until committed (thus nothing to delete).
-
-        //MAYBE: before a delete, check if the same reference was previously
-        //added before forcing a commit if any additions occurred.
-
-        var docCount = 0;
+        // Operations are sent in a single request, in the order received.
+        // Solr executes them in that order, so a delete following the
+        // addition of the same document is honored.
+        var batch = new SolrUpdateBatch();
         try {
-            final var solrBatchRequest = new UpdateRequest();
-            var previousWasAddition = false;
             while (it.hasNext()) {
                 var r = it.next();
                 if (r instanceof UpsertRequest upsert) {
-                    addSolrUpsertRequest(solrBatchRequest, upsert);
-                    previousWasAddition = true;
+                    addUpsert(batch, upsert);
                 } else if (r instanceof DeleteRequest delete) {
-                    if (previousWasAddition) {
-                        pushSolrRequest(solrBatchRequest);
-                    }
-                    addSolrDeleteRequest(solrBatchRequest, delete);
-                    previousWasAddition = false;
+                    addDelete(batch, delete);
                 } else {
                     throw new CommitterException("Unsupported operation:" + r);
                 }
-                docCount++;
             }
-
-            pushSolrRequest(solrBatchRequest);
-            LOG.info("Sent {} committer operations to Solr.", docCount);
-
+            if (batch.isEmpty()) {
+                return;
+            }
+            push(batch);
+            LOG.info("Sent {} committer operations to Solr.", batch.size());
         } catch (CommitterException e) {
             throw e;
         } catch (Exception e) {
@@ -167,85 +152,40 @@ public class SolrCommitter
 
     @Override
     protected void closeBatchCommitter() throws CommitterException {
-        IoUtil.closeQuietly(solrClient);
-        solrClient = null;
-        LOG.info("SolrClient closed.");
+        if (solrClient != null) {
+            solrClient.close();
+            solrClient = null;
+        }
+        LOG.info("Solr client closed.");
     }
 
-    protected void pushSolrRequest(UpdateRequest solrBatchRequest)
-            throws SolrServerException, IOException, CommitterException {
-
-        if (configuration.getCredentials().isSet()) {
-            solrBatchRequest.setBasicAuthCredentials(
-                    configuration.getCredentials().getUsername(),
-                    EncryptionUtil.decryptPassword(
-                            configuration.getCredentials()));
-        }
-        for (Entry<String, String> entry : configuration.getUpdateUrlParams()
-                .entrySet()) {
-            solrBatchRequest.setParam(entry.getKey(), entry.getValue());
-        }
-
-        handleResponse(solrBatchRequest.process(solrClient));
+    private void push(SolrUpdateBatch batch) throws CommitterException {
+        var params = new LinkedHashMap<String, String>();
+        // Explicit commit at the end of every batch, unless disabled.
         if (!configuration.isSolrCommitDisabled()) {
-            handleResponse(solrBatchRequest.commit(solrClient, null));
+            params.put("commit", "true");
         }
-        solrBatchRequest.clear();
+        // user-defined parameters can override the above
+        params.putAll(configuration.getUpdateUrlParams());
+        solrClient.update(batch.toBytes(), params);
     }
 
-    protected void addSolrUpsertRequest(
-            UpdateRequest solrBatchRequest, UpsertRequest committerRequest)
+    private void addUpsert(SolrUpdateBatch batch, UpsertRequest request)
             throws CommitterException {
-
         CommitterUtil.applyTargetId(
-                committerRequest,
+                request,
                 configuration.getSourceIdField(),
                 configuration.getTargetIdField());
         CommitterUtil.applyTargetContent(
-                committerRequest, configuration.getTargetContentField());
-        solrBatchRequest.add(buildSolrDocument(committerRequest.getMetadata()));
+                request, configuration.getTargetContentField());
+        batch.add(request.getMetadata());
     }
 
-    protected void addSolrDeleteRequest(
-            UpdateRequest solrBatchRequest, DeleteRequest committerRequest) {
+    private void addDelete(SolrUpdateBatch batch, DeleteRequest request) {
         CommitterUtil.applyTargetId(
-                committerRequest,
+                request,
                 configuration.getSourceIdField(),
                 configuration.getTargetIdField());
-        solrBatchRequest.deleteById(committerRequest.getReference());
+        batch.delete(request.getReference());
     }
-
-    protected SolrInputDocument buildSolrDocument(Properties fields) {
-        var doc = new SolrInputDocument();
-        for (String key : fields.keySet()) {
-            var values = fields.getStrings(key);
-            for (String value : values) {
-                doc.addField(key, value);
-            }
-        }
-        return doc;
-    }
-
-    private void handleResponse(UpdateResponse response)
-            throws CommitterException {
-        handleResponse(response.getResponse());
-    }
-
-    private void handleResponse(NamedList<Object> response)
-            throws CommitterException {
-        @SuppressWarnings("unchecked")
-        var headers =
-                (NamedList<Object>) response.get("responseHeader");
-        if (headers == null) {
-            throw new CommitterException(
-                    "No response headers obtained from Solr request. "
-                            + "Response: " + response);
-        }
-        var status = Objects.toString(headers.get("status"), null);
-        if (!"0".equals(status)) {
-            throw new CommitterException(
-                    "Invalid Solr response status: " + status);
-        }
-    }
-
 }

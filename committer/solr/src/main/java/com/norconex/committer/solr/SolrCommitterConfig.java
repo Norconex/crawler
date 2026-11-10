@@ -15,6 +15,7 @@
 
 package com.norconex.committer.solr;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,6 +28,7 @@ import com.norconex.commons.lang.collection.CollectionUtil;
 import com.norconex.commons.lang.security.Credentials;
 
 import lombok.Data;
+import lombok.NonNull;
 import lombok.experimental.Accessors;
 
 /**
@@ -42,6 +44,12 @@ public class SolrCommitterConfig extends BaseBatchCommitterConfig {
     public static final String DEFAULT_SOLR_ID_FIELD = "id";
     /** Default Solr content field */
     public static final String DEFAULT_SOLR_CONTENT_FIELD = "content";
+    /** Default time to wait for a connection to be established */
+    public static final Duration DEFAULT_CONNECTION_TIMEOUT =
+            Duration.ofSeconds(10);
+    /** Default time to wait for Solr to respond to a request */
+    public static final Duration DEFAULT_SOCKET_TIMEOUT =
+            Duration.ofSeconds(120);
 
     /**
      * The type of Solr client.
@@ -63,6 +71,33 @@ public class SolrCommitterConfig extends BaseBatchCommitterConfig {
     @JsonXmlMap(entryName = "param")
     private final Map<String, String> updateUrlParams = new HashMap<>();
     private final Credentials credentials = new Credentials();
+
+    /**
+     * A bearer token (e.g., JWT) sent as an <code>Authorization</code>
+     * header with every request. Ignored when basic
+     * authentication credentials are set.
+     */
+    private String bearerToken;
+
+    /**
+     * Custom HTTP headers sent with every request.
+     */
+    @JsonXmlMap(entryName = "header")
+    private final Map<String, String> headers = new HashMap<>();
+
+    /**
+     * Maximum time to wait for a connection to be established.
+     * Default is 10 seconds.
+     */
+    @NonNull
+    private Duration connectionTimeout = DEFAULT_CONNECTION_TIMEOUT;
+
+    /**
+     * Maximum time to wait for Solr to respond to a request (a batch of
+     * documents). Default is 120 seconds.
+     */
+    @NonNull
+    private Duration socketTimeout = DEFAULT_SOCKET_TIMEOUT;
 
     /**
      * The document field name containing the value to be stored
@@ -124,6 +159,31 @@ public class SolrCommitterConfig extends BaseBatchCommitterConfig {
     @JsonIgnore
     public Set<String> getUpdateUrlParamNames() {
         return updateUrlParams.keySet();
+    }
+
+    /**
+     * Gets custom HTTP headers sent with every request.
+     * @return a map of header names and values
+     */
+    public Map<String, String> getHeaders() {
+        return Collections.unmodifiableMap(headers);
+    }
+
+    /**
+     * Sets custom HTTP headers sent with every request.
+     * @param headers a map of header names and values
+     */
+    public void setHeaders(Map<String, String> headers) {
+        CollectionUtil.setAll(this.headers, headers);
+    }
+
+    /**
+     * Sets a custom HTTP header sent with every request.
+     * @param name header name
+     * @param value header value
+     */
+    public void setHeader(String name, String value) {
+        headers.put(name, value);
     }
 
     /**

@@ -125,10 +125,10 @@ committers:
 
 See the [Integrations](/integrations) page for all available committers and their configuration.
 
-When using ZIP distributions, external committers are downloaded separately as
-`nx-committer-<name>-<version>.zip` and their `lib/*.jar` files must be copied into
-the crawler `lib/` directory. Built-in committers such as `LogCommitter` do not
-require this extra step.
+ZIP distributions already include the Elasticsearch/OpenSearch, Solr and SQL
+committers, along with generic ones such as `LogCommitter`. Other committers
+(Kafka, Neo4j, ...) are downloaded separately as `nx-committer-<name>-<version>.zip`
+and their `lib/*.jar` files must be copied into the crawler `lib/` directory.
 
 ## CLI reference
 

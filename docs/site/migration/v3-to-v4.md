@@ -640,6 +640,31 @@ committers:
 | `SQLCommitter`               | `SqlCommitter`        |
 | `MemoryCommitter`, `LogCommitter` | unchanged        |
 
+### Solr committer
+
+`SolrCommitter` no longer uses the SolrJ library. It sends JSON updates over
+HTTP, which removes SolrJ and its Jetty dependencies and is why it can ship
+in the crawler zips. Existing configurations keep working, with these differences:
+
+- `solrClientType` values (`CloudSolrClient`, `HttpJettySolrClient`, ...) are
+  still recognized, but now only select how URLs are used: a single node
+  (`HttpSolrClient`, `HttpJettySolrClient`, `HttpJdkSolrClient`,
+  `ConcurrentUpdate*`), several nodes with load balancing and failover
+  (`LB*`), or a SolrCloud cluster (`CloudSolrClient`).
+- **ZooKeeper connection strings are no longer supported** for
+  `CloudSolrClient`. Provide the URL of one or more Solr nodes instead, each
+  ending with the collection name
+  (e.g., `http://solr1:8983/solr/mycollection`). The nodes hosting the
+  collection are discovered through the Collections API.
+- The `solrURL` for SolrCloud must now include the collection name.
+- Authentication: basic authentication (`credentials`) works as before.
+  Added are `bearerToken` and custom `headers`. Kerberos is not supported.
+- Added `connectionTimeout` and `socketTimeout`.
+- Operations in a batch are sent in order in a single request, with one
+  commit at the end (unless `solrCommitDisabled` is set).
+- Classes extending `SolrCommitter` and overriding its protected SolrJ-based
+  methods must be adapted.
+
 Also worth knowing:
 
 - Unless you set one explicitly, each committer now gets a working directory

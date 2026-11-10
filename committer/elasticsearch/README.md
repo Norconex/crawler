@@ -9,3 +9,5 @@ Website: https://crawler.norconex.com/docs/reference/committers/ElasticsearchCom
 
 
   
+
+This committer is bundled with the web and file system crawler distributions.

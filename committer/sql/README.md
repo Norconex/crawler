@@ -10,3 +10,6 @@ Website: https://crawler.norconex.com/docs/reference/committers/SqlCommitter
 | This Committer   | Committer Core | HTTP Collector | FS Collector |
 | ---------------- | -------------- | -------------- | ------------ |
 
+
+This committer is bundled with the web and file system crawler distributions
+(add your database JDBC driver to the crawler `lib` directory).

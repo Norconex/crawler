@@ -9,21 +9,55 @@ propertyCoverage: all
 
 ## Summary
 
-Commit documents to Apache Solr search engine.
+Commit documents to Apache Solr search engine (standalone or SolrCloud).
 
 ## Notes
 
-Commits crawled documents to an Apache Solr search engine. Supports multiple Solr client types, field mappings, optional explicit Solr commit control, custom URL parameters, and credential configuration.
+Commits crawled documents to an Apache Solr search engine, or a Solr-based product. Documents are sent as JSON over HTTP using the JDK HTTP client (SolrJ is not required). Supports a single node, several nodes with load balancing and failover, and SolrCloud. Also supports field mappings, optional explicit Solr commit control, custom URL parameters, and several authentication options.
+
+This committer is bundled with the web and file system crawler distributions.
+
+### Connection types
+
+The `solrClientType` determines how `solrURL` is used. The names are those of the SolrJ clients they replace, so existing configurations remain valid. All URLs are Solr core or collection URLs, e.g., `http://localhost:8983/solr/mycollection`.
+
+- `HttpJettySolrClient` (default): a single Solr node. Also covers `HttpJdkSolrClient` and `ConcurrentUpdateJettySolrClient`, since documents are already sent in batches. HTTP/2 is used for `https` URLs.
+- `LBJettySolrClient`: comma-separated Solr node URLs. Updates are spread across nodes. A failing node is set aside for a while and the request is sent to another one.
+- `CloudSolrClient`: one or more comma-separated Solr node URLs, each ending with the collection name. The nodes hosting the collection are discovered over HTTP (Collections API `CLUSTERSTATUS`) and refreshed periodically. If the cluster state cannot be obtained, or discovered nodes are not reachable, the configured URLs are used. **ZooKeeper connection strings are not supported.**
+- `HttpSolrClient`, `LBHttpSolrClient`, `ConcurrentUpdateSolrClient`: deprecated. Same as their counterparts above, but always using HTTP/1.1.
+
+### Authentication
+
+Sent with every request to Solr:
+
+- Basic authentication: `credentials` (the password can be encrypted).
+- Bearer token: `bearerToken` (e.g., Solr JWT authentication plugin). Ignored when `credentials` are set.
+- Custom HTTP headers: `headers` (e.g., for an API gateway). They can override the `Authorization` header set by the above.
+- TLS: HTTPS connections use the JVM trust store. Use the standard `javax.net.ssl.*` system properties to customize it (including client certificates).
+
+HTTP proxies are those of the JVM (`http.proxyHost`, `https.proxyHost`, ...). Kerberos is not supported.
 
 ## Properties
 
+### bearerToken
+
+Bearer token (e.g., JWT) sent as an `Authorization` header with every request. Ignored when `credentials` are set.
+
+### connectionTimeout
+
+Maximum time to wait for a connection to be established. Default is 10 seconds.
+
 ### credentials
 
-Username and password to a protected Solr.
+Username and password to a protected Solr (basic authentication).
 
 ### fieldMappings
 
 Mapping of source fields to target ones (Solr fields).
+
+### headers
+
+Custom HTTP headers sent with every request, as name/value pairs. A header named `Authorization` replaces the one derived from `credentials` or `bearerToken`.
 
 ### queue
 
@@ -33,9 +67,13 @@ Configures the committer queue used to batch documents before sending them to th
 
 Defines filter conditions that restrict which documents this committer processes. Documents not matching the restrictions are ignored by this committer.
 
+### socketTimeout
+
+Maximum time to wait for Solr to respond to a request (a batch of documents). Default is 120 seconds.
+
 ### solrClientType
 
-Type of [Solr Client](https://solr.apache.org/guide/solr/latest/deployment-guide/solrj.html#types-of-solrclients) to use. Default client type is `Http2SolrClient`.
+Type of connection to Solr. See "Connection types" above. Default is `HttpJettySolrClient`.
 
 ### solrCommitDisabled
 
@@ -43,7 +81,7 @@ Disable sending an explicit Solr commit request at the end of every batch sent, 
 
 ### solrURL
 
-URL to Solr. Influenced by the client type chosen.
+URL(s) of the Solr core or collection documents are sent to, as per the client type chosen. Multiple URLs are comma-separated.
 
 ### sourceIdField
 
@@ -59,14 +97,42 @@ Solr field name where to store a document unique identifier (source ID field). D
 
 ### updateUrlParams
 
-Parameters to be added on Solr HTTP calls.
+Parameters to be added on Solr HTTP calls (e.g., `commitWithin`).
 
 ## Examples
+
+Single Solr node:
 
 <ConfigBlock
   json={{
     "class": "SolrCommitter",
-    "solrUrl": "http://localhost:8983/solr",
-    "solrCollection": "mycollection"
+    "solrURL": "http://localhost:8983/solr/mycollection"
+  }}
+/>
+
+SolrCloud with basic authentication:
+
+<ConfigBlock
+  json={{
+    "class": "SolrCommitter",
+    "solrClientType": "CloudSolrClient",
+    "solrURL": "https://solr1:8983/solr/mycollection,https://solr2:8983/solr/mycollection",
+    "credentials": {
+      "username": "myuser",
+      "password": "mypassword"
+    }
+  }}
+/>
+
+Bearer token and custom header:
+
+<ConfigBlock
+  json={{
+    "class": "SolrCommitter",
+    "solrURL": "https://solr.example.com/solr/mycollection",
+    "bearerToken": "eyJhbGciOi...",
+    "headers": {
+      "X-Api-Key": "abc123"
+    }
   }}
 />

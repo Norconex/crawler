@@ -129,11 +129,17 @@ to resolve the bundled folder's absolute path at runtime.
 
 ## Install external committers when using ZIP distributions
 
-ZIP distributions include built-in committer support from `nx-committer-core`
-(for example, `LogCommitter`).
+ZIP distributions include these committers, ready to use:
 
-If you want an external committer such as Elasticsearch, Solr, SQL, Kafka, Neo4j,
-Amazon CloudSearch, or Azure Cognitive Search, download the matching
+| Committer                  | Class                    | Notes                                                    |
+| -------------------------- | ------------------------ | -------------------------------------------------------- |
+| Log, Memory                | `LogCommitter`, ...      | Generic, from `nx-committer-core`. Useful for testing.   |
+| Elasticsearch / OpenSearch | `ElasticsearchCommitter` |                                                          |
+| Apache Solr and compatible | `SolrCommitter`          | Standalone and SolrCloud. No ZooKeeper access required.  |
+| SQL                        | `SqlCommitter`           | Add your database's JDBC driver to `lib/`.               |
+
+If you want another committer such as Kafka, Neo4j, IDOL, Amazon CloudSearch,
+Azure AI Search, or Google Cloud Search, download the matching
 `nx-committer-<name>-<version>.zip` package separately and copy its JAR files into
 the crawler `lib/` directory.
 

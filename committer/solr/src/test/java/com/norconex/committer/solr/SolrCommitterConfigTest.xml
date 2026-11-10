@@ -23,6 +23,12 @@
     <param key="param2"/>
 	</updateUrlParams>
 	<solrCommitDisabled>true</solrCommitDisabled>
+	<bearerToken>mytoken</bearerToken>
+	<headers>
+		<header key="X-Api-Key" value="abc"/>
+	</headers>
+	<connectionTimeout>3 seconds</connectionTimeout>
+	<socketTimeout>2 minutes</socketTimeout>
 	<sourceIdField>sourceReferenceField</sourceIdField>
 
 	<targetIdField>targetReferenceField</targetIdField>

@@ -14,134 +14,120 @@
  */
 package com.norconex.committer.solr;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.function.Function;
-
-import org.apache.solr.client.solrj.SolrClient;
-import org.apache.solr.client.solrj.impl.CloudSolrClient;
-import org.apache.solr.client.solrj.impl.HttpJdkSolrClient;
-import org.apache.solr.client.solrj.impl.LBSolrClient;
-import org.apache.solr.client.solrj.jetty.ConcurrentUpdateJettySolrClient;
-import org.apache.solr.client.solrj.jetty.HttpJettySolrClient;
-import org.apache.solr.client.solrj.jetty.LBJettySolrClient;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 /**
- * Supported
- * <a href="https://lucene.apache.org/solr/guide/8_1/using-solrj.html#types-of-solrclients">
- * SolrClient</a> types.
+ * <p>
+ * The type of connection to establish with Solr. Names are the ones
+ * historically used by the Solr committer (named after the SolrJ classes)
+ * so existing configurations keep working. Each type maps to one of
+ * three connection modes (see {@link Mode}).
+ * </p>
  */
 public enum SolrClientType {
 
     /**
-     * For use with a SolrCloud cluster. Expects a comma-separated list
-     * of Zookeeper hosts.
+     * For use with a SolrCloud cluster. Expects one or more Solr node URLs
+     * (comma-separated), each ending with the collection name, e.g.,
+     * <code>http://host1:8983/solr/mycollection</code>. The live nodes
+     * hosting the collection are discovered over HTTP (no ZooKeeper
+     * access required) and updates are spread across them.
      */
-    CLOUD("CloudSolrClient", url -> {
-        List<String> urls = List.of(url.split(SolrClientType.CSV_SPLIT_REGEX));
-        if (url.startsWith("http")) {
-            return new CloudSolrClient.Builder(urls).build();
-        }
-        return new CloudSolrClient.Builder(urls, Optional.empty()).build();
-    }),
+    CLOUD("CloudSolrClient", Mode.CLOUD, true),
 
     /**
-     * For direct access to a single Solr node using the HTTP/2 protocol
-     * (via Jetty). Ideal for local development or small setups.
-     * Expects a Solr URL.
+     * For direct access to a single Solr node. Uses HTTP/2 over TLS when
+     * the URL is "https" (HTTP/1.1 otherwise). Ideal for local development
+     * or small setups. Expects a Solr URL.
      */
-    HTTP2("HttpJettySolrClient",
-            url -> new HttpJettySolrClient.Builder(url).build()),
+    HTTP2("HttpJettySolrClient", Mode.SINGLE, true),
 
     /**
-     * A client using the HTTP/2 protocol (via Jetty), performing simple
-     * load-balancing as an alternative to an external load balancer.
+     * Simple load-balancing as an alternative to an external load balancer.
      * Expects two or more Solr node URLs (comma-separated).
      */
-    LB_HTTP2("LBJettySolrClient", url -> {
-        var endpoints = Arrays.stream(url.split(SolrClientType.CSV_SPLIT_REGEX))
-                .map(LBSolrClient.Endpoint::from)
-                .toArray(LBSolrClient.Endpoint[]::new);
-        return new LBJettySolrClient.Builder(
-                new HttpJettySolrClient.Builder().build(), endpoints).build();
-    }),
+    LB_HTTP2("LBJettySolrClient", Mode.LOAD_BALANCED, true),
 
     /**
-     * A client using the HTTP/2 protocol (via Jetty), optimized for mass
-     * upload on a single node. Not best for queries.
-     * Expects a Solr URL.
+     * Same as {@link #HTTP2}. Committers already send documents in batches,
+     * so no separate concurrent mode is needed.
      */
     CONCURRENT_UPDATE_HTTP2("ConcurrentUpdateJettySolrClient",
-            url -> new ConcurrentUpdateJettySolrClient.Builder(
-                    url, new HttpJettySolrClient.Builder().build()).build()),
+            Mode.SINGLE, true),
 
     /**
-     * A client using the JDK’s built-in Http Client. Supports both Http/2
-     * and Http/1.1. Supports async.
+     * Same as {@link #HTTP2}.
      */
-    HTTP_JDK("HttpJdkSolrClient",
-            url -> new HttpJdkSolrClient.Builder(url).build()),
+    HTTP_JDK("HttpJdkSolrClient", Mode.SINGLE, true),
 
     // Keep these deprecations for a while, for backward compatibility
 
     /**
-     * For direct access to a single Solr node using the HTTP/1.x protocol.
-     * Ideal for local development or small setups. Expects a Solr URL.
+     * For direct access to a single Solr node, always using HTTP/1.1.
+     * Expects a Solr URL.
      * @deprecated use {@link #HTTP2} instead.
      */
     @Deprecated(since = "4.0.0")
-    HTTP("HttpSolrClient",
-            url -> new HttpJettySolrClient.Builder(url).build()),
+    HTTP("HttpSolrClient", Mode.SINGLE, false),
+
     /**
-     * A client using the HTTP/1.x protocol, performing simple load-balancing
-     * as an alternative to an external load balancer.
+     * Simple load-balancing, always using HTTP/1.1.
      * Expects two or more Solr node URLs (comma-separated).
      * @deprecated use {@link #LB_HTTP2} instead.
      */
     @Deprecated(since = "4.0.0")
-    LB_HTTP("LBHttpSolrClient", url -> {
-        var endpoints = Arrays.stream(url.split(SolrClientType.CSV_SPLIT_REGEX))
-                .map(LBSolrClient.Endpoint::from)
-                .toArray(LBSolrClient.Endpoint[]::new);
-        return new LBJettySolrClient.Builder(
-                new HttpJettySolrClient.Builder().build(), endpoints).build();
-    }),
+    LB_HTTP("LBHttpSolrClient", Mode.LOAD_BALANCED, false),
+
     /**
-     * A client using the HTTP/1.x protocol, optimized for mass upload on a
-     * single node.  Not best for queries.
-     * Expects a Solr URL.
-     * @deprecated use {@link #CONCURRENT_UPDATE_HTTP2} instead.
+     * Same as {@link #HTTP}.
+     * @deprecated use {@link #HTTP2} instead.
      */
     @Deprecated(since = "4.0.0")
-    CONCURRENT_UPDATE("ConcurrentUpdateSolrClient",
-            url -> new ConcurrentUpdateJettySolrClient.Builder(
-                    url, new HttpJettySolrClient.Builder().build()).build()),
-                    ;
+    CONCURRENT_UPDATE("ConcurrentUpdateSolrClient", Mode.SINGLE, false);
 
-    private static final String CSV_SPLIT_REGEX = "\\s*,\\s*";
+    /**
+     * How the Solr committer connects to Solr.
+     */
+    public enum Mode {
+        /** A single Solr URL. */
+        SINGLE,
+        /** Several Solr URLs, with updates spread across them. */
+        LOAD_BALANCED,
+        /** Solr URLs of a SolrCloud cluster, with node discovery. */
+        CLOUD
+    }
 
     private final String type;
-    private final Function<String, SolrClient> clientFactory;
+    private final Mode mode;
+    private final boolean http2;
 
-    SolrClientType(String type, Function<String, SolrClient> f) {
+    SolrClientType(String type, Mode mode, boolean http2) {
         this.type = type;
-        clientFactory = f;
+        this.mode = mode;
+        this.http2 = http2;
+    }
+
+    /**
+     * Gets how this type connects to Solr.
+     * @return connection mode
+     */
+    public Mode getMode() {
+        return mode;
+    }
+
+    /**
+     * Whether HTTP/2 is preferred (applies to "https" URLs only).
+     * @return {@code true} if HTTP/2 is preferred
+     */
+    public boolean isHttp2() {
+        return http2;
     }
 
     @JsonValue
     @Override
     public String toString() {
         return type;
-    }
-
-    public SolrClient create(String solrURL) {
-        Objects.requireNonNull(solrURL, "'solrURL' must not be null.");
-        return clientFactory.apply(solrURL);
     }
 
     @JsonCreator

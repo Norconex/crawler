@@ -1,4 +1,4 @@
-/* Copyright 2023-2026 Norconex Inc.
+/* Copyright 2019-2026 Norconex Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,54 +16,52 @@ package com.norconex.committer.solr;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.IOException;
-
-import org.apache.solr.client.solrj.impl.CloudSolrClient;
-import org.apache.solr.client.solrj.impl.HttpJdkSolrClient;
-import org.apache.solr.client.solrj.jetty.ConcurrentUpdateJettySolrClient;
-import org.apache.solr.client.solrj.jetty.HttpJettySolrClient;
-import org.apache.solr.client.solrj.jetty.LBJettySolrClient;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+
+import com.norconex.committer.solr.SolrClientType.Mode;
 
 @SuppressWarnings("deprecation")
 @Timeout(30)
 class SolrClientTypeTest {
 
     @Test
-    void testSolrClientType() throws IOException {
-        var url = "http://solr/base-url";
+    void testModes() {
+        assertThat(SolrClientType.HTTP2.getMode()).isEqualTo(Mode.SINGLE);
+        assertThat(SolrClientType.HTTP_JDK.getMode()).isEqualTo(Mode.SINGLE);
+        assertThat(SolrClientType.CONCURRENT_UPDATE_HTTP2.getMode())
+                .isEqualTo(Mode.SINGLE);
+        assertThat(SolrClientType.LB_HTTP2.getMode())
+                .isEqualTo(Mode.LOAD_BALANCED);
+        assertThat(SolrClientType.CLOUD.getMode()).isEqualTo(Mode.CLOUD);
 
-        var solr = SolrClientType.HTTP.create(url);
-        assertThat(solr).isInstanceOf(HttpJettySolrClient.class);
+        // deprecated ones
+        assertThat(SolrClientType.HTTP.getMode()).isEqualTo(Mode.SINGLE);
+        assertThat(SolrClientType.CONCURRENT_UPDATE.getMode())
+                .isEqualTo(Mode.SINGLE);
+        assertThat(SolrClientType.LB_HTTP.getMode())
+                .isEqualTo(Mode.LOAD_BALANCED);
+    }
 
-        solr = SolrClientType.CONCURRENT_UPDATE.create(url);
-        assertThat(solr).isInstanceOf(ConcurrentUpdateJettySolrClient.class);
+    @Test
+    void testHttp2Preference() {
+        assertThat(SolrClientType.HTTP2.isHttp2()).isTrue();
+        assertThat(SolrClientType.LB_HTTP2.isHttp2()).isTrue();
+        assertThat(SolrClientType.HTTP.isHttp2()).isFalse();
+        assertThat(SolrClientType.LB_HTTP.isHttp2()).isFalse();
+    }
 
-        solr = SolrClientType.LB_HTTP.create(url);
-        assertThat(solr).isInstanceOf(LBJettySolrClient.class);
-
-        solr = SolrClientType.HTTP2.create(url);
-        assertThat(solr).isInstanceOf(HttpJettySolrClient.class);
-        assertThat(SolrClientType.of("HttpJettySolrClient").create(url))
-                .isInstanceOf(HttpJettySolrClient.class);
-
-        solr = SolrClientType.CONCURRENT_UPDATE_HTTP2.create(url);
-        assertThat(solr).isInstanceOf(ConcurrentUpdateJettySolrClient.class);
-
-        solr = SolrClientType.LB_HTTP2.create(url);
-        assertThat(solr).isInstanceOf(LBJettySolrClient.class);
+    @Test
+    void testOf() {
+        // names from the SolrJ days must still be recognized
+        assertThat(SolrClientType.of("HttpJettySolrClient"))
+                .isSameAs(SolrClientType.HTTP2);
+        assertThat(SolrClientType.of("cloudsolrclient"))
+                .isSameAs(SolrClientType.CLOUD);
+        assertThat(SolrClientType.of("LBHttpSolrClient"))
+                .isSameAs(SolrClientType.LB_HTTP);
         assertThat(SolrClientType.LB_HTTP2).hasToString("LBJettySolrClient");
-
-        solr = SolrClientType.HTTP_JDK.create(url);
-        assertThat(solr).isInstanceOf(HttpJdkSolrClient.class);
-
         assertThat(SolrClientType.of(null)).isNull();
-
-        // In SolrJ 10, CloudSolrClient construction is lazy — no exception
-        // is thrown at build time; connection errors only surface on use.
-        solr = SolrClientType.CLOUD.create(url);
-        assertThat(solr).isInstanceOf(CloudSolrClient.class);
-        solr.close();
+        assertThat(SolrClientType.of("nope")).isNull();
     }
 }

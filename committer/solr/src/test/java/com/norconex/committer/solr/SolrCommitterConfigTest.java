@@ -16,6 +16,8 @@ package com.norconex.committer.solr;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -72,6 +74,12 @@ class SolrCommitterConfigTest {
 
         c.getConfiguration().setSolrURL("http://solrurl.com/test");
 
+        c.getConfiguration().setBearerToken("mytoken");
+        c.getConfiguration().setHeader("X-Api-Key", "abc");
+        c.getConfiguration().setHeader("X-Other", "def");
+        c.getConfiguration().setConnectionTimeout(Duration.ofSeconds(3));
+        c.getConfiguration().setSocketTimeout(Duration.ofMinutes(5));
+
         c.getConfiguration().setUpdateUrlParam("param1", "value1a");
         c.getConfiguration().setUpdateUrlParam("param1", "value1b");
         c.getConfiguration().setUpdateUrlParam("param2", "value2");
@@ -91,6 +99,12 @@ class SolrCommitterConfigTest {
                 assertThat(committer
                         .getConfiguration()
                         .getUpdateUrlParamNames()).contains("param1", "param2");
+                assertThat(committer.getConfiguration().getBearerToken())
+                        .isEqualTo("mytoken");
+                assertThat(committer.getConfiguration().getHeaders())
+                        .containsEntry("X-Api-Key", "abc");
+                assertThat(committer.getConfiguration().getConnectionTimeout())
+                        .isEqualTo(Duration.ofSeconds(3));
             }
         });
     }

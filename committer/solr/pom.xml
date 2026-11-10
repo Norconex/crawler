@@ -34,15 +34,10 @@
 
   <dependencies>
       
+    <!-- No SolrJ: the committer talks to Solr with the JDK HTTP client. -->
     <dependency>
-      <groupId>org.apache.solr</groupId>
-      <artifactId>solr-solrj</artifactId>
-      <version>${solr.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.solr</groupId>
-      <artifactId>solr-solrj-jetty</artifactId>
-      <version>${solr.version}</version>
+      <groupId>tools.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
     </dependency>
     <dependency>
       <groupId>com.norconex.crawler</groupId>
@@ -61,6 +56,20 @@
     </dependency>
 
     <!-- Tests and provided. -->
+    <!-- SolrJ is used by integration tests only, as an independent client
+         to verify what the committer sent to Solr. -->
+    <dependency>
+      <groupId>org.apache.solr</groupId>
+      <artifactId>solr-solrj</artifactId>
+      <version>${solr.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.solr</groupId>
+      <artifactId>solr-solrj-jetty</artifactId>
+      <version>${solr.version}</version>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>testcontainers</artifactId>
