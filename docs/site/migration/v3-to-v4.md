@@ -646,17 +646,19 @@ committers:
 HTTP, which removes SolrJ and its Jetty dependencies and is why it can ship
 in the crawler zips. Existing configurations keep working, with these differences:
 
-- `solrClientType` values (`CloudSolrClient`, `HttpJettySolrClient`, ...) are
-  still recognized, but now only select how URLs are used: a single node
-  (`HttpSolrClient`, `HttpJettySolrClient`, `HttpJdkSolrClient`,
-  `ConcurrentUpdate*`), several nodes with load balancing and failover
-  (`LB*`), or a SolrCloud cluster (`CloudSolrClient`).
-- **ZooKeeper connection strings are no longer supported** for
-  `CloudSolrClient`. Provide the URL of one or more Solr nodes instead, each
+- `solrClientType` and `solrURL` are deprecated and replaced by
+  `connectionMode` (`SINGLE_NODE`, `LOAD_BALANCED` or `CLOUD`),
+  `httpVersion` (`AUTO`, `HTTP_1_1` or `HTTP_2`) and `nodes` (a list of URLs,
+  instead of comma-separated ones). The old settings are still honored, with a
+  warning in the logs. Typically, `HttpJettySolrClient` becomes
+  `SINGLE_NODE`, `LBJettySolrClient` becomes `LOAD_BALANCED` and
+  `CloudSolrClient` becomes `CLOUD`. When not set, the mode is
+  `SINGLE_NODE` with one node and `LOAD_BALANCED` with several.
+- **ZooKeeper connection strings are no longer supported** for SolrCloud.
+  Provide the URL of one or more Solr nodes in `nodes` instead, each
   ending with the collection name
   (e.g., `http://solr1:8983/solr/mycollection`). The nodes hosting the
   collection are discovered through the Collections API.
-- The `solrURL` for SolrCloud must now include the collection name.
 - Authentication: basic authentication (`credentials`) works as before.
   Added are `bearerToken` and custom `headers`. Kerberos is not supported.
 - Added `connectionTimeout` and `socketTimeout`.

@@ -19,109 +19,75 @@ import com.fasterxml.jackson.annotation.JsonValue;
 
 /**
  * <p>
- * The type of connection to establish with Solr. Names are the ones
- * historically used by the Solr committer (named after the SolrJ classes)
- * so existing configurations keep working. Each type maps to one of
- * three connection modes (see {@link Mode}).
+ * The legacy way of choosing how to connect to Solr. Names are those of the
+ * SolrJ clients the Solr committer used to rely on. Each one now maps to a
+ * {@link SolrConnectionMode} and a {@link SolrHttpVersion}.
  * </p>
+ *
+ * @deprecated use {@link SolrCommitterConfig#setConnectionMode} and
+ *     {@link SolrCommitterConfig#setHttpVersion} instead.
  */
+@Deprecated(since = "4.0.0")
 public enum SolrClientType {
 
-    /**
-     * For use with a SolrCloud cluster. Expects one or more Solr node URLs
-     * (comma-separated), each ending with the collection name, e.g.,
-     * <code>http://host1:8983/solr/mycollection</code>. The live nodes
-     * hosting the collection are discovered over HTTP (no ZooKeeper
-     * access required) and updates are spread across them.
-     */
-    CLOUD("CloudSolrClient", Mode.CLOUD, true),
+    /** Same as {@link SolrConnectionMode#CLOUD}. */
+    CLOUD("CloudSolrClient", SolrConnectionMode.CLOUD, SolrHttpVersion.AUTO),
 
-    /**
-     * For direct access to a single Solr node. Uses HTTP/2 over TLS when
-     * the URL is "https" (HTTP/1.1 otherwise). Ideal for local development
-     * or small setups. Expects a Solr URL.
-     */
-    HTTP2("HttpJettySolrClient", Mode.SINGLE, true),
+    /** Same as {@link SolrConnectionMode#SINGLE_NODE}. */
+    HTTP2("HttpJettySolrClient",
+            SolrConnectionMode.SINGLE_NODE, SolrHttpVersion.AUTO),
 
-    /**
-     * Simple load-balancing as an alternative to an external load balancer.
-     * Expects two or more Solr node URLs (comma-separated).
-     */
-    LB_HTTP2("LBJettySolrClient", Mode.LOAD_BALANCED, true),
+    /** Same as {@link SolrConnectionMode#LOAD_BALANCED}. */
+    LB_HTTP2("LBJettySolrClient",
+            SolrConnectionMode.LOAD_BALANCED, SolrHttpVersion.AUTO),
 
-    /**
-     * Same as {@link #HTTP2}. Committers already send documents in batches,
-     * so no separate concurrent mode is needed.
-     */
+    /** Same as {@link #HTTP2} (documents are already sent in batches). */
     CONCURRENT_UPDATE_HTTP2("ConcurrentUpdateJettySolrClient",
-            Mode.SINGLE, true),
+            SolrConnectionMode.SINGLE_NODE, SolrHttpVersion.AUTO),
 
-    /**
-     * Same as {@link #HTTP2}.
-     */
-    HTTP_JDK("HttpJdkSolrClient", Mode.SINGLE, true),
+    /** Same as {@link #HTTP2}. */
+    HTTP_JDK("HttpJdkSolrClient",
+            SolrConnectionMode.SINGLE_NODE, SolrHttpVersion.AUTO),
 
-    // Keep these deprecations for a while, for backward compatibility
+    /** Same as {@link #HTTP2}, but always using HTTP/1.1. */
+    HTTP("HttpSolrClient",
+            SolrConnectionMode.SINGLE_NODE, SolrHttpVersion.HTTP_1_1),
 
-    /**
-     * For direct access to a single Solr node, always using HTTP/1.1.
-     * Expects a Solr URL.
-     * @deprecated use {@link #HTTP2} instead.
-     */
-    @Deprecated(since = "4.0.0")
-    HTTP("HttpSolrClient", Mode.SINGLE, false),
+    /** Same as {@link #LB_HTTP2}, but always using HTTP/1.1. */
+    LB_HTTP("LBHttpSolrClient",
+            SolrConnectionMode.LOAD_BALANCED, SolrHttpVersion.HTTP_1_1),
 
-    /**
-     * Simple load-balancing, always using HTTP/1.1.
-     * Expects two or more Solr node URLs (comma-separated).
-     * @deprecated use {@link #LB_HTTP2} instead.
-     */
-    @Deprecated(since = "4.0.0")
-    LB_HTTP("LBHttpSolrClient", Mode.LOAD_BALANCED, false),
-
-    /**
-     * Same as {@link #HTTP}.
-     * @deprecated use {@link #HTTP2} instead.
-     */
-    @Deprecated(since = "4.0.0")
-    CONCURRENT_UPDATE("ConcurrentUpdateSolrClient", Mode.SINGLE, false);
-
-    /**
-     * How the Solr committer connects to Solr.
-     */
-    public enum Mode {
-        /** A single Solr URL. */
-        SINGLE,
-        /** Several Solr URLs, with updates spread across them. */
-        LOAD_BALANCED,
-        /** Solr URLs of a SolrCloud cluster, with node discovery. */
-        CLOUD
-    }
+    /** Same as {@link #HTTP}. */
+    CONCURRENT_UPDATE("ConcurrentUpdateSolrClient",
+            SolrConnectionMode.SINGLE_NODE, SolrHttpVersion.HTTP_1_1);
 
     private final String type;
-    private final Mode mode;
-    private final boolean http2;
+    private final SolrConnectionMode connectionMode;
+    private final SolrHttpVersion httpVersion;
 
-    SolrClientType(String type, Mode mode, boolean http2) {
+    SolrClientType(
+            String type,
+            SolrConnectionMode connectionMode,
+            SolrHttpVersion httpVersion) {
         this.type = type;
-        this.mode = mode;
-        this.http2 = http2;
+        this.connectionMode = connectionMode;
+        this.httpVersion = httpVersion;
     }
 
     /**
-     * Gets how this type connects to Solr.
+     * Gets the connection mode this type translates to.
      * @return connection mode
      */
-    public Mode getMode() {
-        return mode;
+    public SolrConnectionMode getConnectionMode() {
+        return connectionMode;
     }
 
     /**
-     * Whether HTTP/2 is preferred (applies to "https" URLs only).
-     * @return {@code true} if HTTP/2 is preferred
+     * Gets the HTTP version this type translates to.
+     * @return HTTP version
      */
-    public boolean isHttp2() {
-        return http2;
+    public SolrHttpVersion getHttpVersion() {
+        return httpVersion;
     }
 
     @JsonValue

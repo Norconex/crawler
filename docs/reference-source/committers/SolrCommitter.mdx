@@ -17,14 +17,23 @@ Commits crawled documents to an Apache Solr search engine, or a Solr-based produ
 
 This committer is bundled with the web and file system crawler distributions.
 
-### Connection types
+### Connection mode
 
-The `solrClientType` determines how `solrURL` is used. The names are those of the SolrJ clients they replace, so existing configurations remain valid. All URLs are Solr core or collection URLs, e.g., `http://localhost:8983/solr/mycollection`.
+Documents are sent to the Solr core or collection URLs listed in `nodes`, e.g., `http://localhost:8983/solr/mycollection`. The `connectionMode` defines how they are used:
 
-- `HttpJettySolrClient` (default): a single Solr node. Also covers `HttpJdkSolrClient` and `ConcurrentUpdateJettySolrClient`, since documents are already sent in batches. HTTP/2 is used for `https` URLs.
-- `LBJettySolrClient`: comma-separated Solr node URLs. Updates are spread across nodes. A failing node is set aside for a while and the request is sent to another one.
-- `CloudSolrClient`: one or more comma-separated Solr node URLs, each ending with the collection name. The nodes hosting the collection are discovered over HTTP (Collections API `CLUSTERSTATUS`) and refreshed periodically. If the cluster state cannot be obtained, or discovered nodes are not reachable, the configured URLs are used. **ZooKeeper connection strings are not supported.**
-- `HttpSolrClient`, `LBHttpSolrClient`, `ConcurrentUpdateSolrClient`: deprecated. Same as their counterparts above, but always using HTTP/1.1.
+- `SINGLE_NODE`: a single Solr node. This is the default with one node. `HTTP/2` is used for `https` URLs (see `httpVersion`).
+- `LOAD_BALANCED`: several Solr nodes. This is the default with more than one node. Updates are spread across nodes. A failing node is set aside for a while and the request is sent to another one.
+- `CLOUD`: a SolrCloud cluster. Each node URL ends with the collection name. The nodes hosting the collection are discovered over HTTP (Collections API `CLUSTERSTATUS`) and refreshed periodically. If the cluster state cannot be obtained, or discovered nodes are not reachable, the configured nodes are used. SolrCloud has to be set explicitly. **ZooKeeper connection strings are not supported.**
+
+The deprecated `solrClientType` and `solrURL` are replaced by `connectionMode`, `httpVersion` and `nodes`. They are still honored for now, and translate as follows:
+
+| `solrClientType`                                                                   | Replaced by                                   |
+| ---------------------------------------------------------------------------------- | --------------------------------------------- |
+| `HttpJettySolrClient`, `HttpJdkSolrClient`, `ConcurrentUpdateJettySolrClient`      | `connectionMode: SINGLE_NODE`                 |
+| `LBJettySolrClient`                                                                | `connectionMode: LOAD_BALANCED`               |
+| `CloudSolrClient`                                                                  | `connectionMode: CLOUD`                       |
+| `HttpSolrClient`, `ConcurrentUpdateSolrClient`                                     | `SINGLE_NODE` and `httpVersion: HTTP_1_1`     |
+| `LBHttpSolrClient`                                                                 | `LOAD_BALANCED` and `httpVersion: HTTP_1_1`   |
 
 ### Authentication
 
@@ -43,9 +52,15 @@ HTTP proxies are those of the JVM (`http.proxyHost`, `https.proxyHost`, ...). Ke
 
 Bearer token (e.g., JWT) sent as an `Authorization` header with every request. Ignored when `credentials` are set.
 
+### connectionMode
+
+How to connect to the Solr `nodes`: `SINGLE_NODE`, `LOAD_BALANCED` or `CLOUD` (see "Connection mode" above). When not set, it is `SINGLE_NODE` with one node and `LOAD_BALANCED` with several. SolrCloud must be set explicitly.
+
 ### connectionTimeout
 
 Maximum time to wait for a connection to be established. Default is 10 seconds.
+
+
 
 ### credentials
 
@@ -58,6 +73,14 @@ Mapping of source fields to target ones (Solr fields).
 ### headers
 
 Custom HTTP headers sent with every request, as name/value pairs. A header named `Authorization` replaces the one derived from `credentials` or `bearerToken`.
+
+### httpVersion
+
+HTTP protocol version: `AUTO` (default), `HTTP_1_1` or `HTTP_2`. With `AUTO`, HTTP/2 is used for `https` URLs and HTTP/1.1 for `http` ones.
+
+### nodes
+
+URLs of the Solr core or collection to send documents to, e.g., `http://localhost:8983/solr/mycollection`. For SolrCloud, each URL ends with the collection name. Replaces the deprecated `solrURL`.
 
 ### queue
 
@@ -73,7 +96,7 @@ Maximum time to wait for Solr to respond to a request (a batch of documents). De
 
 ### solrClientType
 
-Type of connection to Solr. See "Connection types" above. Default is `HttpJettySolrClient`.
+**Deprecated**: use `connectionMode` and `httpVersion` instead (see "Connection mode" above).
 
 ### solrCommitDisabled
 
@@ -81,7 +104,7 @@ Disable sending an explicit Solr commit request at the end of every batch sent, 
 
 ### solrURL
 
-URL(s) of the Solr core or collection documents are sent to, as per the client type chosen. Multiple URLs are comma-separated.
+**Deprecated**: use `nodes` instead. Comma-separated Solr URLs.
 
 ### sourceIdField
 
@@ -106,7 +129,7 @@ Single Solr node:
 <ConfigBlock
   json={{
     "class": "SolrCommitter",
-    "solrURL": "http://localhost:8983/solr/mycollection"
+    "nodes": ["http://localhost:8983/solr/mycollection"]
   }}
 />
 
@@ -115,8 +138,11 @@ SolrCloud with basic authentication:
 <ConfigBlock
   json={{
     "class": "SolrCommitter",
-    "solrClientType": "CloudSolrClient",
-    "solrURL": "https://solr1:8983/solr/mycollection,https://solr2:8983/solr/mycollection",
+    "connectionMode": "CLOUD",
+    "nodes": [
+      "https://solr1:8983/solr/mycollection",
+      "https://solr2:8983/solr/mycollection"
+    ],
     "credentials": {
       "username": "myuser",
       "password": "mypassword"
@@ -129,7 +155,7 @@ Bearer token and custom header:
 <ConfigBlock
   json={{
     "class": "SolrCommitter",
-    "solrURL": "https://solr.example.com/solr/mycollection",
+    "nodes": ["https://solr.example.com/solr/mycollection"],
     "bearerToken": "eyJhbGciOi...",
     "headers": {
       "X-Api-Key": "abc123"

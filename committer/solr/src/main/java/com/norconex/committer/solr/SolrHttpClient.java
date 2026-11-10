@@ -88,19 +88,16 @@ final class SolrHttpClient implements Closeable {
     private volatile boolean clusterRefreshWarned;
 
     SolrHttpClient(SolrCommitterConfig cfg) throws CommitterException {
-        var type = cfg.getSolrClientType() != null
-                ? cfg.getSolrClientType()
-                : SolrClientType.HTTP2;
-        var urls = parseUrls(type, cfg.getSolrURL());
-        seedUrls = List.copyOf(urls);
-        cloud = type.getMode() == SolrClientType.Mode.CLOUD;
+        var conn = resolve(cfg);
+        seedUrls = conn.nodes();
+        cloud = conn.mode() == SolrConnectionMode.CLOUD;
 
-        var allHttps = urls.stream().allMatch(u -> u.startsWith("https:"));
+        var useHttp2 = conn.httpVersion() == SolrHttpVersion.HTTP_2
+                || conn.httpVersion() == SolrHttpVersion.AUTO
+                        && seedUrls.stream()
+                                .allMatch(u -> u.startsWith("https:"));
         http = HttpClient.newBuilder()
-                .version(
-                        type.isHttp2() && allHttps
-                                ? Version.HTTP_2
-                                : Version.HTTP_1_1)
+                .version(useHttp2 ? Version.HTTP_2 : Version.HTTP_1_1)
                 .connectTimeout(cfg.getConnectionTimeout())
                 // Redirects would turn POST requests into GET.
                 .followRedirects(Redirect.NEVER)
@@ -109,35 +106,92 @@ final class SolrHttpClient implements Closeable {
         initHeaders(cfg);
     }
 
-    private static List<String> parseUrls(SolrClientType type, String url)
+    /** Effective connection settings, once defaults and legacy ones apply. */
+    record Connection(
+            List<String> nodes,
+            SolrConnectionMode mode,
+            SolrHttpVersion httpVersion) {
+    }
+
+    // Visible for testing
+    @SuppressWarnings("deprecation")
+    static Connection resolve(SolrCommitterConfig cfg)
             throws CommitterException {
-        if (StringUtils.isBlank(url)) {
-            throw new CommitterException("'solrURL' must be specified.");
+
+        // Nodes
+        var urls = new ArrayList<String>(cfg.getNodes());
+        if (StringUtils.isNotBlank(cfg.getSolrURL())) {
+            if (urls.isEmpty()) {
+                LOG.warn("'solrURL' is deprecated. Use 'nodes' instead.");
+                Arrays.stream(cfg.getSolrURL().split("\s*,\s*"))
+                        .forEach(urls::add);
+            } else {
+                LOG.warn("Both 'nodes' and the deprecated 'solrURL' are "
+                        + "set. Ignoring 'solrURL'.");
+            }
         }
-        List<String> urls = type.getMode() == SolrClientType.Mode.SINGLE
-                ? List.of(url.trim())
-                : Arrays.stream(url.split("\\s*,\\s*"))
-                        .map(String::trim)
-                        .filter(StringUtils::isNotBlank)
-                        .toList();
-        var result = new ArrayList<String>();
-        for (String u : urls) {
-            if (!StringUtils.startsWithIgnoreCase(u, "http://")
-                    && !StringUtils.startsWithIgnoreCase(u, "https://")) {
+        var nodes = new ArrayList<String>();
+        for (String url : urls) {
+            if (StringUtils.isNotBlank(url)) {
+                nodes.add(StringUtils.removeEnd(url.trim(), "/"));
+            }
+        }
+        if (nodes.isEmpty()) {
+            throw new CommitterException(
+                    "At least one Solr node must be specified in 'nodes'.");
+        }
+
+        // Mode and HTTP version
+        var mode = cfg.getConnectionMode();
+        var httpVersion = cfg.getHttpVersion();
+        var legacy = cfg.getSolrClientType();
+        if (legacy != null) {
+            LOG.warn("'solrClientType' is deprecated. Use 'connectionMode' "
+                    + "and 'httpVersion' instead ({} is {} and {}).",
+                    legacy, legacy.getConnectionMode(),
+                    legacy.getHttpVersion());
+            if (mode == null) {
+                mode = legacy.getConnectionMode();
+            } else {
+                LOG.warn("Both 'connectionMode' and the deprecated "
+                        + "'solrClientType' are set. Ignoring "
+                        + "'solrClientType' for the connection mode.");
+            }
+            if (httpVersion == null) {
+                httpVersion = legacy.getHttpVersion();
+            }
+        }
+        if (mode == null) {
+            mode = nodes.size() > 1
+                    ? SolrConnectionMode.LOAD_BALANCED
+                    : SolrConnectionMode.SINGLE_NODE;
+        }
+        if (httpVersion == null) {
+            httpVersion = SolrHttpVersion.AUTO;
+        }
+        if (mode == SolrConnectionMode.SINGLE_NODE && nodes.size() > 1) {
+            throw new CommitterException(
+                    "Connection mode SINGLE_NODE accepts only one node, but "
+                            + nodes.size() + " were specified. Use "
+                            + "LOAD_BALANCED or CLOUD.");
+        }
+
+        for (String url : nodes) {
+            if (!StringUtils.startsWithIgnoreCase(url, "http://")
+                    && !StringUtils.startsWithIgnoreCase(url, "https://")) {
                 throw new CommitterException(
-                        "Invalid Solr URL: \"" + u + "\". Solr URLs must "
-                                + "start with http:// or https://. "
-                                + (type == SolrClientType.CLOUD
-                                        ? "ZooKeeper connection strings are "
+                        "Invalid Solr node URL: \"" + url + "\". URLs must "
+                                + "start with http:// or https://."
+                                + (mode == SolrConnectionMode.CLOUD
+                                        ? " ZooKeeper connection strings are "
                                                 + "not supported. Provide "
-                                                + "one or more Solr node "
-                                                + "URLs, each ending with "
-                                                + "the collection name."
+                                                + "Solr node URLs, each "
+                                                + "ending with the "
+                                                + "collection name."
                                         : ""));
             }
-            result.add(StringUtils.removeEnd(u, "/"));
         }
-        return result;
+        return new Connection(List.copyOf(nodes), mode, httpVersion);
     }
 
     private void initHeaders(SolrCommitterConfig cfg)

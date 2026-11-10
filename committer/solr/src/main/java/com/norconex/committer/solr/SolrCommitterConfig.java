@@ -16,7 +16,9 @@
 package com.norconex.committer.solr;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -52,14 +54,38 @@ public class SolrCommitterConfig extends BaseBatchCommitterConfig {
             Duration.ofSeconds(120);
 
     /**
-     * The type of Solr client.
+     * The URLs of the Solr core or collection to send documents to. For
+     * SolrCloud, each URL ends with the collection name.
      */
+    private final List<String> nodes = new ArrayList<>();
+
+    /**
+     * How to connect to the Solr nodes. When not set, it is
+     * {@link SolrConnectionMode#SINGLE_NODE} with one node and
+     * {@link SolrConnectionMode#LOAD_BALANCED} with several.
+     * SolrCloud (with node discovery) must be set explicitly.
+     */
+    private SolrConnectionMode connectionMode;
+
+    /**
+     * The HTTP protocol version. Default is {@link SolrHttpVersion#AUTO}.
+     */
+    private SolrHttpVersion httpVersion;
+
+    /**
+     * The type of Solr client.
+     * @deprecated use {@link #setConnectionMode(SolrConnectionMode)} and
+     *     {@link #setHttpVersion(SolrHttpVersion)} instead.
+     */
+    @Deprecated(since = "4.0.0")
     private SolrClientType solrClientType;
 
     /**
-     * The endpoint URL used to connect to Solr (as per the client type
-     * selected).
+     * The endpoint URL(s) used to connect to Solr (comma-separated when
+     * more than one).
+     * @deprecated use {@link #setNodes(List)} instead.
      */
+    @Deprecated(since = "4.0.0")
     private String solrURL;
 
     /**
@@ -159,6 +185,22 @@ public class SolrCommitterConfig extends BaseBatchCommitterConfig {
     @JsonIgnore
     public Set<String> getUpdateUrlParamNames() {
         return updateUrlParams.keySet();
+    }
+
+    /**
+     * Gets the URLs of the Solr core or collection to send documents to.
+     * @return Solr node URLs
+     */
+    public List<String> getNodes() {
+        return Collections.unmodifiableList(nodes);
+    }
+
+    /**
+     * Sets the URLs of the Solr core or collection to send documents to.
+     * @param nodes Solr node URLs
+     */
+    public void setNodes(List<String> nodes) {
+        CollectionUtil.setAll(this.nodes, nodes);
     }
 
     /**

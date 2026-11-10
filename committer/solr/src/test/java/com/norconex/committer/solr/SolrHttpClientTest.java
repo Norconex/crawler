@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -94,10 +95,11 @@ class SolrHttpClientTest {
         nodes.forEach(Node::stop);
     }
 
-    private static SolrCommitterConfig config(SolrClientType type, String url) {
+    private static SolrCommitterConfig config(
+            SolrConnectionMode mode, String urls) {
         var cfg = new SolrCommitterConfig();
-        cfg.setSolrClientType(type);
-        cfg.setSolrURL(url);
+        cfg.setConnectionMode(mode);
+        cfg.setNodes(Arrays.asList(urls.split("\\s*,\\s*")));
         return cfg;
     }
 
@@ -109,7 +111,7 @@ class SolrHttpClientTest {
     void testSingleNode() throws Exception {
         var n = node();
         try (var c = new SolrHttpClient(
-                config(SolrClientType.HTTP2, n.url("/solr/test/")))) {
+                config(SolrConnectionMode.SINGLE_NODE, n.url("/solr/test/")))) {
             var params = new LinkedHashMap<String, String>();
             params.put("commit", "true");
             params.put("a b", "c&d");
@@ -127,7 +129,7 @@ class SolrHttpClientTest {
     @Test
     void testBasicAuth() throws Exception {
         var n = node();
-        var cfg = config(SolrClientType.HTTP2, n.url("/solr/test"));
+        var cfg = config(SolrConnectionMode.SINGLE_NODE, n.url("/solr/test"));
         var creds = new Credentials();
         creds.setUsername("user");
         creds.setPassword("pass");
@@ -144,7 +146,7 @@ class SolrHttpClientTest {
     @Test
     void testBearerTokenAndCustomHeaders() throws Exception {
         var n = node();
-        var cfg = config(SolrClientType.HTTP2, n.url("/solr/test"));
+        var cfg = config(SolrConnectionMode.SINGLE_NODE, n.url("/solr/test"));
         cfg.setBearerToken("tok");
         cfg.setHeader("X-Api-Key", "k1");
         try (var c = new SolrHttpClient(cfg)) {
@@ -173,7 +175,7 @@ class SolrHttpClientTest {
                     "{\"error\":{\"msg\":\"unknown field 'zzz'\",\"code\":400}}";
         }
         try (var c = new SolrHttpClient(config(
-                SolrClientType.LB_HTTP2,
+                SolrConnectionMode.LOAD_BALANCED,
                 n1.url("/solr/t") + "," + n2.url("/solr/t")))) {
             assertThatExceptionOfType(CommitterException.class)
                     .isThrownBy(() -> send(c))
@@ -188,14 +190,14 @@ class SolrHttpClientTest {
         var n = node();
         n.response = "{\"responseHeader\":{\"status\":500}}";
         try (var c = new SolrHttpClient(
-                config(SolrClientType.HTTP2, n.url("/solr/t")))) {
+                config(SolrConnectionMode.SINGLE_NODE, n.url("/solr/t")))) {
             assertThatExceptionOfType(CommitterException.class)
                     .isThrownBy(() -> send(c))
                     .withMessageContaining("Invalid Solr response status: 500");
         }
         n.response = "<html>not solr</html>";
         try (var c = new SolrHttpClient(
-                config(SolrClientType.HTTP2, n.url("/solr/t")))) {
+                config(SolrConnectionMode.SINGLE_NODE, n.url("/solr/t")))) {
             assertThatExceptionOfType(CommitterException.class)
                     .isThrownBy(() -> send(c))
                     .withMessageContaining("Invalid response from Solr");
@@ -209,7 +211,7 @@ class SolrHttpClientTest {
         bad.status = x -> 503;
         var urls = bad.url("/solr/t") + ", " + good.url("/solr/t");
         try (var c = new SolrHttpClient(
-                config(SolrClientType.LB_HTTP2, urls))) {
+                config(SolrConnectionMode.LOAD_BALANCED, urls))) {
             for (var i = 0; i < 6; i++) {
                 send(c);
             }
@@ -224,7 +226,7 @@ class SolrHttpClientTest {
         var n1 = node();
         var n2 = node();
         try (var c = new SolrHttpClient(config(
-                SolrClientType.LB_HTTP2,
+                SolrConnectionMode.LOAD_BALANCED,
                 n1.url("/solr/t") + "," + n2.url("/solr/t")))) {
             for (var i = 0; i < 6; i++) {
                 send(c);
@@ -242,7 +244,7 @@ class SolrHttpClientTest {
         dead.stop();
         var good = node();
         try (var c = new SolrHttpClient(config(
-                SolrClientType.LB_HTTP2,
+                SolrConnectionMode.LOAD_BALANCED,
                 deadUrl + "," + good.url("/solr/t")))) {
             assertThatCode(() -> {
                 send(c);
@@ -257,7 +259,8 @@ class SolrHttpClientTest {
         var n = node();
         var url = n.url("/solr/t");
         n.stop();
-        try (var c = new SolrHttpClient(config(SolrClientType.HTTP2, url))) {
+        try (var c = new SolrHttpClient(
+                config(SolrConnectionMode.SINGLE_NODE, url))) {
             assertThatExceptionOfType(CommitterException.class)
                     .isThrownBy(() -> send(c))
                     .withMessageContaining("Could not send documents to Solr");
@@ -270,7 +273,7 @@ class SolrHttpClientTest {
         var calls = new int[1];
         n.status = x -> calls[0]++ == 0 ? 503 : 200;
         try (var c = new SolrHttpClient(
-                config(SolrClientType.HTTP2, n.url("/solr/t")))) {
+                config(SolrConnectionMode.SINGLE_NODE, n.url("/solr/t")))) {
             send(c);
         }
         assertThat(n.requests).hasSize(2);
@@ -281,12 +284,12 @@ class SolrHttpClientTest {
         assertThatExceptionOfType(CommitterException.class)
                 .isThrownBy(
                         () -> new SolrHttpClient(config(
-                                SolrClientType.CLOUD, "zk1:2181,zk2:2181")))
+                                SolrConnectionMode.CLOUD, "zk1:2181,zk2:2181")))
                 .withMessageContaining("ZooKeeper");
         assertThatExceptionOfType(CommitterException.class)
                 .isThrownBy(() -> new SolrHttpClient(config(
-                        SolrClientType.HTTP2, "")))
-                .withMessageContaining("solrURL");
+                        SolrConnectionMode.SINGLE_NODE, "")))
+                .withMessageContaining("nodes");
     }
 
     //--- Cloud ----------------------------------------------------------
@@ -312,7 +315,7 @@ class SolrHttpClientTest {
                 ? 503
                 : 200;
         try (var c = new SolrHttpClient(config(
-                SolrClientType.CLOUD, seed.url("/solr/coll")))) {
+                SolrConnectionMode.CLOUD, seed.url("/solr/coll")))) {
             send(c);
         }
         assertThat(seed.requests.get(0)).startsWith(
@@ -334,7 +337,7 @@ class SolrHttpClientTest {
                 : 200;
         seed.response = OK;
         try (var c = new SolrHttpClient(config(
-                SolrClientType.CLOUD, seed.url("/solr/coll")))) {
+                SolrConnectionMode.CLOUD, seed.url("/solr/coll")))) {
             send(c);
         }
         assertThat(seed.requests)
@@ -354,7 +357,7 @@ class SolrHttpClientTest {
             """;
         seed.status = x -> 200;
         try (var c = new SolrHttpClient(config(
-                SolrClientType.CLOUD, seed.url("/solr/coll")))) {
+                SolrConnectionMode.CLOUD, seed.url("/solr/coll")))) {
             send(c);
         }
         assertThat(seed.requests)
@@ -372,7 +375,7 @@ class SolrHttpClientTest {
               "live_nodes":["localhost:%d_solr"]}}
             """.formatted(port);
         try (var c = new SolrHttpClient(config(
-                SolrClientType.CLOUD, seed.url("/solr/myalias")))) {
+                SolrConnectionMode.CLOUD, seed.url("/solr/myalias")))) {
             assertThat(c.fetchCollectionUrls(seed.url("/solr/myalias")))
                     .containsExactly(seed.url("/solr/myalias"));
         }
@@ -381,7 +384,7 @@ class SolrHttpClientTest {
     @Test
     void testCloudAuthAppliesToClusterStatusToo() throws Exception {
         var seed = node();
-        var cfg = config(SolrClientType.CLOUD, seed.url("/solr/coll"));
+        var cfg = config(SolrConnectionMode.CLOUD, seed.url("/solr/coll"));
         cfg.setBearerToken("tok");
         try (var c = new SolrHttpClient(cfg)) {
             send(c);

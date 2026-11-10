@@ -79,7 +79,7 @@ class SolrCloudAndAuthIT {
             assertThat(create).contains("\"status\":0");
 
             var coll = base + "/cloudtest";
-            var committer = committer(SolrClientType.CLOUD, coll, null);
+            var committer = committer(SolrConnectionMode.CLOUD, coll, null);
             try {
                 committer.upsert(upsert("1", "Hello"));
                 committer.upsert(upsert("2", "World"));
@@ -129,7 +129,7 @@ class SolrCloudAndAuthIT {
             creds.setPassword("SolrRocks");
 
             // no credentials: rejected
-            var noAuth = committer(SolrClientType.HTTP2, coll, null);
+            var noAuth = committer(SolrConnectionMode.SINGLE_NODE, coll, null);
             try {
                 assertThatExceptionOfType(CommitterException.class)
                         .isThrownBy(() -> {
@@ -145,7 +145,7 @@ class SolrCloudAndAuthIT {
             var bad = new Credentials();
             bad.setUsername("solr");
             bad.setPassword("nope");
-            var badAuth = committer(SolrClientType.HTTP2, coll, bad);
+            var badAuth = committer(SolrConnectionMode.SINGLE_NODE, coll, bad);
             try {
                 assertThatExceptionOfType(CommitterException.class)
                         .isThrownBy(() -> {
@@ -158,7 +158,8 @@ class SolrCloudAndAuthIT {
             }
 
             // good credentials
-            var committer = committer(SolrClientType.HTTP2, coll, creds);
+            var committer =
+                    committer(SolrConnectionMode.SINGLE_NODE, coll, creds);
             try {
                 committer.upsert(upsert("1", "Hello"));
             } finally {
@@ -176,12 +177,12 @@ class SolrCloudAndAuthIT {
     }
 
     private SolrCommitter committer(
-            SolrClientType type, String url, Credentials creds)
+            SolrConnectionMode mode, String url, Credentials creds)
             throws CommitterException {
         var committer = new SolrCommitter();
         var cfg = committer.getConfiguration();
-        cfg.setSolrClientType(type);
-        cfg.setSolrURL(url);
+        cfg.setConnectionMode(mode);
+        cfg.setNodes(java.util.List.of(url));
         if (creds != null) {
             cfg.setCredentials(creds);
         }

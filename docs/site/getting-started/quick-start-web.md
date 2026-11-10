@@ -120,7 +120,8 @@ committers:
 ```yaml
 committers:
   - class: SolrCommitter
-    solrURL: http://localhost:8983/solr/my-core
+    nodes:
+      - http://localhost:8983/solr/my-core
 ```
 
 See the [Integrations](/integrations) page for all available committers and their configuration.

@@ -16,7 +16,9 @@ package com.norconex.committer.solr;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.StringReader;
 import java.time.Duration;
+import java.util.List;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -67,12 +69,13 @@ class SolrCommitterConfigTest {
         c.getConfiguration().setTargetIdField("targetId");
         c.getConfiguration().setTargetContentField("targetContent");
 
-        c.getConfiguration().setSolrClientType(
-                SolrClientType.CONCURRENT_UPDATE_HTTP2);
+        c.getConfiguration().setConnectionMode(SolrConnectionMode.CLOUD);
+        c.getConfiguration().setHttpVersion(SolrHttpVersion.HTTP_2);
 
         c.getConfiguration().setSolrCommitDisabled(true);
 
-        c.getConfiguration().setSolrURL("http://solrurl.com/test");
+        c.getConfiguration().setNodes(
+                List.of("http://solr1/test", "http://solr2/test"));
 
         c.getConfiguration().setBearerToken("mytoken");
         c.getConfiguration().setHeader("X-Api-Key", "abc");
@@ -105,7 +108,33 @@ class SolrCommitterConfigTest {
                         .containsEntry("X-Api-Key", "abc");
                 assertThat(committer.getConfiguration().getConnectionTimeout())
                         .isEqualTo(Duration.ofSeconds(3));
+                assertThat(committer.getConfiguration().getNodes())
+                        .containsExactly(
+                                "http://host1/solr/coll",
+                                "http://host2/solr/coll");
+                assertThat(committer.getConfiguration().getConnectionMode())
+                        .isEqualTo(SolrConnectionMode.CLOUD);
+                assertThat(committer.getConfiguration().getHttpVersion())
+                        .isEqualTo(SolrHttpVersion.HTTP_2);
             }
         });
+    }
+
+    @SuppressWarnings("deprecation")
+    @Test
+    void testReadDeprecatedSettings() {
+        var xml = """
+                <committer class="com.norconex.committer.solr.SolrCommitter">
+                  <solrClientType>LBHttpSolrClient</solrClientType>
+                  <solrURL>http://a/solr/c,http://b/solr/c</solrURL>
+                </committer>
+                """;
+        var committer = BeanMapper.DEFAULT.read(
+                SolrCommitter.class, new StringReader(xml), Format.XML);
+        var cfg = committer.getConfiguration();
+        assertThat(cfg.getSolrClientType()).isEqualTo(SolrClientType.LB_HTTP);
+        assertThat(cfg.getSolrURL())
+                .isEqualTo("http://a/solr/c,http://b/solr/c");
+        assertThat(cfg.getNodes()).isEmpty();
     }
 }

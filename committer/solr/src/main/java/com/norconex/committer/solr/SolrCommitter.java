@@ -38,41 +38,41 @@ import lombok.extern.slf4j.Slf4j;
  * not depend on the SolrJ library.
  * </p>
  *
- * <h2>Connection type</h2>
+ * <h2>Connection mode</h2>
  * <p>
- * The <code>solrClientType</code> influences what the expected
- * <code>solrURL</code> value is. All URLs are Solr "core" or "collection"
- * URLs, such as <code>http://localhost:8983/solr/mycollection</code>.
- * Client types keep the name of the SolrJ client they replace so existing
- * configurations remain valid. They are:
+ * The Solr URLs to send documents to are specified as <code>nodes</code>.
+ * Each is a Solr "core" or "collection" URL, such as
+ * <code>http://localhost:8983/solr/mycollection</code>.
+ * The <code>connectionMode</code> defines how they are used:
  * </p>
  * <dl>
- *   <dt>HttpJettySolrClient</dt>
- *     <dd>Default. For direct access to a single Solr node. Expects a
- *         Solr URL. HTTP/2 is used when the URL starts with
- *         <code>https</code>, else HTTP/1.1 is used.</dd>
- *   <dt>CloudSolrClient</dt>
- *     <dd>For use with a SolrCloud cluster. Expects one or more Solr node
- *         URLs (comma-separated), each ending with the collection name.
- *         The nodes currently hosting the collection are discovered
- *         over HTTP (Collections API <code>CLUSTERSTATUS</code>) and
- *         refreshed periodically, so ZooKeeper does not have to be
- *         reachable. Updates are spread across these nodes. If the cluster
- *         state cannot be obtained (e.g., missing permission) or
- *         discovered nodes are unreachable, the configured URLs are used.
- *         <b>ZooKeeper connection strings are not supported.</b></dd>
- *   <dt>LBJettySolrClient</dt>
+ *   <dt>SINGLE_NODE</dt>
+ *     <dd>Direct access to a single Solr node. Default with one node.</dd>
+ *   <dt>LOAD_BALANCED</dt>
  *     <dd>Simple load-balancing as an alternative to an external load
- *         balancer. Expects two or more Solr node URLs (comma-separated).
+ *         balancer. Default with several nodes.
  *         Updates are spread across nodes. A failing node is set aside
  *         for a while and the request is sent to another one.</dd>
- *   <dt>ConcurrentUpdateJettySolrClient, HttpJdkSolrClient</dt>
- *     <dd>Same as <code>HttpJettySolrClient</code> (documents are already
- *         sent in batches).</dd>
- *   <dt>HttpSolrClient, LBHttpSolrClient, ConcurrentUpdateSolrClient</dt>
- *     <dd><b>Deprecated.</b> Same as their HTTP/2 counterparts, but always
- *         using HTTP/1.1.</dd>
+ *   <dt>CLOUD</dt>
+ *     <dd>For use with a SolrCloud cluster. Each node URL ends with the
+ *         collection name. The nodes currently hosting the collection are
+ *         discovered over HTTP (Collections API <code>CLUSTERSTATUS</code>)
+ *         and refreshed periodically, so ZooKeeper does not have to be
+ *         reachable. Updates are spread across these nodes. If the cluster
+ *         state cannot be obtained (e.g., missing permission) or
+ *         discovered nodes are unreachable, the configured nodes are used.
+ *         <b>ZooKeeper connection strings are not supported.</b></dd>
  * </dl>
+ * <p>
+ * The <code>httpVersion</code> is <code>AUTO</code> by default: HTTP/2 is
+ * used with "https" URLs, HTTP/1.1 otherwise.
+ * </p>
+ * <p>
+ * <b>Deprecated:</b> <code>solrClientType</code> (SolrJ client names) and
+ * <code>solrURL</code> (comma-separated URLs) are replaced by
+ * <code>connectionMode</code>, <code>httpVersion</code> and
+ * <code>nodes</code>. They are still honored for now.
+ * </p>
  *
  * <h2>Authentication</h2>
  * <p>

@@ -16,8 +16,12 @@
 	limitations under the License.
 -->
 <committer class="com.norconex.committer.solr.SolrCommitter">
-	<solrClientType>CloudSolrClient</solrClientType>
-	<solrURL>http://host/solr</solrURL>
+	<connectionMode>CLOUD</connectionMode>
+	<httpVersion>HTTP_2</httpVersion>
+	<nodes>
+		<node>http://host1/solr/coll</node>
+		<node>http://host2/solr/coll</node>
+	</nodes>
 	<updateUrlParams>
 		<param key="param1" value="value1"/>
     <param key="param2"/>

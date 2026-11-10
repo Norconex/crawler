@@ -16,6 +16,7 @@ package com.norconex.committer.solr;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrServerException;
@@ -98,7 +99,7 @@ public abstract class AbstractSolrIT {
                                 "" + TimeIdGenerator.next()).toPath())
                 .build();
         var committer = new SolrCommitter();
-        committer.getConfiguration().setSolrURL(getSolrTestURL());
+        committer.getConfiguration().setNodes(List.of(getSolrTestURL()));
         committer.getConfiguration().setUpdateUrlParam("commitWithin", "1");
         committer.init(ctx);
         return committer;
