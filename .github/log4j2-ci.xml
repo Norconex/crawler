@@ -11,7 +11,7 @@
     <Logger name="com.norconex.importer.Importer" level="ERROR" additivity="false">
       <AppenderRef ref="Console"/>
     </Logger>
-    <Logger name="com.norconex.importer.handler.splitter.impl.XMLStreamSplitter" level="OFF" additivity="false">
+    <Logger name="com.norconex.importer.handler.splitter.impl.XmlStreamSplitter" level="OFF" additivity="false">
       <AppenderRef ref="Console"/>
     </Logger>
     <Logger name="org.apache.poi" level="ERROR" additivity="false">
@@ -21,6 +21,39 @@
       <AppenderRef ref="Console"/>
     </Logger>
     <Logger name="org.apache.pdfbox.jbig2.JBIG2Globals" level="OFF" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+
+    <!-- Loggers whose stack traces come from tests that fail on purpose
+         (or from third-party code in test-only setups). Silenced so that any
+         stack trace left in the CI log is a real problem. In tests that can
+         use it, prefer @WithLogLevel scoped to the test. -->
+    <Logger name="com.norconex.commons.lang.exec.Retrier" level="OFF" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+    <Logger name="org.elasticsearch.client.sniff.Sniffer" level="OFF" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+    <Logger name="org.apache.tika.parser.journal.GrobidRESTParser" level="OFF" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+
+    <!-- Committer error events and queue retries: tests of failing committers
+         trigger them on purpose. Silenced here (and not per test) because
+         changing levels at runtime proved unreliable with parallel classes. -->
+    <Logger name="com.norconex.committer.core.batch.queue.impl.FsQueue" level="OFF" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+    <Logger name="CommitterEvent.COMMITTER_BATCH_ERROR" level="OFF" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+    <Logger name="CommitterEvent.COMMITTER_UPSERT_ERROR" level="OFF" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+    <Logger name="CommitterEvent.COMMITTER_DELETE_ERROR" level="OFF" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+    <Logger name="CommitterEvent.COMMITTER_INIT_ERROR" level="OFF" additivity="false">
       <AppenderRef ref="Console"/>
     </Logger>
 

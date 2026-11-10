@@ -30,6 +30,7 @@ import org.apache.hc.core5.http.HttpHost;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import com.norconex.crawler.core.junit.WithLogLevel;
 import com.norconex.commons.lang.bean.BeanMapper;
 import com.norconex.crawler.core.CrawlerException;
 import com.norconex.crawler.fs.FsTestUtil;
@@ -37,6 +38,7 @@ import com.norconex.crawler.fs.fetch.FileFetchRequest;
 import com.norconex.importer.doc.Doc;
 
 @Timeout(30)
+@WithLogLevel(value = "OFF", classes = HdfsFetcher.class) // tests expect exceptions
 class HdfsFetcherTest {
 
     @Test

@@ -44,6 +44,7 @@ import org.junit.jupiter.api.Timeout;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.norconex.crawler.core.junit.WithLogLevel;
 import com.norconex.commons.lang.bean.BeanMapper;
 import com.norconex.crawler.core.CrawlerConfig;
 import com.norconex.crawler.core.CrawlerException;
@@ -63,6 +64,7 @@ import com.norconex.importer.doc.DocMetaConstants;
 
 @Timeout(30)
 @SuppressWarnings("null")
+@WithLogLevel(value = "OFF", classes = M365GraphFetcher.class) // tests expect exceptions
 class M365GraphFetcherTest {
 
     private static final ObjectMapper JSON = new ObjectMapper();

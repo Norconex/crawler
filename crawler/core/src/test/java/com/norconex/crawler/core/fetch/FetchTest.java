@@ -24,6 +24,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import com.norconex.crawler.core.junit.WithLogLevel;
 import com.norconex.crawler.core.CrawlerConfig;
 import com.norconex.crawler.core.context.CrawlerContext;
 import com.norconex.crawler.core.event.CrawlerEvent;
@@ -198,6 +199,7 @@ class FetchTest {
     }
 
     @Test
+    @WithLogLevel(value = "OFF", classes = MultiFetcher.class)
     void testMultiFetcher_handlesExceptionFromFetcher() throws Exception {
         var fetcher1 = mock(Fetcher.class);
         when(fetcher1.accept(org.mockito.ArgumentMatchers.any()))

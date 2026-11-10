@@ -26,6 +26,8 @@ import java.util.concurrent.TimeUnit;
 import org.mockserver.integration.ClientAndServer;
 import org.mockserver.junit.jupiter.MockServerSettings;
 
+import com.norconex.crawler.core.junit.WithLogLevel;
+import com.norconex.crawler.core.fetch.MultiFetcher;
 import com.norconex.committer.core.CommitterException;
 import com.norconex.committer.core.UpsertRequest;
 import com.norconex.crawler.web.WebCrawlerConfig;
@@ -41,6 +43,7 @@ import org.junit.jupiter.api.Timeout;
 @MockServerSettings
 @Timeout(30)
 @SuppressWarnings("null")
+@WithLogLevel(value = "OFF", classes = MultiFetcher.class) // tests expect exceptions
 class TimeoutTest {
 
     private final String basePath = "/timeout";

@@ -23,7 +23,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import com.norconex.crawler.core.junit.WithLogLevel;
+
 @Timeout(30)
+@WithLogLevel(value = "OFF", classes = ExceptionSwallower.class) // tests expect exceptions
 class ExceptionSwallowerTest {
 
     // -------------------------------------------------------------------------

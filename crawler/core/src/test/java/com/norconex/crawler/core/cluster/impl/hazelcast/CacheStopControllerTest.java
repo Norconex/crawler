@@ -25,6 +25,7 @@ import static org.mockito.Mockito.when;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import com.norconex.crawler.core.junit.WithLogLevel;
 import com.norconex.crawler.core.cluster.CacheManager;
 import com.norconex.crawler.core.cluster.CacheMap;
 import com.norconex.crawler.core.cluster.pipeline.PipelineManager;
@@ -102,6 +103,7 @@ class CacheStopControllerTest {
     }
 
     @Test
+    @WithLogLevel(value = "OFF", classes = CacheStopController.class)
     void init_keepsPollingWhenAdminCacheCheckThrows() {
         @SuppressWarnings("unchecked")
         CacheMap<String> adminCache = mock(CacheMap.class);

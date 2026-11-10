@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 
+import com.norconex.crawler.core.junit.WithLogLevel;
 import com.norconex.commons.lang.config.Configurable;
 import com.norconex.crawler.core.CrawlerConfig;
 import com.norconex.crawler.core.event.CrawlerEvent;
@@ -54,6 +55,7 @@ import com.norconex.crawler.core.test.CrawlerTestInstrument;
  */
 @Timeout(60)
 @WithTestWatcherLogging
+@WithLogLevel(value = "OFF", classes = CrawlerProcessStep.class) // tests expect exceptions
 class CrawlerProcessStepExceptionHandlingTest {
 
     @TempDir

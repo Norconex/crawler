@@ -41,6 +41,7 @@ import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 
+import com.norconex.crawler.core.junit.WithLogLevel;
 import com.norconex.crawler.core.fetch.FetchException;
 import com.norconex.crawler.core.ledger.ProcessingOutcome;
 import com.norconex.crawler.web.fetch.HttpMethod;
@@ -50,6 +51,7 @@ import com.norconex.crawler.web.mocks.MockWebDriver;
 import com.norconex.crawler.web.stubs.CrawlDocStubs;
 
 @Timeout(30)
+@WithLogLevel(value = "OFF", classes = WebDriverFetcher.class) // tests expect exceptions
 class WebDriverFetcherTest {
 
     @Test

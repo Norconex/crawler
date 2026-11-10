@@ -28,6 +28,8 @@ import org.junit.jupiter.api.Timeout;
 
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
+import com.norconex.crawler.core.junit.WithLogLevel;
+import com.norconex.crawler.web.fetch.util.AbstractScreenshotHandler;
 import com.norconex.commons.lang.bean.BeanMapper;
 import com.norconex.commons.lang.io.CachedStreamFactory;
 import com.norconex.crawler.web.fetch.util.DocImageHandlerConfig.DirStructure;
@@ -99,6 +101,7 @@ class PlaywrightScreenshotHandlerTest {
     // -------------------------------------------------------------------------
 
     @Test
+    @WithLogLevel(value = "OFF", classes = AbstractScreenshotHandler.class) // tests expect exceptions
     void testTakeScreenshotSwallowsException() {
         var page = mock(Page.class);
         when(page.screenshot()).thenThrow(new RuntimeException("boom"));

@@ -37,6 +37,7 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoSettings;
 
+import com.norconex.crawler.core.junit.WithLogLevel;
 import com.norconex.commons.lang.map.Properties;
 import com.norconex.crawler.fs.doc.FsDocMetadata;
 
@@ -54,6 +55,7 @@ class LocalFetcherAclTest {
     }
 
     @Test
+@WithLogLevel(value = "OFF", classes = LocalFetcher.class) // tests expect exceptions
     void testAcl() throws IOException {
         var fetcher = new LocalFetcher();
         var meta = new Properties();

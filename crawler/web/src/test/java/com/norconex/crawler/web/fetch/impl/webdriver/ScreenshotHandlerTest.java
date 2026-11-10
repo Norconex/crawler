@@ -39,6 +39,8 @@ import org.openqa.selenium.OutputType;
 import org.openqa.selenium.Point;
 import org.openqa.selenium.WebElement;
 
+import com.norconex.crawler.core.junit.WithLogLevel;
+import com.norconex.crawler.web.fetch.util.AbstractScreenshotHandler;
 import com.norconex.commons.lang.bean.BeanMapper;
 import com.norconex.crawler.web.fetch.util.DocImageHandlerConfig.DirStructure;
 import com.norconex.crawler.web.fetch.util.DocImageHandlerConfig.Target;
@@ -49,6 +51,7 @@ import com.norconex.importer.doc.Doc;
 import java.nio.file.Path;
 
 @Timeout(30)
+@WithLogLevel(value = "OFF", classes = AbstractScreenshotHandler.class) // tests expect exceptions
 class ScreenshotHandlerTest {
 
     @Test

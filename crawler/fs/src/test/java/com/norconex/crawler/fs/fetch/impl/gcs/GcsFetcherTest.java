@@ -35,12 +35,14 @@ import com.google.cloud.storage.HttpStorageOptions;
 import com.google.cloud.storage.StorageOptions;
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem;
 import com.google.cloud.storage.contrib.nio.CloudStoragePath;
+import com.norconex.crawler.core.junit.WithLogLevel;
 import com.norconex.commons.lang.bean.BeanMapper;
 import com.norconex.crawler.fs.FsTestUtil;
 import com.norconex.crawler.fs.fetch.FileFetchRequest;
 import com.norconex.importer.doc.Doc;
 
 @Timeout(30)
+@WithLogLevel(value = "OFF", classes = GcsFetcher.class) // tests expect exceptions
 class GcsFetcherTest {
 
     @Test

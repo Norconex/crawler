@@ -44,6 +44,7 @@ import com.microsoft.playwright.BrowserType.LaunchOptions;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
 import com.microsoft.playwright.Response;
+import com.norconex.crawler.core.junit.WithLogLevel;
 import com.norconex.commons.lang.net.Host;
 import com.norconex.commons.lang.net.ProxySettings;
 import com.norconex.commons.lang.security.Credentials;
@@ -55,6 +56,7 @@ import com.norconex.crawler.web.fetch.impl.playwright.PlaywrightFetcherConfig.Wa
 import com.norconex.crawler.web.stubs.CrawlDocStubs;
 
 @Timeout(30)
+@WithLogLevel(value = "OFF", classes = PlaywrightFetcher.class) // tests expect exceptions
 class PlaywrightFetcherTest {
 
     // -------------------------------------------------------------------------
