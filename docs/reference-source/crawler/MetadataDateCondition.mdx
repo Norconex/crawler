@@ -1,0 +1,59 @@
+---
+component: MetadataDateCondition
+module: crawler/core
+locale: en
+propertyCoverage: all
+---
+
+# MetadataDateCondition
+
+## Summary
+
+Met when a metadata field has a date value satisfying a comparison, such as a last modification date.
+
+## Notes
+
+Met when at least one value of at least one field whose name matches `fieldMatcher` is a date satisfying the comparison. A missing field or a value that is not a date in the expected `format` is never a match.
+
+Use one value matcher to compare with a date, or two to define a range (both must be satisfied). With none, the condition is met when the value is a date.
+
+A matcher date is either absolute (`2025-05-31` or `2025-05-31T22:44:15`) or relative to the current date: `TODAY` or `NOW`, optionally followed by a number of units to add or remove, such as `TODAY-2Y` (`Y` year, `M` month, `D` day, `h` hour, `m` minute, `s` second).
+
+## Properties
+
+### docZoneId
+
+Time zone assumed for field values that do not carry one. Defaults to UTC.
+
+### fieldMatcher
+
+Matches metadata field names. Required.
+
+### format
+
+The format of the field date values, as per Java `DateTimeFormatter`. Defaults to the number of milliseconds since 1970-01-01 (epoch). For HTTP headers such as `Last-Modified`, use `EEE, dd MMM yyyy HH:mm:ss zzz`.
+
+### valueMatcher
+
+The comparison to satisfy: an `operator` (`gt`, `ge`, `lt`, `le` or `eq`, with the same alternative spellings as for numbers), a `date` expression and an optional `zoneId`.
+
+### valueMatcherRangeEnd
+
+A second comparison that must also be satisfied, to define a range together with `valueMatcher`.
+
+## Examples
+
+Not modified since the start of 2024:
+
+<ConfigBlock
+  json={{
+    "class": "MetadataDateCondition",
+    "fieldMatcher": {
+      "pattern": "crawler.lastModified"
+    },
+    "valueMatcher": {
+      "operator": "lt",
+      "date": "2024-01-01"
+    }
+  }}
+/>

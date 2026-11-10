@@ -1,0 +1,99 @@
+---
+component: ConditionMetadataFilter
+module: crawler/core
+locale: en
+propertyCoverage: all
+---
+
+# ConditionMetadataFilter
+
+## Summary
+
+Filter by a condition on metadata field values: text, number (e.g., a size), date (e.g., a modification date) or blank, optionally combined.
+
+## Notes
+
+Accepts or rejects a document based on a condition evaluated on its metadata. Unlike `GenericMetadataFilter`, which only matches text, this filter can compare numbers and dates, and can combine several tests with `allOf`, `anyOf` and `noneOf` groups, nested as deep as needed.
+
+Only metadata is ever tested, never the document content. A text, number, date or blank condition must therefore name the field(s) it applies to.
+
+A condition that cannot be evaluated is simply not met: a missing field, a value that is not a number, or a value that is not a date in the expected format never matches. Combined with an `onMatch` of `EXCLUDE`, such documents are kept. Use a `blank` condition if you need to act on a missing field.
+
+### Filtering before download
+
+This filter is most useful as a metadata filter that runs before a document is downloaded, to avoid downloading what you do not want (for instance, very large files). That only happens when the crawler obtains metadata in a separate step first: see `metadataFetchSupport` in the crawler configuration.
+
+- **Web crawler:** metadata comes from an HTTP `HEAD` request, which means **two requests per page** instead of one. Servers do not always return `Content-Length` or `Last-Modified` (dynamic pages often do not), in which case the condition is not met. Leave `metadataFetchSupport` disabled unless you have good reason to do otherwise, such as skipping huge files you would rather not download.
+- **File crawlers:** metadata comes from the file attributes (size, last modified, and so on), which can be inexpensive for local files, but may cost a round-trip per file for remote storage. Folders have no size or date, so a number or date condition is never met for a folder. With `EXCLUDE` this means folders are kept and still explored. With `INCLUDE` they are rejected, and so is everything underneath them: prefer `EXCLUDE` for these conditions on file crawlers.
+
+When `metadataFetchSupport` is disabled, this filter, as any metadata filter, still runs but after the document was downloaded, on the metadata obtained with it.
+
+## Properties
+
+### condition
+
+The condition to test. Either a single test (`MetadataTextCondition`, `MetadataNumberCondition`, `MetadataDateCondition` or `MetadataBlankCondition`) or a group of conditions (`MetadataAllOf`, `MetadataAnyOf` or `MetadataNoneOf`). When not set, every document is accepted.
+
+### onMatch
+
+What to do with a document for which the condition is met. `EXCLUDE` rejects it; `INCLUDE` (the default) keeps it and rejects the documents for which the condition is not met.
+
+Remember that when at least one include filter exists, a document must satisfy at least one of them to be accepted.
+
+## Examples
+
+### Skip files bigger than 10 MB
+
+The `Content-Length` field holds a size in bytes.
+
+<ConfigBlock
+  json={{
+    "class": "ConditionMetadataFilter",
+    "onMatch": "EXCLUDE",
+    "condition": {
+      "class": "MetadataNumberCondition",
+      "fieldMatcher": {
+        "pattern": "Content-Length"
+      },
+      "valueMatcher": {
+        "operator": "gt",
+        "number": 10000000
+      }
+    }
+  }}
+/>
+
+### Skip documents not modified for two years, or that are videos
+
+<ConfigBlock
+  json={{
+    "class": "ConditionMetadataFilter",
+    "onMatch": "EXCLUDE",
+    "condition": {
+      "class": "MetadataAnyOf",
+      "conditions": [
+        {
+          "class": "MetadataDateCondition",
+          "fieldMatcher": {
+            "pattern": "Last-Modified"
+          },
+          "format": "EEE, dd MMM yyyy HH:mm:ss zzz",
+          "valueMatcher": {
+            "operator": "lt",
+            "date": "TODAY-2Y"
+          }
+        },
+        {
+          "class": "MetadataTextCondition",
+          "fieldMatcher": {
+            "pattern": "Content-Type"
+          },
+          "valueMatcher": {
+            "method": "WILDCARD",
+            "pattern": "video/*"
+          }
+        }
+      ]
+    }
+  }}
+/>

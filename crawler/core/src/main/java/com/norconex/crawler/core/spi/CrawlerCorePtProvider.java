@@ -28,6 +28,14 @@ import com.norconex.crawler.core.doc.operations.checksum.MetadataChecksummer;
 import com.norconex.crawler.core.doc.operations.filter.DocumentFilter;
 import com.norconex.crawler.core.doc.operations.filter.MetadataFilter;
 import com.norconex.crawler.core.doc.operations.filter.ReferenceFilter;
+import com.norconex.crawler.core.doc.operations.filter.impl.condition.MetadataAllOf;
+import com.norconex.crawler.core.doc.operations.filter.impl.condition.MetadataAnyOf;
+import com.norconex.crawler.core.doc.operations.filter.impl.condition.MetadataBlankCondition;
+import com.norconex.crawler.core.doc.operations.filter.impl.condition.MetadataCondition;
+import com.norconex.crawler.core.doc.operations.filter.impl.condition.MetadataDateCondition;
+import com.norconex.crawler.core.doc.operations.filter.impl.condition.MetadataNoneOf;
+import com.norconex.crawler.core.doc.operations.filter.impl.condition.MetadataNumberCondition;
+import com.norconex.crawler.core.doc.operations.filter.impl.condition.MetadataTextCondition;
 import com.norconex.crawler.core.doc.operations.spoil.SpoiledReferenceStrategizer;
 
 /**
@@ -49,6 +57,14 @@ public class CrawlerCorePtProvider extends BasePolymorphicTypeProvider {
                 .addFromScan(MetadataFilter.class)
                 .addFromScan(ReferenceFilter.class)
                 .addFromScan(SpoiledReferenceStrategizer.class)
+                .add(MetadataCondition.class,
+                        MetadataTextCondition.class,
+                        MetadataNumberCondition.class,
+                        MetadataDateCondition.class,
+                        MetadataBlankCondition.class,
+                        MetadataAllOf.class,
+                        MetadataAnyOf.class,
+                        MetadataNoneOf.class)
                 .add(ClusterConnector.class, HazelcastClusterConnector.class)
                 .add(ClusterConnector.class, MemoryClusterConnector.class)
                 .add(ClusterConnector.class, MVStoreClusterConnector.class)

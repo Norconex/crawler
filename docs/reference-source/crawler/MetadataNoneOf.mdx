@@ -1,0 +1,38 @@
+---
+component: MetadataNoneOf
+module: crawler/core
+locale: en
+propertyCoverage: all
+---
+
+# MetadataNoneOf
+
+## Summary
+
+Met when none of its conditions is met.
+
+## Notes
+
+A logical NOT, or NOR with several conditions. Also met when it has no conditions. Groups can be nested.
+
+## Properties
+
+### conditions
+
+The conditions, none of which may be met.
+
+## Examples
+
+A field that is present and not blank (the opposite of a blank field):
+
+<ConfigBlock
+  json={{
+    "class": "MetadataNoneOf",
+    "conditions": [
+      {
+        "class": "MetadataBlankCondition",
+        "fieldMatcher": { "pattern": "title" }
+      }
+    ]
+  }}
+/>

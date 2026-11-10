@@ -1,0 +1,39 @@
+---
+component: MetadataBlankCondition
+module: crawler/core
+locale: en
+propertyCoverage: all
+---
+
+# MetadataBlankCondition
+
+## Summary
+
+Met when metadata fields are blank or missing.
+
+## Notes
+
+Met when no field matches `fieldMatcher`, or when the values of the matching fields are blank (control characters and spaces ignored). By default, all values must be blank. A field name pattern is required: the document content is never tested.
+
+To test that a field is present and not blank, wrap this condition in a `MetadataNoneOf` group.
+
+## Properties
+
+### fieldMatcher
+
+Matches metadata field names. Required.
+
+### matchAnyBlank
+
+When `true`, a single blank value is enough for the condition to be met, instead of all values having to be blank. Defaults to `false`.
+
+## Examples
+
+<ConfigBlock
+  json={{
+    "class": "MetadataBlankCondition",
+    "fieldMatcher": {
+      "pattern": "Content-Type"
+    }
+  }}
+/>

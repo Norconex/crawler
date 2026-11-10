@@ -1,0 +1,41 @@
+---
+component: MetadataTextCondition
+module: crawler/core
+locale: en
+propertyCoverage: all
+---
+
+# MetadataTextCondition
+
+## Summary
+
+Met when a metadata field has a value matching a text pattern.
+
+## Notes
+
+Met when at least one value of at least one field whose name matches `fieldMatcher` also matches `valueMatcher`. A field name pattern is required: the document content is never tested.
+
+## Properties
+
+### fieldMatcher
+
+Matches metadata field names. Required.
+
+### valueMatcher
+
+Matches the values of the fields selected by `fieldMatcher`.
+
+## Examples
+
+<ConfigBlock
+  json={{
+    "class": "MetadataTextCondition",
+    "fieldMatcher": {
+      "pattern": "Content-Type"
+    },
+    "valueMatcher": {
+      "method": "WILDCARD",
+      "pattern": "application/zip*"
+    }
+  }}
+/>

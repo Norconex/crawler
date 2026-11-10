@@ -1,0 +1,44 @@
+---
+component: MetadataAllOf
+module: crawler/core
+locale: en
+propertyCoverage: all
+---
+
+# MetadataAllOf
+
+## Summary
+
+Met when all of its conditions are met.
+
+## Notes
+
+A logical AND. Also met when it has no conditions. Groups can be nested.
+
+## Properties
+
+### conditions
+
+The conditions that must all be met.
+
+## Examples
+
+Bigger than 1 MB and a PDF:
+
+<ConfigBlock
+  json={{
+    "class": "MetadataAllOf",
+    "conditions": [
+      {
+        "class": "MetadataNumberCondition",
+        "fieldMatcher": { "pattern": "Content-Length" },
+        "valueMatcher": { "operator": "gt", "number": 1048576 }
+      },
+      {
+        "class": "MetadataTextCondition",
+        "fieldMatcher": { "pattern": "Content-Type" },
+        "valueMatcher": { "pattern": "application/pdf" }
+      }
+    ]
+  }}
+/>

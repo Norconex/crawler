@@ -1,0 +1,53 @@
+---
+component: MetadataNumberCondition
+module: crawler/core
+locale: en
+propertyCoverage: all
+---
+
+# MetadataNumberCondition
+
+## Summary
+
+Met when a metadata field has a numeric value satisfying a comparison, such as a size.
+
+## Notes
+
+Met when at least one value of at least one field whose name matches `fieldMatcher` is a number satisfying the comparison. Decimals are supported, using a dot as the decimal character. A missing field or a value that is not a number is never a match.
+
+Use one value matcher to compare with a number, or two to define a range (both must be satisfied). With none, the condition is met when the value is a number.
+
+## Properties
+
+### fieldMatcher
+
+Matches metadata field names. Required.
+
+### valueMatcher
+
+The comparison to satisfy: an `operator` (`gt`, `ge`, `lt`, `le` or `eq`; the symbols `>`, `>=`, `<`, `<=` and `=`, and the names `GREATER_THAN`, `GREATER_EQUAL`, `LOWER_THAN`, `LOWER_EQUAL` and `EQUALS` also work, ignoring case and punctuation) and a `number`.
+
+### valueMatcherRangeEnd
+
+A second comparison that must also be satisfied, to define a range together with `valueMatcher`.
+
+## Examples
+
+Between 1 KB and 1 MB:
+
+<ConfigBlock
+  json={{
+    "class": "MetadataNumberCondition",
+    "fieldMatcher": {
+      "pattern": "Content-Length"
+    },
+    "valueMatcher": {
+      "operator": "ge",
+      "number": 1024
+    },
+    "valueMatcherRangeEnd": {
+      "operator": "lt",
+      "number": 1048576
+    }
+  }}
+/>

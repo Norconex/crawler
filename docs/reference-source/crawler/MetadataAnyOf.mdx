@@ -1,0 +1,44 @@
+---
+component: MetadataAnyOf
+module: crawler/core
+locale: en
+propertyCoverage: all
+---
+
+# MetadataAnyOf
+
+## Summary
+
+Met when at least one of its conditions is met.
+
+## Notes
+
+A logical OR. Not met when it has no conditions. Groups can be nested.
+
+## Properties
+
+### conditions
+
+The conditions, at least one of which must be met.
+
+## Examples
+
+A ZIP or a video:
+
+<ConfigBlock
+  json={{
+    "class": "MetadataAnyOf",
+    "conditions": [
+      {
+        "class": "MetadataTextCondition",
+        "fieldMatcher": { "pattern": "Content-Type" },
+        "valueMatcher": { "pattern": "application/zip" }
+      },
+      {
+        "class": "MetadataTextCondition",
+        "fieldMatcher": { "pattern": "Content-Type" },
+        "valueMatcher": { "method": "WILDCARD", "pattern": "video/*" }
+      }
+    ]
+  }}
+/>
