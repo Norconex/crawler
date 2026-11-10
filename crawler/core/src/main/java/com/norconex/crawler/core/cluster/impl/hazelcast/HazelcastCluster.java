@@ -37,7 +37,6 @@ import com.norconex.crawler.core.cluster.ClusterNode;
 import com.norconex.crawler.core.cluster.impl.hazelcast.event.CoordinatorChangeListener;
 import com.norconex.crawler.core.cluster.impl.hazelcast.pipeline.HazelcastPipelineManager;
 import com.norconex.crawler.core.cluster.pipeline.PipelineManager;
-import com.norconex.crawler.core.event.CrawlerEvent;
 import com.norconex.crawler.core.session.CrawlerSession;
 import com.norconex.crawler.core.util.ExceptionSwallower;
 import com.norconex.crawler.core.util.ThreadTracker;
@@ -345,15 +344,15 @@ public class HazelcastCluster implements Cluster {
     @Override
     public void stop() {
         if (stopController != null) {
-            var session = getCrawlSession();
-            session.fire(CrawlerEvent.CRAWLER_STOP_REQUEST_BEGIN, session);
             if (isStandalone()) {
                 LOG.info("Standalone mode: stopping local pipeline directly.");
-                pipelineManager.stop();
+                stopLocally();
             } else {
+                // Every node, this one included, picks up the signal and
+                // stops itself through stopLocally() (see
+                // CacheStopController), so each fires the stop events.
                 stopController.sendClusterStopSignal();
             }
-            session.fire(CrawlerEvent.CRAWLER_STOP_REQUEST_END, session);
             LOG.info("Stopping cluster...");
         }
     }

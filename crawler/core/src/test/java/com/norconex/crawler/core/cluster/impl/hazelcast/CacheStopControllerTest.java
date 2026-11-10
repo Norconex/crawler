@@ -16,6 +16,7 @@ package com.norconex.crawler.core.cluster.impl.hazelcast;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
@@ -154,6 +155,8 @@ class CacheStopControllerTest {
 
         when(cluster.getCacheManager()).thenReturn(cacheManager);
         when(cluster.getPipelineManager()).thenReturn(pipelineManager);
+        // The stop goes through the real Cluster.stopLocally() default.
+        doCallRealMethod().when(cluster).stopLocally();
         when(cacheManager.getAdminCache()).thenReturn(adminCache);
 
         return new Fixture(cluster, pipelineManager);

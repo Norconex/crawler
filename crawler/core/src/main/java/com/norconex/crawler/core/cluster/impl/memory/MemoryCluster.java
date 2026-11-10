@@ -124,7 +124,7 @@ public class MemoryCluster implements Cluster {
     @Override
     public void stop() {
         if (pipelineManager != null) {
-            pipelineManager.stop();
+            stopLocally();
         }
     }
 

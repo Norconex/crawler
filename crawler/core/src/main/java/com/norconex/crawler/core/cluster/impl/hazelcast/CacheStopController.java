@@ -74,7 +74,7 @@ class CacheStopController implements AutoCloseable {
     private void triggerLocalStop(String source) {
         if (stopping.compareAndSet(false, true)) {
             LOG.info("STOP triggered via {}.", source);
-            cluster.getPipelineManager().stop();
+            cluster.stopLocally();
         }
     }
 

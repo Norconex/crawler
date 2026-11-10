@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.norconex.crawler.core.cluster.pipeline.PipelineManager;
+import com.norconex.crawler.core.event.CrawlerEvent;
 import com.norconex.crawler.core.session.CrawlerSession;
 
 public interface Cluster extends Closeable {
@@ -80,6 +81,25 @@ public interface Cluster extends Closeable {
      * Requests to stop the cluster. Does not wait.
      */
     void stop();
+
+    /**
+     * Stops the crawl pipelines running on this node, firing
+     * {@link CrawlerEvent#CRAWLER_STOP_REQUEST_BEGIN} before and
+     * {@link CrawlerEvent#CRAWLER_STOP_REQUEST_END} after. Every cluster
+     * implementation must stop a node through this method, whatever the way
+     * the stop reached the node, so listeners are told on every node and in
+     * every cluster mode.
+     */
+    default void stopLocally() {
+        var session = getCrawlSession();
+        if (session != null) {
+            session.fire(CrawlerEvent.CRAWLER_STOP_REQUEST_BEGIN, session);
+        }
+        getPipelineManager().stop();
+        if (session != null) {
+            session.fire(CrawlerEvent.CRAWLER_STOP_REQUEST_END, session);
+        }
+    }
 
     //    /**
     //     * Checks if the cluster is configured in standalone (non-clustered)
