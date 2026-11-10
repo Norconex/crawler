@@ -32,6 +32,9 @@ public class RefListEnqueuer implements ReferenceEnqueuer {
         var cfg = ctx.getCrawlSession().getCrawlContext().getCrawlConfig();
         var cnt = 0;
         for (String ref : cfg.getStartReferences()) {
+            if (ctx.isStopRequested()) {
+                break;
+            }
             if (StringUtils.isNotBlank(ref)) {
                 ctx.queue(ref);
                 cnt++;

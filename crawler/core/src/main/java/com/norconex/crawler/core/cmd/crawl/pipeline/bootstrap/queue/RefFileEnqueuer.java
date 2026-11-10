@@ -40,9 +40,12 @@ public class RefFileEnqueuer implements ReferenceEnqueuer {
         var refsFiles = cfg.getStartReferencesFiles();
         var cnt = 0;
         for (Path refsFile : refsFiles) {
+            if (ctx.isStopRequested()) {
+                break;
+            }
             try (var it = IOUtils.lineIterator(Files.newInputStream(refsFile),
                     StandardCharsets.UTF_8)) {
-                while (it.hasNext()) {
+                while (it.hasNext() && !ctx.isStopRequested()) {
                     var ref = StringUtils.trimToNull(it.next());
                     if (ref != null && !ref.startsWith("#")) {
                         ctx.queue(ref);

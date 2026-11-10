@@ -32,11 +32,14 @@ public class RefProviderEnqueuer implements ReferenceEnqueuer {
         var providers = cfg.getStartReferencesProviders();
         var cnt = 0;
         for (ReferencesProvider provider : providers) {
+            if (ctx.isStopRequested()) {
+                break;
+            }
             if (provider == null) {
                 continue;
             }
             var it = provider.provideReferences();
-            while (it.hasNext()) {
+            while (it.hasNext() && !ctx.isStopRequested()) {
                 ctx.queue(it.next());
                 cnt++;
             }

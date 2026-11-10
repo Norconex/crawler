@@ -84,6 +84,15 @@ public class GenericSitemapResolver extends CrawlerLifeCycleListener
     private void doResolve(SitemapContext ctx, Set<String> resolvedIndices) {
 
         var location = ctx.getLocation();
+        if (stopping.get()) {
+            LOG.debug("Skipping sitemap (stop requested): {}", location);
+            return;
+        }
+        // Sitemap indices can refer to each other.
+        if (!resolvedIndices.add(location)) {
+            LOG.debug("Sitemap already processed: {}", location);
+            return;
+        }
 
         // TODO Delete stored sitemaps that were not updated in session (orphans)
 
@@ -118,9 +127,6 @@ public class GenericSitemapResolver extends CrawlerLifeCycleListener
                     "Cannot fetch sitemap: {} ({})",
                     location, e.getMessage(), e);
         } finally {
-            if (sitemapRec != null) {
-                sitemapStore.put(location, sitemapRec);
-            }
             if (fetchResult != null) {
                 try {
                     fetchResult.doc().close();
@@ -133,12 +139,14 @@ public class GenericSitemapResolver extends CrawlerLifeCycleListener
         }
 
         for (SitemapRecord child : childSitemaps) {
-            if (!resolvedIndices.contains(child.getLocation())) {
-                doResolve(
-                        ctx.withLocation(child.getLocation()), resolvedIndices);
-            } else {
-                LOG.debug("Sitemap already processed: {}", child.getLocation());
-            }
+            doResolve(ctx.withLocation(child.getLocation()), resolvedIndices);
+        }
+
+        // Only remember a sitemap (and an index, with all its children) as
+        // processed once read in full. One left part-read by a stop is read
+        // again when the crawl resumes, rather than skipped as unmodified.
+        if (sitemapRec != null && !stopping.get()) {
+            sitemapStore.put(location, sitemapRec);
         }
     }
 
@@ -218,6 +226,9 @@ public class GenericSitemapResolver extends CrawlerLifeCycleListener
 
     @Override
     protected void onCrawlerCrawlBegin(CrawlerEvent event) {
+        // The same resolver can serve several runs in a JVM: a stop in a
+        // previous one must not affect this one.
+        stopping.set(false);
         sitemapStore = Web.gridCache(
                 (CrawlerSession) event.getSource(),
                 SITEMAP_STORE_NAME,

@@ -19,7 +19,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 
 import org.apache.commons.collections4.CollectionUtils;
 
@@ -68,52 +67,73 @@ public class QueueBootstrapper implements CrawlerBootstrapper {
         }
     }
 
+    /**
+     * Queues the start references, unless a previous run of this crawl
+     * session already queued them all. A run resuming a crawl whose
+     * queueing was left unfinished (stopped, failed or crashed) queues them
+     * again: references already known to the crawl are ignored.
+     * @param session the crawl session
+     */
     @Override
     public void bootstrap(CrawlerSession session) {
-        var crawlContext = session.getCrawlContext();
         if (session.isResumed()) {
-            LOG.info("Unfinished previous crawl detected. Resuming...");
-            LOG.info("Skipping start reference queueing on resumed run. "
-                    + "Will continue with entries restored from ledger.");
-            session.setStartRefsQueueingComplete(true);
-            return;
+            if (session.isStartRefsAllQueued()) {
+                LOG.info("Resuming: start references were all queued by a "
+                        + "previous run. Continuing with the entries restored "
+                        + "from the ledger.");
+                session.setStartRefsQueueingComplete(true);
+                return;
+            }
+            LOG.info("Resuming: a previous run did not finish queueing "
+                    + "start references. Queueing them again (references "
+                    + "already known are ignored).");
         } else {
-            LOG.info("Queueing start references ({})...",
-                    crawlContext.getCrawlConfig().isStartReferencesAsync()
-                            ? "asynchronously"
-                            : "synchronously");
+            session.setStartRefsAllQueued(false);
         }
 
-        //--- Queue initial references ---------------------------------
-        //TODO if we resume, shall we not queue again? What if it stopped
-        // in the middle of initial queuing, then to be safe we have to
-        // queue again and expect that those that were already processed
-        // will simply be ignored (default behavior).
-        // Consider persisting a flag that would tell us if we are resuming
-        // with an incomplete queue initialization, or make initialization
-        // more sophisticated so we can resume in the middle of it
-        // (this last option would likely be very impractical).
-        LOG.info("Queueing initial references...");
+        session.markStartRefsQueueingNode();
+        var async = session.getCrawlContext()
+                .getCrawlConfig().isStartReferencesAsync();
+        LOG.info("Queueing start references ({})...",
+                async ? "asynchronously" : "synchronously");
         var queueInitContext = new QueueBootstrapContext(
                 session,
                 docCtx -> queue(new QueuePipelineContext(session, docCtx)));
 
-        var callback = (Consumer<QueueBootstrapContext>) ctx -> {
+        if (async) {
+            initializeQueueAsync(queueInitContext);
+        } else {
+            runEnqueuers(queueInitContext);
+        }
+    }
+
+    private void runEnqueuers(QueueBootstrapContext ctx) {
+        var session = ctx.getCrawlSession();
+        var allQueued = false;
+        try {
             var cnt = 0;
             for (var enqueuer : enqueuers) {
+                if (session.isStopRequested()) {
+                    break;
+                }
                 cnt += enqueuer.enqueue(ctx);
             }
-            if (LOG.isInfoEnabled()) {
-                LOG.info("{} start URLs identified.",
+            allQueued = !session.isStopRequested();
+            if (allQueued) {
+                LOG.info("{} start references identified.",
+                        NumberFormat.getNumberInstance().format(cnt));
+            } else {
+                LOG.info("Queueing of start references stopped after {} "
+                        + "references. It resumes with the crawl.",
                         NumberFormat.getNumberInstance().format(cnt));
             }
-        };
-
-        var cfg = crawlContext.getCrawlConfig();
-        if (cfg.isStartReferencesAsync()) {
-            initializeQueueAsync(callback, queueInitContext);
-        } else {
-            initializeQueueSync(callback, queueInitContext);
+        } finally {
+            if (allQueued) {
+                session.setStartRefsAllQueued(true);
+            }
+            // Whether queueing finished, was stopped or failed, this run
+            // must not wait for it any longer.
+            session.setStartRefsQueueingComplete(true);
         }
     }
 
@@ -125,17 +145,19 @@ public class QueueBootstrapper implements CrawlerBootstrapper {
                 .accept(context);
     }
 
-    private void initializeQueueAsync(
-            Consumer<QueueBootstrapContext> callback,
-            QueueBootstrapContext ctx) {
+    private void initializeQueueAsync(QueueBootstrapContext ctx) {
         var executor = Executors.newSingleThreadExecutor();
         try {
             executor.submit(() -> {
                 LogUtil.setMdcCrawlerId(ctx.getCrawlSession().getCrawlerId());
                 Thread.currentThread()
                         .setName(ctx.getCrawlSession().getCrawlerId());
-                callback.accept(ctx);
-                ctx.getCrawlSession().setStartRefsQueueingComplete(true);
+                try {
+                    runEnqueuers(ctx);
+                } catch (RuntimeException e) {
+                    LOG.error("Could not queue all start references. "
+                            + "Queueing resumes with the crawl.", e);
+                }
             });
         } finally {
             try {
@@ -147,12 +169,5 @@ public class QueueBootstrapper implements CrawlerBootstrapper {
                 Thread.currentThread().interrupt();
             }
         }
-    }
-
-    private void initializeQueueSync(
-            Consumer<QueueBootstrapContext> callback,
-            QueueBootstrapContext ctx) {
-        callback.accept(ctx);
-        ctx.getCrawlSession().setStartRefsQueueingComplete(true);
     }
 }

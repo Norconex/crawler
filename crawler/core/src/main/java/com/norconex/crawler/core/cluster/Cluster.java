@@ -93,6 +93,7 @@ public interface Cluster extends Closeable {
     default void stopLocally() {
         var session = getCrawlSession();
         if (session != null) {
+            session.markStopRequested();
             session.fire(CrawlerEvent.CRAWLER_STOP_REQUEST_BEGIN, session);
         }
         getPipelineManager().stop();

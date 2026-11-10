@@ -43,4 +43,14 @@ public class QueueBootstrapContext {
     public void queue(@NonNull CrawlerEntry entry) {
         queuer.accept(entry);
     }
+
+    /**
+     * Whether the crawler is being stopped. Enqueuers check it between
+     * references and stop queueing when it is {@code true}. Queueing is
+     * then left unfinished, and resumes with the crawl.
+     * @return {@code true} if a stop was requested
+     */
+    public boolean isStopRequested() {
+        return crawlSession.isStopRequested();
+    }
 }

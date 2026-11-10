@@ -70,6 +70,7 @@ public class CrawlerSession implements Closeable {
 
     private CrawlerRunInfo crawlRunInfo;
     private boolean closed;
+    private volatile boolean stopRequested;
     private Runnable postCloseCleanup;
 
     /**
@@ -321,12 +322,63 @@ public class CrawlerSession implements Closeable {
         return adminServer.getPort();
     }
 
+    /**
+     * Whether a stop was requested on this node. Long-running work outside
+     * the crawl pipeline steps (e.g., queueing start references in the
+     * background) checks it to end early.
+     * @return {@code true} once a stop was requested
+     */
+    public boolean isStopRequested() {
+        return stopRequested;
+    }
+
+    /**
+     * Marks this session as stopping. Called when a node stops (see
+     * {@link Cluster#stopLocally()}).
+     */
+    public void markStopRequested() {
+        stopRequested = true;
+    }
+
     public boolean isStartRefsQueueingComplete() {
         return stateStore.isStartRefsQueueingComplete();
     }
 
     public void setStartRefsQueueingComplete(boolean isComplete) {
         stateStore.setStartRefsQueueingComplete(isComplete);
+    }
+
+    /**
+     * Whether all start references of this crawl session were queued, by
+     * this run or a previous one.
+     * @return {@code true} once every start reference was queued
+     */
+    public boolean isStartRefsAllQueued() {
+        return stateStore.isStartRefsAllQueued();
+    }
+
+    public void setStartRefsAllQueued(boolean allQueued) {
+        stateStore.setStartRefsAllQueued(allQueued);
+    }
+
+    /**
+     * Records this node as the one queueing start references in this run.
+     */
+    public void markStartRefsQueueingNode() {
+        stateStore.setStartRefsQueueingNode(
+                cluster.getLocalNode().getNodeName());
+    }
+
+    /**
+     * Whether the node queueing start references in this run is still part
+     * of the cluster. When it is not (e.g., it crashed), nobody will finish
+     * the queueing in this run.
+     * @return {@code true} if the queueing node is alive
+     */
+    public boolean isStartRefsQueueingNodeAlive() {
+        return stateStore.getStartRefsQueueingNode()
+                .map(node -> cluster.getNodeNames().contains(node))
+                .orElse(false);
     }
 
     public void updateCrawlState(CrawlerState state) {

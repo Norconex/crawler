@@ -176,8 +176,6 @@ class CrawlerActivityChecker {
                     References are still being queued. \
                     Waiting for new references or initial queuing \
                     to be over...""");
-                var noWorkPollCount = 0;
-                var waitStart = Instant.now();
                 do {
                     Sleeper.sleepMillis(200);
                     queueEmpty = isQueuedEntryEmpty();
@@ -190,36 +188,19 @@ class CrawlerActivityChecker {
                             queueInitialized={}.""",
                                 queueEmpty, queueInitialized);
                     }
-                    // Guard against the start-refs-queuing flag becoming
-                    // permanently unavailable (e.g., due to partition
-                    // migration after a coordinator crash). Exit the loop if:
-                    //  (a) Queue and processing have both been empty for ~1s,
-                    //      meaning no more work exists at all; OR
-                    //  (b) We have been waiting >30s, after which even
-                    //      orphaned PROCESSING entries left by a crashed node
-                    //      should not prevent idle timeout from firing.
-                    if (!queueInitialized && queueEmpty) {
-                        var processingCount = session.getCrawlContext()
-                                .getCrawlEntryLedger().getProcessingCount();
-                        if (processingCount == 0) {
-                            noWorkPollCount++;
-                        } else {
-                            noWorkPollCount = 0;
-                        }
-                        var waited =
-                                Duration.between(waitStart, Instant.now());
-                        if (noWorkPollCount >= 5
-                                || waited.toMillis() >= 30_000) {
-                            LOG.info("Treating start-refs queuing as "
-                                    + "complete (no-work polls: {}, "
-                                    + "waited: {}). The flag may be "
-                                    + "temporarily unavailable due to a "
-                                    + "coordinator crash.",
-                                    noWorkPollCount, waited);
-                            queueInitialized = true;
-                        }
-                    } else {
-                        noWorkPollCount = 0;
+                    // Queueing can take long (e.g., large sitemaps) and
+                    // leave the queue empty in the meantime: keep waiting
+                    // for as long as the node doing it is alive. Only when
+                    // it left the cluster (e.g., crashed) is nobody going to
+                    // finish it in this run. It is then resumed with the
+                    // crawl, since it was not marked as fully done.
+                    if (!queueInitialized && queueEmpty
+                            && !session.isStartRefsQueueingNodeAlive()) {
+                        LOG.warn("The node queueing start references left "
+                                + "the cluster before it was done. Not "
+                                + "waiting for it: queueing resumes with "
+                                + "the next run.");
+                        queueInitialized = true;
                     }
                 } while (queueEmpty && !queueInitialized);
             }

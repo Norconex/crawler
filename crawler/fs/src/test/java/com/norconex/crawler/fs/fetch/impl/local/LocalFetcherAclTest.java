@@ -55,7 +55,7 @@ class LocalFetcherAclTest {
     }
 
     @Test
-@WithLogLevel(value = "OFF", classes = LocalFetcher.class) // tests expect exceptions
+    @WithLogLevel(value = "OFF", classes = LocalFetcher.class) // tests expect exceptions
     void testAcl() throws IOException {
         var fetcher = new LocalFetcher();
         var meta = new Properties();

@@ -52,6 +52,9 @@ public class SitemapEnqueuer implements ReferenceEnqueuer {
 
         // Process each sitemap URL
         for (String url : sitemapURLs) {
+            if (queueInitCtx.isStopRequested()) {
+                break;
+            }
             sitemapResolver.resolve(SitemapContext.builder()
                     .fetcher(queueInitCtx.getCrawlSession().getCrawlContext()
                             .getFetcher())

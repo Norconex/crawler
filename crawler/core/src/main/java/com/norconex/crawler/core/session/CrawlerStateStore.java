@@ -14,6 +14,8 @@
  */
 package com.norconex.crawler.core.session;
 
+import java.util.Optional;
+
 import com.norconex.crawler.core.cluster.CacheMap;
 import com.norconex.crawler.core.util.SerialUtil;
 
@@ -30,6 +32,10 @@ public class CrawlerStateStore {
     static final String SESSION_STATE_KEY = "session.state";
     static final String START_REFS_QUEUED_KEY =
             "session.startRefsQueuingComplete";
+    static final String START_REFS_ALL_QUEUED_KEY =
+            "session.startRefsAllQueued";
+    static final String START_REFS_QUEUEING_NODE_KEY =
+            "session.startRefsQueueingNode";
 
     private final CacheMap<String> sessionCache;
     private final CrawlerAttributes sessionAttributes;
@@ -88,6 +94,41 @@ public class CrawlerStateStore {
      */
     public void setStartRefsQueueingComplete(boolean isComplete) {
         runAttributes.setBoolean(START_REFS_QUEUED_KEY, isComplete);
+    }
+
+    /**
+     * Returns whether all start references of this crawl session were
+     * queued, by this run or a previous one. Unlike
+     * {@link #isStartRefsQueueingComplete()}, it persists across runs, so a
+     * resumed crawl knows whether queueing was left unfinished.
+     * @return {@code true} once every start reference was queued
+     */
+    public boolean isStartRefsAllQueued() {
+        return sessionAttributes.getBoolean(START_REFS_ALL_QUEUED_KEY);
+    }
+
+    /**
+     * Marks whether all start references of this crawl session were queued.
+     * @param allQueued {@code true} once every start reference was queued
+     */
+    public void setStartRefsAllQueued(boolean allQueued) {
+        sessionAttributes.setBoolean(START_REFS_ALL_QUEUED_KEY, allQueued);
+    }
+
+    /**
+     * Returns the name of the node queueing start references in this run.
+     * @return node name, or empty if queueing has not started
+     */
+    public Optional<String> getStartRefsQueueingNode() {
+        return runAttributes.getString(START_REFS_QUEUEING_NODE_KEY);
+    }
+
+    /**
+     * Records the name of the node queueing start references in this run.
+     * @param nodeName node name
+     */
+    public void setStartRefsQueueingNode(String nodeName) {
+        runAttributes.setString(START_REFS_QUEUEING_NODE_KEY, nodeName);
     }
 
     /**
