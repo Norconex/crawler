@@ -128,10 +128,8 @@ class SitemapStopResumeTest {
             urls.append("<url><loc>%s</loc>".formatted(page)
                     + "<lastmod>2005-01-01</lastmod></url>\n");
         }
-        // Unchanged between runs, as is typical: a sitemap wrongly remembered
-        // as processed would be skipped as unmodified when the crawl
-        // resumes (once its Last-Modified date is recorded, which sitemap
-        // fetches do not do yet).
+        // Unchanged between runs, as is typical: the resumed crawl must
+        // still read it rather than skip it as unmodified.
         client.when(request(PATH + "/sitemap.xml")).respond(response()
                 .withHeader("Last-Modified", "Wed, 01 Jan 2025 00:00:00 GMT")
                 .withBody("""

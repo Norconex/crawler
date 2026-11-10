@@ -26,11 +26,8 @@ import java.util.zip.GZIPInputStream;
 import org.apache.commons.lang3.StringUtils;
 
 import com.norconex.commons.lang.file.ContentType;
-import com.norconex.crawler.web.doc.operations.sitemap.SitemapRecord;
-import com.norconex.crawler.web.ledger.WebCrawlerEntry;
 import com.norconex.importer.doc.Doc;
 
-import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -58,27 +55,6 @@ final class SitemapUtil {
             LOG.info("Invalid sitemap date: {}", value);
         }
         return zdt;
-    }
-
-    // we consider having no cache or no last modified date on cache to
-    // mean cache is older
-    static boolean shouldProcessSitemap(
-            @NonNull SitemapRecord newRec, SitemapRecord cachedRec) {
-        if (cachedRec == null) {
-            return true;
-        }
-        var cacheModifDate = cachedRec.getLastModified();
-        return cacheModifDate == null
-                || cacheModifDate.isBefore(newRec.getLastModified());
-    }
-
-    static SitemapRecord toSitemapRecord(Doc doc,
-            WebCrawlerEntry sitemapEntry) {
-        var indexRec = new SitemapRecord();
-        indexRec.setLastModified(sitemapEntry.getLastModified());
-        indexRec.setCrawlDate(ZonedDateTime.now(ZoneOffset.UTC));
-        indexRec.setLocation(doc.getReference());
-        return indexRec;
     }
 
     static InputStream uncompressedSitemapStream(Doc doc)
