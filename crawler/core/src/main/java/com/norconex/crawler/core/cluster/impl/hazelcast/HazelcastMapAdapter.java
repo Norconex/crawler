@@ -24,25 +24,19 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.Strings;
 
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.OperationTimeoutException;
 import com.hazelcast.map.IMap;
 import com.hazelcast.query.PagingPredicate;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
 import com.hazelcast.query.impl.predicates.PagingPredicateImpl;
-import com.norconex.commons.lang.Sleeper;
 import com.norconex.crawler.core.cluster.CacheMap;
 import com.norconex.crawler.core.cluster.QueryFilter;
 import com.norconex.crawler.core.util.SerialUtil;
@@ -67,9 +61,6 @@ public class HazelcastMapAdapter<T> implements CacheMap<T> {
     private final IMap<String, Object> hzMap;
     private final HazelcastInstance hzInstance;
     private static final int DEFAULT_BATCH_SIZE = 100;
-    private static final long EPH_GET_TIMEOUT_MS = 5_000L;
-    private static final int EPH_GET_RETRIES = 24;
-    private static final long EPH_GET_RETRY_DELAY_MS = 250L;
     private static final Set<String> CLOSED_LOGGED =
             ConcurrentHashMap.newKeySet();
     private final Class<T> type;
@@ -109,7 +100,7 @@ public class HazelcastMapAdapter<T> implements CacheMap<T> {
     @Override
     public Optional<T> get(String key) {
         return Optional.ofNullable(
-                supplyIfCache(() -> fromStored(getStored(key)), null));
+                supplyIfCache(() -> fromStored(hzMap.get(key)), null));
     }
 
     @Override
@@ -353,56 +344,6 @@ public class HazelcastMapAdapter<T> implements CacheMap<T> {
             return SerialUtil.fromJson(s, type);
         }
         return type.cast(stored);
-    }
-
-    private Object getStored(String key) {
-        if (!isEphemeralMap()) {
-            return hzMap.get(key);
-        }
-
-        Throwable lastFailure = null;
-        for (var attempt = 1; attempt <= EPH_GET_RETRIES; attempt++) {
-            try {
-                return hzMap.getAsync(key)
-                        .toCompletableFuture()
-                        .get(EPH_GET_TIMEOUT_MS, TimeUnit.MILLISECONDS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new IllegalStateException(
-                        "Interrupted while reading ephemeral cache entry.",
-                        e);
-            } catch (ExecutionException e) {
-                var cause = e.getCause();
-                if (!isTransientHazelcastReadFailure(cause)) {
-                    throw new RuntimeException(cause != null ? cause : e);
-                }
-                lastFailure = cause != null ? cause : e;
-            } catch (TimeoutException e) {
-                lastFailure = e;
-            }
-
-            if (attempt < EPH_GET_RETRIES) {
-                Sleeper.sleepMillis(EPH_GET_RETRY_DELAY_MS);
-            }
-        }
-
-        LOG.warn("Ephemeral cache read timed out for key '{}' in map '{}' "
-                + "after {} attempts. Treating as missing key. Last failure: {}",
-                key, name, EPH_GET_RETRIES,
-                lastFailure != null
-                        ? lastFailure.getClass().getSimpleName()
-                                + ": " + lastFailure.getMessage()
-                        : "n/a");
-        return null;
-    }
-
-    private boolean isEphemeralMap() {
-        return Strings.CI.startsWith(name, "eph-");
-    }
-
-    private boolean isTransientHazelcastReadFailure(Throwable t) {
-        return t instanceof TimeoutException
-                || t instanceof OperationTimeoutException;
     }
 
     /**
