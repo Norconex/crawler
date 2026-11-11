@@ -130,32 +130,22 @@ class SolrCloudAndAuthIT {
 
             // no credentials: rejected
             var noAuth = committer(SolrConnectionMode.SINGLE_NODE, coll, null);
-            try {
-                assertThatExceptionOfType(CommitterException.class)
-                        .isThrownBy(() -> {
-                            noAuth.upsert(upsert("1", "Hello"));
-                            noAuth.close();
-                        })
-                        .withStackTraceContaining("HTTP 401");
-            } finally {
-                noAuth.close();
-            }
+            // Queued only (batches of 20): sent, and rejected, on close.
+            noAuth.upsert(upsert("1", "Hello"));
+            assertThatExceptionOfType(CommitterException.class)
+                    .isThrownBy(noAuth::close)
+                    .withStackTraceContaining("HTTP 401");
 
             // wrong credentials: rejected
             var bad = new Credentials();
             bad.setUsername("solr");
             bad.setPassword("nope");
             var badAuth = committer(SolrConnectionMode.SINGLE_NODE, coll, bad);
-            try {
-                assertThatExceptionOfType(CommitterException.class)
-                        .isThrownBy(() -> {
-                            badAuth.upsert(upsert("1", "Hello"));
-                            badAuth.close();
-                        })
-                        .withStackTraceContaining("HTTP 401");
-            } finally {
-                badAuth.close();
-            }
+            // Queued only (batches of 20): sent, and rejected, on close.
+            badAuth.upsert(upsert("1", "Hello"));
+            assertThatExceptionOfType(CommitterException.class)
+                    .isThrownBy(badAuth::close)
+                    .withStackTraceContaining("HTTP 401");
 
             // good credentials
             var committer =

@@ -53,7 +53,7 @@ public class CrawlerProgressLogger {
     private final CrawlerMetrics metrics;
 
     // Just so we can show the delta between each log entry
-    private Counts prevCounts = new Counts();
+    private final Counts prevCounts = new Counts();
     private long prevElapsed;
 
     private ScheduledExecutorService execService;

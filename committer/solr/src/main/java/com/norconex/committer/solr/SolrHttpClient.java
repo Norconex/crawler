@@ -38,6 +38,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -83,7 +84,8 @@ final class SolrHttpClient implements Closeable {
     private final Map<String, Long> deadUntil = new ConcurrentHashMap<>();
 
     // Collection URLs discovered from the cluster state (cloud mode).
-    private volatile List<String> discoveredUrls = List.of();
+    private final AtomicReference<List<String>> discoveredUrls =
+            new AtomicReference<>(List.of());
     private volatile long nextClusterRefresh;
     private volatile boolean clusterRefreshWarned;
 
@@ -282,8 +284,9 @@ final class SolrHttpClient implements Closeable {
         refreshClusterIfNeeded();
 
         var ordered = new LinkedHashSet<String>();
-        var primary = cloud && !discoveredUrls.isEmpty()
-                ? discoveredUrls
+        var discovered = discoveredUrls.get();
+        var primary = cloud && !discovered.isEmpty()
+                ? discovered
                 : seedUrls;
         var start = Math.floorMod(roundRobin.getAndIncrement(), primary.size());
         for (var i = 0; i < primary.size(); i++) {
@@ -349,7 +352,7 @@ final class SolrHttpClient implements Closeable {
             try {
                 var urls = fetchCollectionUrls(seed);
                 if (!urls.isEmpty()) {
-                    discoveredUrls = urls;
+                    discoveredUrls.set(urls);
                     nextClusterRefresh = System.nanoTime()
                             + CLUSTER_REFRESH_DELAY.toNanos();
                     clusterRefreshWarned = false;

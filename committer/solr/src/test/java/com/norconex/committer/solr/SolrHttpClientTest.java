@@ -99,7 +99,8 @@ class SolrHttpClientTest {
             SolrConnectionMode mode, String urls) {
         var cfg = new SolrCommitterConfig();
         cfg.setConnectionMode(mode);
-        cfg.setNodes(Arrays.asList(urls.split("\\s*,\\s*")));
+        cfg.setNodes(Arrays.stream(urls.split(",")).map(String::trim)
+                .toList());
         return cfg;
     }
 

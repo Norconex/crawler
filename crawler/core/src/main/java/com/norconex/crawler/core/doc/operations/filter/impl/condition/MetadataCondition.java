@@ -16,6 +16,7 @@ package com.norconex.crawler.core.doc.operations.filter.impl.condition;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.norconex.commons.lang.event.EventManager;
 import com.norconex.commons.lang.map.Properties;
@@ -46,7 +47,8 @@ public abstract class MetadataCondition {
 
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
-    private transient volatile Condition compiled;
+    private final transient AtomicReference<Condition> compiled =
+            new AtomicReference<>();
 
     MetadataCondition() {
     }
@@ -80,10 +82,10 @@ public abstract class MetadataCondition {
     abstract Condition toCondition();
 
     private Condition compiled() {
-        var c = compiled;
+        var c = compiled.get();
         if (c == null) {
             c = toCondition();
-            compiled = c;
+            compiled.set(c);
         }
         return c;
     }

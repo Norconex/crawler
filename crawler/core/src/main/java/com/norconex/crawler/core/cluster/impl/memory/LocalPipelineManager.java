@@ -15,6 +15,8 @@
 package com.norconex.crawler.core.cluster.impl.memory;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.norconex.crawler.core.cluster.impl.hazelcast.event.CacheEntryChangeListener;
 import com.norconex.crawler.core.cluster.pipeline.Pipeline;
@@ -40,9 +42,10 @@ public class LocalPipelineManager implements PipelineManager {
 
     private final CrawlerSession session;
     private volatile boolean stopRequested;
-    private volatile Step currentStep;
+    private final AtomicReference<Step> currentStep =
+            new AtomicReference<>();
     private volatile String currentStepId;
-    private volatile int currentStepIndex;
+    private final AtomicInteger currentStepIndex = new AtomicInteger();
     private volatile int stepCount;
 
     public LocalPipelineManager(CrawlerSession session) {
@@ -54,7 +57,7 @@ public class LocalPipelineManager implements PipelineManager {
             Pipeline pipeline) {
         var startedAt = System.currentTimeMillis();
         stepCount = pipeline.getSteps().size();
-        currentStepIndex = 0;
+        currentStepIndex.set(0);
         stopRequested = false;
 
         PipelineStatus finalStatus = PipelineStatus.COMPLETED;
@@ -67,14 +70,14 @@ public class LocalPipelineManager implements PipelineManager {
                     break;
                 }
                 var step = pipeline.getStep(stepId);
-                currentStep = step;
+                currentStep.set(step);
                 currentStepId = stepId;
                 lastStepId = stepId;
 
                 LOG.debug("Executing step: {}", stepId);
                 step.execute(session);
-                currentStep = null;
-                currentStepIndex++;
+                currentStep.set(null);
+                currentStepIndex.incrementAndGet();
 
                 if (step.isStopRequested()) {
                     finalStatus = PipelineStatus.STOPPED;
@@ -111,7 +114,7 @@ public class LocalPipelineManager implements PipelineManager {
                         ? PipelineStatus.STOPPING
                         : PipelineStatus.RUNNING)
                 .currentStepId(currentStepId)
-                .currentStepIndex(currentStepIndex)
+                .currentStepIndex(currentStepIndex.get())
                 .stepCount(stepCount)
                 .build();
     }
@@ -119,7 +122,7 @@ public class LocalPipelineManager implements PipelineManager {
     @Override
     public void stop() {
         stopRequested = true;
-        var step = currentStep;
+        var step = currentStep.get();
         if (step != null) {
             step.stop(session);
         }

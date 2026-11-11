@@ -59,10 +59,10 @@ public class StringJdbcMapStore
     }
 
     private static class Sqls {
-        private String store;
-        private String delete;
-        private String load;
-        private String loadAllKeys;
+        private final String store;
+        private final String delete;
+        private final String load;
+        private final String loadAllKeys;
 
         Sqls(String tableName, String mergeSql) {
             //--- Store ---

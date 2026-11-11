@@ -41,10 +41,10 @@ import lombok.extern.slf4j.Slf4j;
 public class StringJdbcQueueStore implements QueueStore<String> {
 
     private static class Sqls {
-        private String store;
-        private String delete;
-        private String load;
-        private String loadAllKeys;
+        private final String store;
+        private final String delete;
+        private final String load;
+        private final String loadAllKeys;
 
         Sqls(String tableName) {
             //--- Store ---
@@ -63,9 +63,9 @@ public class StringJdbcQueueStore implements QueueStore<String> {
         }
     }
 
-    private JdbcClient db;
-    private Sqls sqls;
-    private String tableName;
+    private final JdbcClient db;
+    private final Sqls sqls;
+    private final String tableName;
 
     /**
      * Construct the queue store using the DataSource attached to the

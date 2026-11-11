@@ -87,7 +87,8 @@ class CrawlerCommonPoolTest {
                 .filter(e -> Arrays.stream(e.getValue())
                         .map(StackTraceElement::getClassName)
                         .anyMatch(cls -> cls.startsWith("com.norconex.crawler.")
-                                && !cls.matches(".*Test(\\$.*)?")))
+                                && !cls.endsWith("Test")
+                                && !cls.contains("Test$")))
                 .map(Map.Entry::getKey)
                 .map(Thread::getName)
                 .toList();

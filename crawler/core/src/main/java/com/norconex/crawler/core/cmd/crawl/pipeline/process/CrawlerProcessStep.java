@@ -17,6 +17,7 @@ package com.norconex.crawler.core.cmd.crawl.pipeline.process;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -56,7 +57,9 @@ public class CrawlerProcessStep extends BaseStep {
     private BatchDispatcher batchDispatcher;
     // Keep a reference to the session so getProgress() can compute
     // cluster-wide progress
-    private volatile CrawlerSession sessionRef;
+    @EqualsAndHashCode.Exclude
+    private final AtomicReference<CrawlerSession> sessionRef =
+            new AtomicReference<>();
 
     public CrawlerProcessStep(String id, ProcessQueueAction queueAction) {
         super(id);
@@ -66,7 +69,7 @@ public class CrawlerProcessStep extends BaseStep {
     @Override
     public void execute(CrawlerSession session) {
         // store session for progress computations
-        sessionRef = session;
+        sessionRef.set(session);
         var ctx = session.getCrawlContext();
         if (isStopRequested()) {
             return;
@@ -120,7 +123,7 @@ public class CrawlerProcessStep extends BaseStep {
     @Override
     public Step.StepProgress getProgress() {
         // Only compute for active session; otherwise unknown
-        var s = sessionRef;
+        var s = sessionRef.get();
         if (s == null) {
             return null;
         }

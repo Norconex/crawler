@@ -41,7 +41,7 @@ class CrawlerActivityChecker {
 
     private boolean isResolving;
     private boolean isPresumedActive = true;
-    private AtomicBoolean canContinue = new AtomicBoolean(true);
+    private final AtomicBoolean canContinue = new AtomicBoolean(true);
     //    private boolean maxDocsReached;
 
     public CrawlerActivityChecker(CrawlerSession session, boolean deleting) {

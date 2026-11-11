@@ -36,7 +36,7 @@ import lombok.Setter;
 public class MVStoreClusterConnector implements ClusterConnector,
         Configurable<MVStoreClusterConnectorConfig> {
 
-    private MVStoreClusterConnectorConfig configuration =
+    private final MVStoreClusterConnectorConfig configuration =
             new MVStoreClusterConnectorConfig();
 
     @Getter(lombok.AccessLevel.NONE)
