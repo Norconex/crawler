@@ -65,6 +65,18 @@ public class HazelcastPipelineManager
                             cluster.getLocalNode().getNodeName()));
         }
 
+        // Nothing to run (and coordinate): completed, as with other
+        // pipeline managers.
+        if (pipeline.getSteps().isEmpty()) {
+            var now = System.currentTimeMillis();
+            return CompletableFuture.completedFuture(PipelineResult.builder()
+                    .pipelineId(pipeline.getId())
+                    .status(PipelineStatus.COMPLETED)
+                    .startedAt(now)
+                    .finishedAt(now)
+                    .build());
+        }
+
         // Create execution without try-with-resources so it is not closed
         // immediately. We close it when the returned future completes.
         var exec = new PipelineExecution(cluster, pipeline);

@@ -149,6 +149,9 @@ public class PipelineExecution implements AutoCloseable {
             try {
                 workerShutdownFuture.get(SHUTDOWN_AWAIT_SECONDS,
                         TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                LOG.debug("Interrupted while waiting for worker shutdown.");
             } catch (Exception e) {
                 LOG.debug("Timed out or interrupted while waiting for worker "
                         + "shutdown: {}", e.toString());

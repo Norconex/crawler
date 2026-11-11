@@ -187,7 +187,12 @@ public final class HazelcastUtil {
                 .get(pipelineKey)
                 .orElse(null);
         if (stepRec == null) {
-            var stepId = pipeline.getFirstStep().getId();
+            var firstStep = pipeline.getFirstStep();
+            if (firstStep == null) {
+                throw new IllegalStateException("Pipeline \"%s\" has no steps."
+                        .formatted(pipeline.getId()));
+            }
+            var stepId = firstStep.getId();
             stepRec = new StepRecord();
             stepRec.setPipelineId(pipeline.getId());
             stepRec.setStepId(stepId);
