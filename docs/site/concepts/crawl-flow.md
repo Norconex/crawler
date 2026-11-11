@@ -158,6 +158,13 @@ Applies your `referenceFilters` to the reference string alone — no request has
 been made yet, so this is the cheapest place to exclude anything you know you do
 not want. Rejects as `REJECTED_FILTER`.
 
+_File system crawler:_ `referenceFilters` judge **files** only. A folder is only
+there to be browsed, so it is tested by its own `folderReferenceFilters`
+instead, and a rejected folder is never listed, nor anything under it. That is
+why a rule such as "only keep `.pdf`" does not reject the folders leading to
+the PDFs. Start references are never filtered, whether they are a file or a
+folder.
+
 ### robots.txt rules
 
 _Web crawler only._ Applies the `Disallow` and `Allow` directives from the
@@ -296,6 +303,21 @@ With the metadata directive enabled, this is your chance to reject a document
 from its headers alone — before spending a `GET` on it. Rejects as
 `REJECTED_FILTER`.
 
+`GenericMetadataFilter` matches text. To compare numbers and dates (a size, a
+modification date) use `ConditionMetadataFilter`, which can also combine several
+tests.
+
+Enabling the metadata directive (`metadataFetchSupport`) has a cost. On the web
+crawler it means a `HEAD` request in addition to the `GET` for every page, and
+servers do not always return `Content-Length` or `Last-Modified`. Leave it
+disabled unless you have a good reason, such as skipping very large files you
+would rather not download.
+
+_File system crawler:_ `metadataFilters` judge **files** only. Folders have
+their own `folderMetadataFilters`, which see the dates and flags a folder has
+(`crawler.lastModified`, `crawler.creationTime`, `crawler.hidden`,
+`crawler.symbolicLink`), but no size. Start references are never filtered.
+
 ### Canonical check
 
 _Web crawler only._ If the document declares a different URL as canonical, this
@@ -397,7 +419,8 @@ flowchart TB
 _File system crawler only._ When the reference is a folder, lists its children
 and queues them. It sits immediately after the metadata filters so that
 rejecting a folder also skips everything inside it — filter out
-`/archive/` once and its whole subtree is never listed.
+`/archive/` once, with `folderReferenceFilters` or `folderMetadataFilters`, and
+its whole subtree is never listed. Folders are never sent to a committer.
 
 ## The committer pipeline
 
