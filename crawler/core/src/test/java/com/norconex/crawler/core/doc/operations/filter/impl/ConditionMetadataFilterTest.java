@@ -157,6 +157,29 @@ class ConditionMetadataFilterTest {
     }
 
     @Test
+    void aDateThatCannotBeRead_isNotAMatch_andTheOtherTestsOfAGroupStillCount() {
+        var date = new MetadataDateCondition()
+                .setFieldMatcher(TextMatcher.basic("Last-Modified"))
+                .setFormat("EEE, dd MMM yyyy HH:mm:ss zzz")
+                .setValueMatcher(new DateValueMatcher(
+                        Operator.LOWER_THAN, "2020-01-01", null));
+
+        // not a failure of the document: the value just does not match, so
+        // nothing is excluded
+        var alone = excluding(date);
+        assertThat(alone.acceptMetadata(REF,
+                meta("Last-Modified", "yesterday"))).isTrue();
+
+        // in a group, it does not keep the other tests from being made
+        var group = excluding(new MetadataAnyOf()
+                .setConditions(List.of(date, biggerThan("size", 10))));
+        assertThat(group.acceptMetadata(REF,
+                meta("Last-Modified", "yesterday", "size", "500"))).isFalse();
+        assertThat(group.acceptMetadata(REF,
+                meta("Last-Modified", "yesterday", "size", "5"))).isTrue();
+    }
+
+    @Test
     void textCondition_matchesFieldValue() {
         var filter = excluding(new MetadataTextCondition()
                 .setFieldMatcher(TextMatcher.basic("Content-Type"))

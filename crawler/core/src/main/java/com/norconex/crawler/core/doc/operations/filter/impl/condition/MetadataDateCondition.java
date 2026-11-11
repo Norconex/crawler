@@ -14,6 +14,7 @@
  */
 package com.norconex.crawler.core.doc.operations.filter.impl.condition;
 
+import java.time.DateTimeException;
 import java.time.ZoneId;
 
 import com.norconex.commons.lang.text.TextMatcher;
@@ -87,6 +88,15 @@ public class MetadataDateCondition extends MetadataCondition {
                 .setDocZoneId(docZoneId)
                 .setValueMatcher(valueMatcher)
                 .setValueMatcherRangeEnd(valueMatcherRangeEnd);
-        return cond;
+        // A value that is not a date in the expected format (a server that sends a malformed Last-Modified, say) is a
+        // value that does not match, not a failure of the document: the date parser throws, and the other tests of a
+        // group still have their say.
+        return ctx -> {
+            try {
+                return cond.test(ctx);
+            } catch (DateTimeException e) {
+                return false;
+            }
+        };
     }
 }
