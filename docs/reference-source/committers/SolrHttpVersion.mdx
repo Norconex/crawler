@@ -1,0 +1,22 @@
+---
+component: SolrHttpVersion
+module: committer/solr
+locale: en
+propertyCoverage: all
+---
+
+# SolrHttpVersion
+
+## Summary
+
+HTTP protocol version used by the Solr committer.
+
+## Notes
+
+- `AUTO`: HTTP/2 for `https` URLs and HTTP/1.1 for `http` ones. This is the default.
+- `HTTP_1_1`: always use HTTP/1.1.
+- `HTTP_2`: always use HTTP/2.
+
+See [SolrCommitter](/docs/reference/committers/SolrCommitter) for details.
+
+## Properties

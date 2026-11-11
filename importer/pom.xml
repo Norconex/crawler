@@ -197,13 +197,6 @@
       <artifactId>commons-cli</artifactId>
     </dependency>
     
-    <!-- Required for JPEG JJ200 support. -->
-    <dependency>
-      <groupId>edu.ucar</groupId>
-      <artifactId>jj2000</artifactId>
-      <version>${ucar-jj2000.version}</version>
-    </dependency>
-
     <dependency>
       <groupId>com.opencsv</groupId>
       <artifactId>opencsv</artifactId>
@@ -362,6 +355,30 @@
     
   </dependencies>
   
+  <profiles>
+    <!--
+      JPEG 2000 support (jj2000). Active unless -Dnx.skipJj2000 is set. It is
+      only needed at runtime (no source uses it), and it is hosted on a
+      third-party repository (see "repositories") whose outages would break
+      builds that do not need it, such as the aggregate Javadoc one.
+    -->
+    <profile>
+      <id>jj2000</id>
+      <activation>
+        <property>
+          <name>!nx.skipJj2000</name>
+        </property>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>edu.ucar</groupId>
+          <artifactId>jj2000</artifactId>
+          <version>${ucar-jj2000.version}</version>
+        </dependency>
+      </dependencies>
+    </profile>
+  </profiles>
+
   <build>
     <plugins>
 

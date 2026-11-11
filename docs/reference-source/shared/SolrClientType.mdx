@@ -9,10 +9,10 @@ propertyCoverage: all
 
 ## Summary
 
-Supported Solr client connection types.
+Deprecated Solr client types.
 
 ## Notes
 
-Specifies how the Solr committer connects to a Solr instance. Available types include standard HTTP client connections and SolrCloud-aware connections that support ZooKeeper-based cluster discovery and load balancing across Solr nodes.
+**Deprecated**: replaced by the Solr committer `connectionMode` and `httpVersion` settings. Existing values are still honored and translated to them; see [SolrCommitter](/docs/reference/committers/SolrCommitter). The SolrJ-based client types no longer exist: the committer uses the JDK HTTP client, and ZooKeeper connection strings are not supported.
 
 ## Properties

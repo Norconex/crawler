@@ -1,0 +1,22 @@
+---
+component: SolrConnectionMode
+module: committer/solr
+locale: en
+propertyCoverage: all
+---
+
+# SolrConnectionMode
+
+## Summary
+
+How the Solr committer connects to its Solr nodes.
+
+## Notes
+
+- `SINGLE_NODE`: a single Solr node. This is the default when one node is configured.
+- `LOAD_BALANCED`: several Solr nodes. Updates are spread across nodes, and a failing node is set aside for a while. This is the default when more than one node is configured.
+- `CLOUD`: a SolrCloud cluster. The nodes hosting the collection are discovered over HTTP and refreshed periodically, falling back to the configured nodes. It has to be set explicitly. ZooKeeper connection strings are not supported.
+
+See [SolrCommitter](/docs/reference/committers/SolrCommitter) for details.
+
+## Properties
