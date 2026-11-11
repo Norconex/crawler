@@ -14,6 +14,8 @@
  */
 package com.norconex.crawler.core.doc.pipelines.importer.stages;
 
+import java.util.List;
+
 import com.norconex.commons.lang.map.Properties;
 import com.norconex.crawler.core.doc.operations.filter.MetadataFilter;
 import com.norconex.crawler.core.doc.pipelines.OnMatchFiltersResolver;
@@ -36,11 +38,34 @@ public class MetadataFiltersStage extends AbstractImporterStage {
         super(fetchDirective);
     }
 
+    /**
+     * The metadata filters to apply to the document being processed. Defaults
+     * to the configured metadata filters. Crawlers dealing with different
+     * kinds of entries can override this to apply different ones.
+     * @param ctx importer pipeline context
+     * @return metadata filters (never {@code null})
+     */
+    protected List<MetadataFilter> getFilters(ImporterPipelineContext ctx) {
+        return ctx.getCrawlSession().getCrawlContext().getCrawlConfig()
+                .getMetadataFilters();
+    }
+
+    /**
+     * Whether the document being processed is accepted without being tested.
+     * Defaults to {@code false}.
+     * @param ctx importer pipeline context
+     * @return {@code true} to accept the document without applying any filter
+     */
+    protected boolean isExempt(ImporterPipelineContext ctx) {
+        return false;
+    }
+
     @Override
     protected boolean executeStage(ImporterPipelineContext ctx) {
 
         if (!ctx.isFetchDirectiveEnabled(getFetchDirective())
-                || ctx.isMetadataDirectiveExecuted(getFetchDirective())) {
+                || ctx.isMetadataDirectiveExecuted(getFetchDirective())
+                || isExempt(ctx)) {
             return true;
         }
 
@@ -49,9 +74,7 @@ public class MetadataFiltersStage extends AbstractImporterStage {
         return OnMatchFiltersResolver
                 .<Properties, MetadataFilter>builder()
                 .subject(doc.getMetadata())
-                .filters(
-                        ctx.getCrawlSession().getCrawlContext().getCrawlConfig()
-                                .getMetadataFilters())
+                .filters(getFilters(ctx))
                 .predicate((s, f) -> f
                         .acceptMetadata(doc.getReference(), s))
                 .onRejected((f, msg) -> {

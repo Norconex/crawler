@@ -30,14 +30,14 @@ import com.norconex.crawler.core.doc.pipelines.importer.stages.DocumentPreProces
 import com.norconex.crawler.core.doc.pipelines.importer.stages.ImportModuleStage;
 import com.norconex.crawler.core.doc.pipelines.importer.stages.MetadataChecksumStage;
 import com.norconex.crawler.core.doc.pipelines.importer.stages.MetadataDedupStage;
-import com.norconex.crawler.core.doc.pipelines.importer.stages.MetadataFiltersStage;
 import com.norconex.crawler.core.doc.pipelines.queue.QueuePipeline;
 import com.norconex.crawler.core.doc.pipelines.queue.stages.DepthValidationStage;
 import com.norconex.crawler.core.doc.pipelines.queue.stages.QueueReferenceStage;
-import com.norconex.crawler.core.doc.pipelines.queue.stages.ReferenceFiltersStage;
 import com.norconex.crawler.core.fetch.FetchDirective;
 import com.norconex.crawler.fs.doc.pipelines.importer.stages.FileFetchStage;
+import com.norconex.crawler.fs.doc.pipelines.importer.stages.FsMetadataFiltersStage;
 import com.norconex.crawler.fs.doc.pipelines.importer.stages.FolderPathsExtractorStage;
+import com.norconex.crawler.fs.doc.pipelines.queue.stages.FsReferenceFiltersStage;
 
 public final class FsPipelines {
 
@@ -51,7 +51,7 @@ public final class FsPipelines {
                         .builder()
                         .stages(Predicates.allOf(
                                 new DepthValidationStage(),
-                                new ReferenceFiltersStage(),
+                                new FsReferenceFiltersStage(),
                                 new QueueReferenceStage()))
                         .build())
                 .importerPipeline(ImporterPipeline
@@ -62,7 +62,7 @@ public final class FsPipelines {
                                 // the following is executed
                                 new FileFetchStage(
                                         METADATA),
-                                new MetadataFiltersStage(
+                                new FsMetadataFiltersStage(
                                         METADATA),
                                 // Child folders done right after filter to
                                 // give a chance to reject the folder before
@@ -77,7 +77,7 @@ public final class FsPipelines {
                                 //--- DOCUMENT ---
                                 new FileFetchStage(
                                         DOCUMENT),
-                                new MetadataFiltersStage(
+                                new FsMetadataFiltersStage(
                                         DOCUMENT),
                                 new FolderPathsExtractorStage(
                                         DOCUMENT),

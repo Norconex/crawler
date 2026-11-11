@@ -36,6 +36,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.norconex.commons.lang.file.ContentType;
+import com.norconex.commons.lang.map.Properties;
 import com.norconex.crawler.core.fetch.AbstractFetcher;
 import com.norconex.crawler.core.fetch.BaseFetcherConfig;
 import com.norconex.crawler.core.fetch.FetchDirective;
@@ -176,6 +177,8 @@ public abstract class AbstractNioFetcher<C extends BaseFetcherConfig>
                     fetchContent(doc, path);
                 }
                 fetchMetadata(doc, path, attrs);
+            } else if (isFolder) {
+                fetchFolderMetadata(doc, path, attrs);
             }
 
             //TODO set status if not found or whatever bad state
@@ -258,6 +261,32 @@ public abstract class AbstractNioFetcher<C extends BaseFetcherConfig>
         }
     }
 
+    // A folder is never committed, but what it has can tell whether to open it
+    // (see the folder metadata filters). Nothing is assumed about what people
+    // want to filter on, so a folder gets what a file gets, except what is
+    // meaningless for a folder: its size and a guessed content type.
+    protected void fetchFolderMetadata(
+            Doc doc, @NonNull Path path, @NonNull BasicFileAttributes attrs)
+            throws IOException {
+        var meta = doc.getMetadata();
+        meta.set(
+                FsDocMetadata.LAST_MODIFIED,
+                attrs.lastModifiedTime().toMillis());
+        setCreationTime(meta, attrs);
+        meta.set(PREFIX + "symbolicLink", attrs.isSymbolicLink());
+        // Costs its own round-trip on remote providers, as for a file.
+        meta.set(PREFIX + "hidden", Files.isHidden(path));
+    }
+
+    private static void setCreationTime(
+            Properties meta, BasicFileAttributes attrs) {
+        if (attrs.creationTime() != null) {
+            meta.set(
+                    FsDocMetadata.CREATION_TIME,
+                    attrs.creationTime().toMillis());
+        }
+    }
+
     protected void fetchMetadata(
             Doc doc, @NonNull Path path, @NonNull BasicFileAttributes attrs)
             throws IOException {
@@ -269,6 +298,7 @@ public abstract class AbstractNioFetcher<C extends BaseFetcherConfig>
         meta.set(
                 FsDocMetadata.LAST_MODIFIED,
                 attrs.lastModifiedTime().toMillis());
+        setCreationTime(meta, attrs);
 
         // Cheap, filename-only content-type guess (no bytes read, no
         // network access) so it is available to metadata filters when a

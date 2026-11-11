@@ -14,6 +14,7 @@
  */
 package com.norconex.crawler.core.doc.pipelines.queue.stages;
 
+import java.util.List;
 import java.util.function.Predicate;
 
 import org.apache.commons.lang3.StringUtils;
@@ -42,18 +43,42 @@ public class ReferenceFiltersStage implements Predicate<QueuePipelineContext> {
         this.type = type;
     }
 
+    /**
+     * The reference filters to apply to the entry being queued. Defaults to
+     * the configured reference filters. Crawlers dealing with different kinds
+     * of entries can override this to apply different ones.
+     * @param ctx queue pipeline context
+     * @return reference filters (never {@code null})
+     */
+    protected List<ReferenceFilter> getFilters(QueuePipelineContext ctx) {
+        return ctx.getCrawlSession().getCrawlContext().getCrawlConfig()
+                .getReferenceFilters();
+    }
+
+    /**
+     * Whether the entry being queued is accepted without being tested.
+     * Defaults to {@code false}.
+     * @param ctx queue pipeline context
+     * @return {@code true} to accept the entry without applying any filter
+     */
+    protected boolean isExempt(QueuePipelineContext ctx) {
+        return false;
+    }
+
     @Override
     public boolean test(QueuePipelineContext ctx) {
+        if (isExempt(ctx)) {
+            return true;
+        }
         var msgSuffix = StringUtils.isBlank(type)
                 ? ""
                 : " (" + StringUtils.trimToEmpty(type) + ")";
 
-        var crawlCtx = ctx.getCrawlSession().getCrawlContext();
         var crawlEntry = ctx.getCrawlEntry();
         return OnMatchFiltersResolver
                 .<String, ReferenceFilter>builder()
                 .subject(crawlEntry.getReference())
-                .filters(crawlCtx.getCrawlConfig().getReferenceFilters())
+                .filters(getFilters(ctx))
                 .predicate((s, f) -> f.acceptReference(s))
                 .onRejected((f, msg) -> {
                     LOG.debug("REJECTED reference{}: {} Filter={}",

@@ -25,6 +25,14 @@ public final class FsDocMetadata {
     //TODO make part of crawler-core?
     public static final String LAST_MODIFIED = PREFIX + "lastModified";
 
+    /**
+     * When the file or folder was created, in milliseconds since 1970-01-01.
+     * Not every file system keeps it: when it does not, the value is
+     * whatever the file system reports instead (often the last modified
+     * date).
+     */
+    public static final String CREATION_TIME = PREFIX + "creationTime";
+
     public static final String ACL = PREFIX + "acl";
 
     private FsDocMetadata() {

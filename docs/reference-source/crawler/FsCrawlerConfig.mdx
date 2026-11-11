@@ -1,0 +1,195 @@
+---
+component: FsCrawlerConfig
+module: crawler/fs
+locale: en
+propertyCoverage: all
+---
+
+# FsCrawlerConfig
+
+## Summary
+
+The top-level configuration for a file system crawler.
+
+## Notes
+
+The top-level configuration for a file system crawler. It behaves like the base crawler configuration, with a `LocalFetcher` registered by default so that a configuration declaring no `fetchers` still crawls the local file system, and with filters for folders.
+
+### Files and folders
+
+Folders are only there to be browsed: they are never sent to a committer. Filters are therefore split by what they decide on.
+
+- The reference, metadata and document filters judge **files** only. A folder is never tested by them, so a rule such as "only keep PDF files" does not reject the folders leading to those files.
+- `folderReferenceFilters` and `folderMetadataFilters` decide which **folders** to open. A folder that is rejected is not listed, and neither is anything under it, which saves reading what you do not want.
+
+Start references are never filtered, whether they are a file or a folder.
+
+## Properties
+
+### cluster
+
+Configuration for the crawler cluster. Controls how the crawler runs across one or more nodes, including distribution of work and inter-node communication.
+
+### changeDiscovery
+
+Defines how the crawler discovers changes during a run. `CRAWLER_SCAN` (default) discovers changes by scanning source inventory and can treat missing references as orphan evidence in incremental runs. `SOURCE_DELTA` expects explicit source-side change/delete signals, so missing references alone are not treated as orphan evidence.
+
+### committers
+
+One or more Committers responsible for sending crawled documents to their final storage destinations (e.g., search engines, databases). Documents that pass all filters and processing steps are forwarded to each configured Committer.
+
+### deferredShutdownDuration
+
+Amount of time to defer the crawler shutdown after it finishes executing. Useful for giving external processes with polling intervals enough time to capture the latest crawler state before it shuts down. Default is zero (no delay).
+
+### documentChecksummer
+
+Generates a checksum from a document's content to detect whether the document has changed since the last crawl. When combined with `documentDeduplicate`, duplicate documents within a session are also rejected. Default is MD5-based.
+
+### documentDeduplicate
+
+Whether to enable deduplication based on document checksum. Requires a `documentChecksummer` to be configured. When enabled, any document with the same checksum as a previously processed document in the same crawl session is rejected. Not recommended unless document checksums are reliably unique for your content.
+
+### documentFetchSupport
+
+Controls whether the crawler performs a full document fetch (e.g., HTTP `GET`). Can be `DISABLED`, `OPTIONAL` (attempts but ignores failure), or `REQUIRED` (rejects the document on failure). Default is `REQUIRED`.
+
+### documentFilters
+
+Filters applied to documents after their full content has been downloaded. Documents that do not pass the filters are rejected and not sent to the Importer or Committers. Folders are never tested by these filters (see `folderReferenceFilters` and `folderMetadataFilters`).
+
+### eventListeners
+
+One or more event listeners that react to crawler lifecycle events (e.g., document fetched, crawl started, crawl completed). Useful for custom monitoring, alerting, or triggering side effects.
+
+### fetchers
+
+One or more Fetchers responsible for obtaining documents and their metadata from the crawl source. At least one fetcher is required. If multiple fetchers are configured, they are tried in order.
+
+### fetchersMaxRetries
+
+Maximum number of times a Fetcher will re-attempt fetching a resource upon failure. Default is zero (no retries).
+
+### fetchersRetryDelay
+
+How long to wait before a failing Fetcher re-attempts fetching a resource, in milliseconds. Default is zero (no delay).
+
+### folderMetadataFilters
+
+Filters deciding which folders to open, based on their metadata, once it was obtained and before the folder is listed. A rejected folder is not opened, and neither is anything under it.
+
+The metadata of a folder depends on the fetcher. File systems reached through Java NIO (local, SMB, S3 and others) provide `crawler.lastModified`, `crawler.creationTime` (not every file system keeps it), `crawler.symbolicLink` and `crawler.hidden`. A folder has no size and no content type. The last modified date of a folder changes when entries are added to it or removed from it, not when a file inside is edited, so it is not a reliable way to tell whether a folder holds recent files.
+
+Use `ConditionMetadataFilter` to compare dates. Start references are never filtered.
+
+### folderReferenceFilters
+
+Filters deciding which folders to open, based on their reference (their path), before the folder is listed. A rejected folder is not opened, and neither is anything under it.
+
+Because only folders are tested, an `INCLUDE` filter here means "only open folders matching", so it must match the folders leading to the ones you want as well. To leave a folder out, an `EXCLUDE` filter is simplest. Folder references end with a slash. Start references are never filtered.
+
+### id
+
+A unique identifier for this crawler. Used to distinguish crawlers within the same crawl session and in generated file names and logs. It is important for this value to be unique among all crawlers in the same session.
+
+### idleTimeout
+
+Maximum time to wait before shutting down an idle crawler (one whose queue is empty and has no active processing). Unlike `deferredShutdownDuration`, new queue additions can resume processing. Useful when an external process can add references to the queue dynamically. Default is zero (does not wait).
+
+### importer
+
+Configuration for the Norconex Importer module, which handles document content parsing, metadata extraction, and transformation before documents are sent to Committers.
+
+### maxCrawlDuration
+
+Maximum total duration a crawler is allowed to run. Once this limit is reached, the crawler stops processing new documents. Zero or a negative value means unlimited. Default is zero (unlimited).
+
+### maxDepth
+
+Maximum depth the crawler should explore from its start references. The definition of depth is crawler-specific (e.g., directory levels for file system crawlers, click distance from start URL for web crawlers). Default is -1 (unlimited).
+
+### maxDocuments
+
+Maximum number of documents processed in a single crawler run before the crawler stops.
+If the queue still contains documents when this limit is reached, the crawl session is paused,
+not completed, and the next run resumes the same session.
+
+### maxQueueBatchSize
+
+Maximum number of references a crawler node reads at once from the queue to process locally. Adjusting this value can affect throughput in clustered deployments. Default is 50.
+
+### maxStreamCachePoolSize
+
+Maximum number of bytes used for in-memory caching of all reusable streams combined at any given time. Defaults to 1 GB. File-based caching is used when this limit is reached.
+
+### maxStreamCacheSize
+
+Maximum number of bytes used for in-memory caching of a single reusable stream. Defaults to 100 MB. File-based caching is used when this limit is reached for a single stream, or when the pool maximum has been reached.
+
+### metadataChecksummer
+
+Generates a checksum from a document's metadata to detect whether the metadata has changed since the last crawl. When combined with `metadataDeduplicate`, duplicate metadata within a session are also rejected. Metadata checksum generation is disabled when not configured.
+
+### metadataDeduplicate
+
+Whether to enable deduplication based on metadata checksum. Requires a `metadataChecksummer` to be configured. When enabled, any document with the same metadata checksum as a previously processed document in the same crawl session is rejected. Not recommended unless metadata checksums are reliably unique.
+
+### metadataFetchSupport
+
+Controls whether the crawler fetches document metadata separately before (or instead of) fetching the full document. Can be `DISABLED`, `OPTIONAL`, or `REQUIRED`. Default is `DISABLED`.
+
+### metadataFilters
+
+Filters applied to documents based on their metadata, after metadata has been obtained but before the full document is fetched. Documents that do not pass the filters are rejected. Only files are tested: folders have their own filters (see `folderMetadataFilters`). Start references are never filtered.
+
+### minProgressLoggingInterval
+
+Minimum time to wait between each crawling progress log entry. A value of `null` or below 1 second disables progress logging. Default is 30 seconds.
+
+### numThreads
+
+Maximum number of concurrent threads the crawler uses for processing documents. Default is 2. In clustered deployments, this value applies per node.
+
+### orphansStrategy
+
+Determines what to do with previously crawled documents that are no longer found during the current crawl (orphans). Typical values are `PROCESS`, `DELETE`, or `IGNORE`.
+
+### postImportConsumers
+
+A list of document consumers invoked after the document has been processed by the importer.
+
+### preImportConsumers
+
+A list of document consumers invoked before the document is sent to the importer for content extraction and metadata enrichment.
+
+### referenceFilters
+
+Filters applied to document references (URLs or file paths) to control which ones are fetched. Documents whose references do not pass the filters are skipped. Only files are tested: folders have their own filters (see `folderReferenceFilters`). Start references are never filtered.
+
+### spoiledReferenceStrategizer
+
+Determines how to handle references that repeatedly fail to be fetched or processed. Configures the strategy for dealing with such "spoiled" references.
+
+### startReferences
+
+The initial set of document references (URLs or file paths) from which the crawl begins.
+
+### startReferencesAsync
+
+When enabled, start references are provided and consumed asynchronously, allowing the crawl to begin before all start references are available.
+
+### startReferencesFiles
+
+One or more files containing lists of start references, one reference per line.
+
+### startReferencesProviders
+
+A list of pluggable providers that supply the initial references to crawl, used when start references come from a dynamic or external source.
+
+### stopOnExceptions
+
+A list of fully qualified exception class names which, when encountered, will stop the crawler.
+
+### workDir
+
+The directory where working files (temporary data, queues, state) are stored during crawl execution.
