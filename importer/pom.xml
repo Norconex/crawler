@@ -64,7 +64,7 @@
     <repository>
       <id>unidata-releases</id>
       <name>UNIDATA Releases</name>
-      <url>https://repo.osgeo.org/repository/release/</url>
+      <url>https://artifacts.unidata.ucar.edu/repository/unidata-releases/</url>
     </repository>
   </repositories>
 
