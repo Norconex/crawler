@@ -87,28 +87,34 @@ public class CrawlerProcessStep extends BaseStep {
                 numThreads, ctx.getThreadFactoryCreator()
                         .create(session.getCrawlerId()));
 
-        var futures = IntStream.range(0, numThreads)
-                .mapToObj(i -> CompletableFuture
-                        .runAsync(() -> {
-                            try {
-                                processQueue(session,
-                                        i);
-                            } catch (Exception e) {
-                                LOG.error("Problem running task {} {} of {}.",
-                                        "crawl-" + session
-                                                .getCrawlerId(),
-                                        i,
-                                        numThreads,
-                                        e);
-                                throw new CompletionException(
-                                        e);
-                            }
-                        }, executor))
-                .toList();
-        CompletableFuture.allOf(
-                futures.toArray(new CompletableFuture[0]))
-                .join();
-        ConcurrentUtil.cleanShutdown(executor);
+        try {
+            var futures = IntStream.range(0, numThreads)
+                    .mapToObj(i -> CompletableFuture
+                            .runAsync(() -> {
+                                try {
+                                    processQueue(session,
+                                            i);
+                                } catch (Exception e) {
+                                    LOG.error(
+                                            "Problem running task {} {} of {}.",
+                                            "crawl-" + session
+                                                    .getCrawlerId(),
+                                            i,
+                                            numThreads,
+                                            e);
+                                    throw new CompletionException(
+                                            e);
+                                }
+                            }, executor))
+                    .toList();
+            CompletableFuture.allOf(
+                    futures.toArray(new CompletableFuture[0]))
+                    .join();
+        } finally {
+            // Also when a task failed: the pool's threads would otherwise
+            // stay parked, and keep the JVM from exiting.
+            ConcurrentUtil.cleanShutdown(executor);
+        }
     }
 
     @Override
