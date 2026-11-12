@@ -555,7 +555,8 @@ public final class CrawlerEntryLedger {
     }
 
     public void forEachProcessed(Consumer<CrawlerEntry> c) {
-        forEachProcessingStatus(ProcessingStatus.PROCESSED, c);
+        getCurrentLedger().forEachMatching(
+                statusQueryFilter(ProcessingStatus.PROCESSED), c);
     }
 
     //--- Previous baseline crawl entries ---

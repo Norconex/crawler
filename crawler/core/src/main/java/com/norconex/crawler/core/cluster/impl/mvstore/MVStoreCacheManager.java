@@ -85,6 +85,7 @@ public class MVStoreCacheManager implements CacheManager {
                 .fileName(storePath.toString())
                 .pageSplitSize(config.getPageSplitSize())
                 .cacheSize(config.getCacheSize())
+                .autoCompactFillRate(config.getAutoCompactFillRate())
                 .autoCommitBufferSize(config.getAutoCommitBufferSize());
         if (config.getCompress() == 1) {
             builder.compress();
