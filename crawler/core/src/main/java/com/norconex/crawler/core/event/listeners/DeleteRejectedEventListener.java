@@ -14,12 +14,15 @@
  */
 package com.norconex.crawler.core.event.listeners;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 import com.norconex.commons.lang.config.Configurable;
 import com.norconex.commons.lang.event.Event;
 import com.norconex.commons.lang.event.EventListener;
 import com.norconex.commons.lang.text.TextMatcher;
 import com.norconex.crawler.core.cluster.CacheSet;
 import com.norconex.crawler.core.event.CrawlerEvent;
+import com.norconex.crawler.core.ledger.ProcessingOutcome;
 import com.norconex.crawler.core.session.CrawlerSession;
 import com.norconex.importer.doc.Doc;
 
@@ -140,12 +143,35 @@ public class DeleteRejectedEventListener implements
                     LOG.info("Committing {} rejected references "
                             + "for deletion...", refCache.size());
                 }
-                refCache.forEach(
-                        ref -> crawlSession.getCrawlContext()
-                                .getCommitterService()
-                                .delete(new Doc(ref)));
+                var skipped = new AtomicInteger();
+                refCache.forEach(ref -> {
+                    if (configuration.isPreviouslyCommittedOnly()
+                            && !wasCommitted(crawlSession, ref)) {
+                        skipped.incrementAndGet();
+                        return;
+                    }
+                    crawlSession.getCrawlContext()
+                            .getCommitterService()
+                            .delete(new Doc(ref));
+                });
+                if (skipped.get() > 0) {
+                    LOG.info("{} rejected references were not committed by a "
+                            + "previous session: no deletion request.",
+                            skipped.get());
+                }
                 LOG.info("Done committing rejected references.");
             }
         });
+    }
+
+    // Whether the previous session left this reference in the committer:
+    // its last known outcome is one of a document that was committed or is
+    // still there (new, modified, unmodified, not yet due for a recrawl).
+    private boolean wasCommitted(CrawlerSession crawlSession, String ref) {
+        return crawlSession.getCrawlContext().getCrawlEntryLedger()
+                .getBaselineEntry(ref)
+                .map(entry -> ProcessingOutcome
+                        .isGoodState(entry.getProcessingOutcome()))
+                .orElse(false);
     }
 }

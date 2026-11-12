@@ -15,11 +15,17 @@ Sends deletion requests to the committer when documents are rejected or not foun
 
 Listens for crawler rejection events (such as "not found" or "filtered") and sends a deletion request to the committer for the affected document. Useful for keeping the index clean when documents are removed from or filtered out of the source.
 
+The rejections of reference filters, metadata filters and document filters all name the reference, so any of them can trigger a deletion. A deletion request holds the reference and almost no metadata, so a committer restricted by metadata (see the committer `restrictions`) does not accept it. To avoid deleting what was never committed, set `previouslyCommittedOnly`.
+
 ## Properties
 
 ### eventMatcher
 
 A text matcher identifying which crawler events trigger a deletion request to the committer. Default matches any event matching the regular expression `REJECTED_.*`.
+
+### previouslyCommittedOnly
+
+When `true`, a deletion request is only sent for a reference that a previous crawl session committed. A reference that was never committed (it was rejected the first time it was encountered, for instance) has nothing to delete, and one that an earlier session already deleted is no longer in the committer, so neither gets a request. That keeps the number of deletion requests to what is needed, and stops the same ones from being sent run after run. What was committed is read from the previous session's ledger, so nothing is deleted on a first crawl. Default is `false`: every rejected reference gets a deletion request.
 
 ## Examples
 

@@ -31,6 +31,20 @@ public class DeleteRejectedEventListenerConfig {
     private final TextMatcher eventMatcher = TextMatcher.regex("REJECTED_.*");
 
     /**
+     * Whether to only send a deletion request for a reference that a
+     * previous crawl session committed. A reference that was never committed
+     * (it was rejected the first time it was encountered, for instance) has
+     * nothing to delete, and one that was deleted by a previous session is
+     * no longer in the committer, so neither gets a request. Default is
+     * {@code false}: every rejected reference gets one.
+     * <p>
+     * What was committed is read from the previous session's ledger, so
+     * nothing is deleted on a first crawl.
+     * </p>
+     */
+    private boolean previouslyCommittedOnly;
+
+    /**
      * Gets the event matcher used to identify which events can trigger
      * a deletion request. Default is regular expression
      * <code>REJECTED_.*</code>.

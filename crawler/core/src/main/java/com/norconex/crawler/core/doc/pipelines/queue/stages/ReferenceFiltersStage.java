@@ -87,6 +87,10 @@ public class ReferenceFiltersStage implements Predicate<QueuePipelineContext> {
                             CrawlerEvent.builder()
                                     .name(CrawlerEvent.REJECTED_FILTER)
                                     .crawlSession(ctx.getCrawlSession())
+                                    // So listeners know which reference
+                                    // was rejected, as they do for a
+                                    // rejection by metadata or by document.
+                                    .crawlEntry(crawlEntry)
                                     .source(f)
                                     .message(msg + msgSuffix)
                                     .build());
