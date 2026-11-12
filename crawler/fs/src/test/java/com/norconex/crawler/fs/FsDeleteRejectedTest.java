@@ -66,7 +66,7 @@ class FsDeleteRejectedTest {
     /** One crawl session over the same tree and work directory. */
     private MemoryCommitter crawl(
             boolean deleteRejected,
-            boolean previouslyCommittedOnly,
+            boolean previouslyProcessedOnly,
             String excludeRegex) throws Exception {
         var mem = new MemoryCommitter();
         var config = new FsCrawlerConfig();
@@ -87,7 +87,7 @@ class FsDeleteRejectedTest {
             var listener = new DeleteRejectedEventListener();
             listener.getConfiguration()
                     .setEventMatcher(TextMatcher.regex("REJECTED_FILTER"))
-                    .setPreviouslyCommittedOnly(previouslyCommittedOnly);
+                    .setPreviouslyProcessedOnly(previouslyProcessedOnly);
             config.addEventListener(listener);
         }
         new Crawler(FsCrawlerDriverFactory.create(), config).crawl();

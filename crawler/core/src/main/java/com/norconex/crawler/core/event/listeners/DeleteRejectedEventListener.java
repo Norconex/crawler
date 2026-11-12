@@ -145,8 +145,8 @@ public class DeleteRejectedEventListener implements
                 }
                 var skipped = new AtomicInteger();
                 refCache.forEach(ref -> {
-                    if (configuration.isPreviouslyCommittedOnly()
-                            && !wasCommitted(crawlSession, ref)) {
+                    if (configuration.isPreviouslyProcessedOnly()
+                            && !wasProcessed(crawlSession, ref)) {
                         skipped.incrementAndGet();
                         return;
                     }
@@ -155,8 +155,9 @@ public class DeleteRejectedEventListener implements
                             .delete(new Doc(ref));
                 });
                 if (skipped.get() > 0) {
-                    LOG.info("{} rejected references were not committed by a "
-                            + "previous session: no deletion request.",
+                    LOG.info("{} rejected references were not processed "
+                            + "successfully by a previous session: "
+                            + "no deletion request.",
                             skipped.get());
                 }
                 LOG.info("Done committing rejected references.");
@@ -164,10 +165,10 @@ public class DeleteRejectedEventListener implements
         });
     }
 
-    // Whether the previous session left this reference in the committer:
-    // its last known outcome is one of a document that was committed or is
-    // still there (new, modified, unmodified, not yet due for a recrawl).
-    private boolean wasCommitted(CrawlerSession crawlSession, String ref) {
+    // Whether a previous session processed this reference successfully: its
+    // last known outcome is new, modified, unmodified or not yet due for a
+    // recrawl. The ledger does not say what each committer received.
+    private boolean wasProcessed(CrawlerSession crawlSession, String ref) {
         return crawlSession.getCrawlContext().getCrawlEntryLedger()
                 .getBaselineEntry(ref)
                 .map(entry -> ProcessingOutcome

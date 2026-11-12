@@ -32,17 +32,21 @@ public class DeleteRejectedEventListenerConfig {
 
     /**
      * Whether to only send a deletion request for a reference that a
-     * previous crawl session committed. A reference that was never committed
-     * (it was rejected the first time it was encountered, for instance) has
-     * nothing to delete, and one that was deleted by a previous session is
-     * no longer in the committer, so neither gets a request. Default is
+     * previous crawl session processed successfully (its last known outcome
+     * is new, modified, unmodified or not yet due for a recrawl). A reference
+     * that was never processed successfully (it was rejected the first time
+     * it was encountered, for instance) was most likely never sent to a
+     * committer, and one that a previous session already rejected was
+     * already asked for, so neither gets a request. Default is
      * {@code false}: every rejected reference gets one.
      * <p>
-     * What was committed is read from the previous session's ledger, so
-     * nothing is deleted on a first crawl.
+     * This is read from the previous session's ledger, so nothing is deleted
+     * on a first crawl. The ledger does not track what each committer
+     * received: a document processed successfully may still have been
+     * refused by a committer (for instance one with {@code restrictions}).
      * </p>
      */
-    private boolean previouslyCommittedOnly;
+    private boolean previouslyProcessedOnly;
 
     /**
      * Gets the event matcher used to identify which events can trigger
