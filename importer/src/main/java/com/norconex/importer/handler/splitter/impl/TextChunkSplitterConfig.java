@@ -38,9 +38,10 @@ public class TextChunkSplitterConfig extends BaseDocumentSplitterConfig {
     public static final String DEFAULT_REFERENCE_CHUNK_PREFIX = "#chunk";
 
     /**
-     * The maximum number of characters a chunk should have. A chunk may be
-     * shorter when a clean break (paragraph, sentence, or word) is found
-     * before this limit. Must be at least 1. Default is
+     * The maximum number of characters a chunk should have, the overlap
+     * with the previous chunk included. A chunk may be shorter when a clean
+     * break (paragraph, sentence, or word) is found before this limit. Must
+     * be at least 1. Default is
      * {@value #DEFAULT_MAX_CHUNK_SIZE}.
      */
     private int maxChunkSize = DEFAULT_MAX_CHUNK_SIZE;
@@ -48,7 +49,9 @@ public class TextChunkSplitterConfig extends BaseDocumentSplitterConfig {
     /**
      * The number of characters from the end of a chunk to repeat at the
      * start of the next one, so a passage spanning a chunk boundary is not
-     * lost from either side's context. Default is
+     * lost from either side's context. The overlap counts toward
+     * {@link #getMaxChunkSize()}, and must not be more than half of it.
+     * Default is
      * {@value #DEFAULT_CHUNK_OVERLAP}. Set to 0 to disable.
      */
     private int chunkOverlap = DEFAULT_CHUNK_OVERLAP;

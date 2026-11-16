@@ -40,7 +40,8 @@ import lombok.Data;
  * </p>
  *
  * <p>
- * Each chunk is capped at {@link TextChunkSplitterConfig#getMaxChunkSize()}
+ * Each chunk, overlap included, is capped at
+ * {@link TextChunkSplitterConfig#getMaxChunkSize()}
  * characters, but the cut point within that limit is chosen to avoid
  * breaking content awkwardly: the last paragraph break is preferred, falling
  * back to the last sentence, then the last word, and only cutting mid-word
@@ -72,24 +73,54 @@ public class TextChunkSplitter
             new TextChunkSplitterConfig();
 
     @Override
-    public void split(DocHandlerContext docCtx) throws DocHandlerException {
+    public void init() throws IOException {
+        // Fails when the importer starts, not on the first long document.
+        validate();
+    }
+
+    /**
+     * Checks that the sizes can work. Done when the importer starts, and again
+     * before each split, for a splitter used without being initialized.
+     */
+    private void validate() throws DocHandlerException {
+        var max = configuration.getMaxChunkSize();
         // Must be checked up front: TextReader treats a size of 0 as "read
         // nothing" and keeps returning empty text without ever reaching the
         // end of the input, so a bad size would hang the crawl, not fail it.
-        if (configuration.getMaxChunkSize() < 1) {
+        if (max < 1) {
             throw new DocHandlerException(
-                    "maxChunkSize must be at least 1, but was "
-                            + configuration.getMaxChunkSize() + ".");
+                    "maxChunkSize must be at least 1, but was " + max + ".");
         }
+        // A chunk is the overlap plus new text, within maxChunkSize. Past half
+        // of it, most of every chunk is a repeat of the one before: the text
+        // is embedded and stored more than twice over, and as the overlap
+        // approaches the size there is hardly any new text left in a chunk.
+        var overlap = configuration.getChunkOverlap();
+        if (overlap > max / 2) {
+            throw new DocHandlerException(
+                    "chunkOverlap must not be more than half of maxChunkSize"
+                            + " (" + max + "), but was " + overlap + ".");
+        }
+    }
+
+    @Override
+    public void split(DocHandlerContext docCtx) throws DocHandlerException {
+        validate();
         try {
             var text = docCtx.input().asString();
             if (StringUtils.isEmpty(text)) {
                 return;
             }
 
+            // Fits in one chunk already: left as it is. This is also what
+            // keeps a chunk, which is read as a document of its own, from
+            // being split again.
+            if (text.length() <= configuration.getMaxChunkSize()) {
+                return;
+            }
+
             var rawChunks = readChunks(text);
             if (rawChunks.size() <= 1) {
-                // Fits in one chunk already: not worth splitting.
                 return;
             }
 
@@ -111,8 +142,12 @@ public class TextChunkSplitter
     // javadoc — no need to reimplement that boundary logic here.
     private List<String> readChunks(String text) throws IOException {
         var chunks = new ArrayList<String>();
+        // Room is kept for the overlap, which is added to every chunk but the
+        // first, so no chunk goes over maxChunkSize.
+        var newTextSize = configuration.getMaxChunkSize()
+                - Math.max(0, configuration.getChunkOverlap());
         try (var reader = new TextReader(
-                new StringReader(text), configuration.getMaxChunkSize())) {
+                new StringReader(text), newTextSize)) {
             String chunk;
             while ((chunk = reader.readText()) != null) {
                 if (StringUtils.isNotEmpty(chunk)) {

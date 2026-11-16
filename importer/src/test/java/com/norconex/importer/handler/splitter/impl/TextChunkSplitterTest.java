@@ -204,6 +204,93 @@ class TextChunkSplitterTest {
                 .isEqualTo("http://example.com/doc#part1");
     }
 
+    private static final String LONG_TEXT =
+            "A sentence of some length goes here. ".repeat(60);
+
+    @Test
+    void testChunksNeverExceedMaxChunkSizeOverlapIncluded()
+            throws IOException {
+        var splitter = new TextChunkSplitter();
+        splitter.getConfiguration().setMaxChunkSize(200).setChunkOverlap(50);
+
+        var docCtx = TestUtil.newHandlerContext(LONG_TEXT);
+        splitter.handle(docCtx);
+
+        assertThat(docCtx.childDocs()).hasSizeGreaterThan(5);
+        for (var chunk : docCtx.childDocs()) {
+            assertThat(textOf(chunk).length()).isLessThanOrEqualTo(200);
+        }
+    }
+
+    @Test
+    void testChunkIsLeftAloneWhenReadAgainAsADocument() throws IOException {
+        // Chunks are documents of their own and go through the importer from
+        // the start, this splitter included: none must be split again.
+        var splitter = new TextChunkSplitter();
+        splitter.getConfiguration().setMaxChunkSize(200).setChunkOverlap(50);
+        var docCtx = TestUtil.newHandlerContext(LONG_TEXT);
+        splitter.handle(docCtx);
+
+        assertThat(docCtx.childDocs()).isNotEmpty();
+        for (var chunk : docCtx.childDocs()) {
+            var again = TestUtil.newHandlerContext(
+                    chunk.getReference(), textOf(chunk));
+
+            assertThat(splitter.handle(again)).isTrue();
+            assertThat(again.childDocs()).isEmpty();
+        }
+    }
+
+    @Test
+    void testTextThatFitsInMaxChunkSizeIsNotSplitWhateverTheOverlap()
+            throws IOException {
+        var splitter = new TextChunkSplitter();
+        splitter.getConfiguration().setMaxChunkSize(100).setChunkOverlap(50);
+
+        // 90 characters: more than what is left for new text once room is
+        // kept for the overlap (50), but it fits whole.
+        var docCtx = TestUtil.newHandlerContext("x".repeat(90));
+
+        assertThat(splitter.handle(docCtx)).isTrue();
+        assertThat(docCtx.childDocs()).isEmpty();
+    }
+
+    @Test
+    void testOverlapOfHalfTheSizeIsAcceptedButNotMore() {
+        var splitter = new TextChunkSplitter();
+        splitter.getConfiguration().setMaxChunkSize(100).setChunkOverlap(50);
+        assertThatNoException().isThrownBy(splitter::init);
+        assertThatNoException().isThrownBy(
+                () -> splitter.handle(TestUtil.newHandlerContext(LONG_TEXT)));
+
+        splitter.getConfiguration().setChunkOverlap(51);
+        assertThatExceptionOfType(DocHandlerException.class)
+                .isThrownBy(splitter::init)
+                .withMessageContaining("chunkOverlap")
+                .withMessageContaining("half")
+                .withMessageContaining("maxChunkSize");
+        // Also when used without being initialized.
+        assertThatExceptionOfType(DocHandlerException.class).isThrownBy(
+                () -> splitter.handle(TestUtil.newHandlerContext(LONG_TEXT)))
+                .withMessageContaining("chunkOverlap");
+    }
+
+    @Test
+    void testBadSizesAreRejectedWhenTheImporterStarts() {
+        var splitter = new TextChunkSplitter();
+        splitter.getConfiguration().setMaxChunkSize(0);
+        assertThatExceptionOfType(DocHandlerException.class)
+                .isThrownBy(splitter::init)
+                .withMessageContaining("maxChunkSize");
+
+        // The default overlap (100) is too much for a small size.
+        var small = new TextChunkSplitter();
+        small.getConfiguration().setMaxChunkSize(150);
+        assertThatExceptionOfType(DocHandlerException.class)
+                .isThrownBy(small::init)
+                .withMessageContaining("chunkOverlap");
+    }
+
     @Test
     void testWriteRead() {
         var splitter = new TextChunkSplitter();

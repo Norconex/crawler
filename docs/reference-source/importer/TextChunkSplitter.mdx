@@ -17,17 +17,23 @@ Runs on the document's extracted text, so the same configuration chunks a
 PDF, an HTML page, or a Word document alike — no per-format splitter needed.
 Should be used as a post-parse handler.
 
-Each chunk is capped at `maxChunkSize` characters, but the cut point within
-that limit is chosen to avoid breaking content awkwardly: the last paragraph
-break is preferred, falling back to the last sentence, then the last word,
-and only cutting mid-word if none of those are found.
+Each chunk is capped at `maxChunkSize` characters, overlap included, but the
+cut point within that limit is chosen to avoid breaking content awkwardly: the
+last paragraph break is preferred, falling back to the last sentence, then the
+last word, and only cutting mid-word if none of those are found.
 
 Consecutive chunks can repeat a few trailing characters of the previous one
 via `chunkOverlap`, so a passage spanning a chunk boundary is not lost from
-either side's context.
+either side's context. The repeated characters count toward `maxChunkSize`,
+so a chunk never goes over it, and `chunkOverlap` cannot be more than half of
+`maxChunkSize`: past that, most of each chunk would be a repeat. A configuration
+that does not follow this is rejected when the importer starts.
 
-A document short enough to fit in a single chunk is left untouched — no
-child documents are created, and the original passes through as-is.
+A document short enough to fit in a single chunk (`maxChunkSize` characters or
+fewer) is left untouched — no child documents are created, and the original
+passes through as-is. This applies to chunks too: they are documents of their
+own, going through the importer again from its first handler, and are not
+split a second time.
 
 Each chunk produced carries a `document.chunk.index` field (1-based) and a
 `document.chunk.count` field with the total number of chunks. Unlike other
@@ -41,7 +47,9 @@ Set `discardOriginal` to `false` if you do want to keep it.
 ### chunkOverlap
 
 The number of characters from the end of a chunk to repeat at the start of
-the next one. Default is 100. Set to 0 to disable.
+the next one. They count toward `maxChunkSize`, and must not be more than half
+of it. Default is 100, so a `maxChunkSize` under 200 needs a smaller overlap
+set as well. Set to 0 to disable.
 
 ### discardOriginal
 
@@ -54,9 +62,9 @@ An optional, user-supplied label for this step in the importer pipeline. It has 
 
 ### maxChunkSize
 
-The maximum number of characters a chunk should have. A chunk may be
-shorter when a clean break (paragraph, sentence, or word) is found before
-this limit. Must be at least 1; anything lower is rejected. Default is 1000.
+The maximum number of characters a chunk should have, the overlap with the
+previous chunk included. A chunk may be shorter when a clean break
+(paragraph, sentence, or word) is found before this limit. Must be at least 1; anything lower is rejected. Default is 1000.
 
 ### referenceChunkPrefix
 
