@@ -44,8 +44,8 @@ class TikaParserTest {
     @Test
     void testParse(@TempDir Path tempDir) throws IOException {
 
-        var tikaConfig = tempDir.resolve("tika.xml");
-        Files.writeString(tikaConfig, "<properties></properties>");
+        var tikaConfig = tempDir.resolve("tika-config.json");
+        Files.writeString(tikaConfig, "{}");
 
         var parser = Configurable.configure(
                 new TikaParser(),
@@ -57,5 +57,10 @@ class TikaParserTest {
         parser.handle(ctx);
 
         assertThat(ctx.input().asString()).isEqualTo("content");
+        // Tika's resource name is for its own use only.
+        assertThat(ctx.metadata().keySet()).noneMatch(
+                k -> k.equalsIgnoreCase(
+                        org.apache.tika.metadata.TikaCoreProperties.RESOURCE_NAME_KEY
+                                .getName()));
     }
 }

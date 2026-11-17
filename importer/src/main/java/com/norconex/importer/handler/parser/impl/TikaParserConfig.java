@@ -1,4 +1,4 @@
-/* Copyright 2010-2024 Norconex Inc.
+/* Copyright 2010-2026 Norconex Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import lombok.experimental.Accessors;
 public class TikaParserConfig extends BaseDocHandlerConfig {
 
     /**
-     * The path to a Tika configuration file.
+     * The path to a Tika JSON configuration file (Tika 4 no longer supports XML).
      */
     private String tikaConfigFile;
 }

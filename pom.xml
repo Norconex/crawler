@@ -63,20 +63,20 @@
 
     <!-- Apache Commons dependencies -->
     <commons-cli.version>1.11.0</commons-cli.version>
-    <commons-codec.version>1.22.0</commons-codec.version>
+    <commons-codec.version>1.23.0</commons-codec.version>
     <commons-collections4.version>4.5.0</commons-collections4.version>
     <commons-compress.version>1.28.0</commons-compress.version>
     <commons-csv.version>1.14.1</commons-csv.version>
     <commons-io.version>2.22.0</commons-io.version>
     <commons-lang3.version>3.20.0</commons-lang3.version>
-    <commons-logging.version>1.3.6</commons-logging.version>
+    <commons-logging.version>1.4.0</commons-logging.version>
     <commons-text.version>1.15.0</commons-text.version>
     
     <!-- Other dependencies -->
     <ant.version>1.10.17</ant.version>
     <h2.version>2.4.240</h2.version>
     <httpclient5.version>5.6.3</httpclient5.version>
-    <jackson.version>3.2.1</jackson.version>
+    <jackson.version>3.2.3</jackson.version>
     <!-- Shared jackson-annotations pin (Jackson 2 AND Jackson 3 use this single 2.x
          artifact). Must satisfy the newest Jackson on the classpath; see the
          dependencyManagement note. Match to the Jackson 3 line: 3.0.x -> 2.20, 3.2.x -> 2.22. -->
@@ -84,17 +84,26 @@
     <!-- Jackson 2.x line, used ONLY by transitive test deps (MockServer).
          Keep aligned with the Jackson 3 line's annotations
          generation: Jackson 3.0.x -> 2.20.x; 3.2.x -> 2.22.x. -->
-    <jackson2.version>2.22.1</jackson2.version>
+    <jackson2.version>2.22.4</jackson2.version>
     <jakarta-activation.version>2.1.4</jakarta-activation.version>
     <jakarta-el-api.version>6.0.1</jakarta-el-api.version>
     <jaxb-runtime.version>2.3.5</jaxb-runtime.version>
     <jetty.version>11.0.25</jetty.version>
     <json.version>1.8</json.version>
     <!-- 1.17.1+ required by Tika 3.x JSoupParser (TagSet class) -->
-    <jsoup.version>1.23.1</jsoup.version>
-    <log4j.version>2.24.3</log4j.version>
+    <jsoup.version>1.23.2</jsoup.version>
+    <log4j.version>2.25.5</log4j.version>
+    <!-- Security pins for transitive dependencies (fixes for known advisories). -->
+    <bouncycastle.version>1.86</bouncycastle.version>
+    <guava.version>33.7.2-jre</guava.version>
+    <lz4-java.version>1.11.4</lz4-java.version>
+    <netty.version>4.2.17.Final</netty.version>
+    <opentelemetry.version>1.67.0</opentelemetry.version>
+    <postgresql.version>42.7.12</postgresql.version>
+    <snappy-java.version>1.1.10.9</snappy-java.version>
+
     <picocli.version>4.7.7</picocli.version>
-    <slf4j.version>2.0.17</slf4j.version>
+    <slf4j.version>2.0.20</slf4j.version>
     <velocity-engine.version>2.4.1</velocity-engine.version>
     <xml-bind-api.version>4.0.5</xml-bind-api.version>
 
@@ -477,6 +486,53 @@
       
       <!-- Other dependencies -->
 
+      <!-- Security pins for transitive dependencies (fixes for known advisories).
+           Raise/remove when the libraries that pull them in move past these versions. -->
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-bom</artifactId>
+        <version>${netty.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.opentelemetry</groupId>
+        <artifactId>opentelemetry-bom</artifactId>
+        <version>${opentelemetry.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>${guava.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.postgresql</groupId>
+        <artifactId>postgresql</artifactId>
+        <version>${postgresql.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.xerial.snappy</groupId>
+        <artifactId>snappy-java</artifactId>
+        <version>${snappy-java.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>at.yawk.lz4</groupId>
+        <artifactId>lz4-java</artifactId>
+        <version>${lz4-java.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcprov-jdk18on</artifactId>
+        <version>${bouncycastle.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcpkix-jdk18on</artifactId>
+        <version>${bouncycastle.version}</version>
+      </dependency>
+
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-lang3</artifactId>
@@ -535,11 +591,6 @@
       <dependency>
         <groupId>jakarta.xml.bind</groupId>
         <artifactId>jakarta.xml.bind-api</artifactId>
-        <version>${xml-bind-api.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.sun.xml.bind</groupId>
-        <artifactId>jaxb-impl</artifactId>
         <version>${xml-bind-api.version}</version>
       </dependency>
       <dependency>

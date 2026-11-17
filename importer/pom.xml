@@ -36,12 +36,13 @@
     <luaj-jse.version>3.0.1</luaj-jse.version>
     <opencsv.version>5.12.0</opencsv.version>
     <poi.version>5.5.1</poi.version>
-    <tika.version>3.3.1</tika.version>
+    <tika.version>4.2.0</tika.version>
+    <icu4j.version>76.1</icu4j.version>
     <ucar-jj2000.version>5.4</ucar-jj2000.version>
     <webp-imageio.version>0.1.6</webp-imageio.version>
     
     <!-- Managed -->
-    <cxf.version>4.2.2</cxf.version>
+    <cxf.version>4.2.4</cxf.version>
     <annotation-api.version>3.0.0</annotation-api.version>
     <jdom2.version>2.0.6.1</jdom2.version>
     
@@ -102,8 +103,14 @@
     </dependency>
     <dependency>
       <groupId>org.apache.tika</groupId>
+      <artifactId>tika-serialization</artifactId>
+      <version>${tika.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.tika</groupId>
       <artifactId>tika-parsers-standard-package</artifactId>
       <version>${tika.version}</version>
+      <type>pom</type>
       <exclusions>
       	<exclusion>
       		<groupId>xml-apis</groupId>
@@ -146,32 +153,18 @@
     
     
     
+    <dependency>
+      <groupId>com.ibm.icu</groupId>
+      <artifactId>icu4j</artifactId>
+      <version>${icu4j.version}</version>
+    </dependency>
     <!-- Are below used? -->
-    <dependency>
-      <groupId>org.apache.tika</groupId>
-      <artifactId>tika-langdetect-lingo24</artifactId>
-      <version>${tika.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.tika</groupId>
-      <artifactId>tika-langdetect-opennlp</artifactId>
-      <version>${tika.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.tika</groupId>
-      <artifactId>tika-langdetect-mitll-text</artifactId>
-      <version>${tika.version}</version>
-    </dependency>
     <dependency>
       <groupId>org.apache.tika</groupId>
       <artifactId>tika-langdetect-optimaize</artifactId>
       <version>${tika.version}</version>
     </dependency>
-    <dependency>
-      <groupId>org.apache.tika</groupId>
-      <artifactId>tika-parser-advancedmedia-module</artifactId>
-      <version>${tika.version}</version>
-    </dependency>
+    <!-- Provides the Journal parser, used with Grobid. -->
     <dependency>
       <groupId>org.apache.tika</groupId>
       <artifactId>tika-parser-nlp-module</artifactId>

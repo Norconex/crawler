@@ -1,4 +1,4 @@
-/* Copyright 2014-2025 Norconex Inc.
+/* Copyright 2014-2026 Norconex Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,19 @@
 package com.norconex.importer.handler.transformer.impl;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.apache.commons.lang3.StringUtils;
 
 import org.apache.tika.langdetect.optimaize.OptimaizeLangDetector;
+import org.apache.tika.langdetect.charsoup.CharSoupLanguageDetector;
 import org.apache.tika.language.detect.LanguageDetector;
 import org.apache.tika.language.detect.LanguageResult;
 
@@ -179,7 +187,7 @@ public class LanguageTransformer
     @Getter(value = AccessLevel.NONE)
     @Setter(value = AccessLevel.NONE)
     @JsonIgnore
-    private LanguageDetector detector;
+    private CombinedDetector detector;
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     @Getter(value = AccessLevel.NONE)
@@ -229,14 +237,128 @@ public class LanguageTransformer
 
     private synchronized void ensureDetectorInitialization()
             throws IOException {
-        if (detector == null) {
+        if (detector != null) {
+            return;
+        }
+        var candidates = configuration.getLanguages();
+        var mode = configuration.getDetector();
+        // Used to know which languages Optimaize supports.
+        var probe = new OptimaizeLangDetector();
+        probe.loadModels();
+
+        LanguageDetector optimaize = null;
+        LanguageDetector charsoup = null;
+        Set<String> charsoupOnly = null;
+        Set<String> optimaizeOnly = null;
+
+        if (mode != LanguageTransformerConfig.Detector.CHARSOUP) {
             var d = new OptimaizeLangDetector();
-            if (configuration.getLanguages().isEmpty()) {
+            if (mode == LanguageTransformerConfig.Detector.AUTO
+                    && !candidates.isEmpty()) {
+                // Scores are only meaningful against all competing models,
+                // so load them all and restrict results afterwards.
                 d.loadModels();
+                var wanted = new HashSet<>(candidates);
+                wanted.removeIf(l -> !probe.hasModel(l));
+                if (!wanted.isEmpty()) {
+                    optimaize = d;
+                    optimaizeOnly = wanted;
+                }
+            } else if (candidates.isEmpty()) {
+                d.loadModels();
+                optimaize = d;
             } else {
-                d.loadModels(new HashSet<>(configuration.getLanguages()));
+                d.loadModels(new HashSet<>(candidates));
+                optimaize = d;
             }
-            detector = d;
+        }
+
+        if (mode == LanguageTransformerConfig.Detector.CHARSOUP
+                || (mode == LanguageTransformerConfig.Detector.AUTO
+                        && !candidates.isEmpty())) {
+            // Charsoup cannot load a subset of models: all are loaded and
+            // results are then restricted to the wanted languages.
+            var d = new CharSoupLanguageDetector();
+            d.loadModels();
+            if (candidates.isEmpty()) {
+                charsoup = d;
+            } else {
+                var wanted = new HashSet<String>();
+                for (String lang : candidates) {
+                    if (mode == LanguageTransformerConfig.Detector.AUTO
+                            && probe.hasModel(lang)) {
+                        continue;
+                    }
+                    wanted.add(LanguageCodes.toThreeLetters(lang));
+                }
+                wanted.retainAll(
+                        CharSoupLanguageDetector.getSupportedLanguages());
+                if (!wanted.isEmpty()) {
+                    charsoup = d;
+                    charsoupOnly = new HashSet<>();
+                    for (String w : wanted) {
+                        charsoupOnly.add(LanguageCodes.toTwoLetters(w));
+                    }
+                }
+            }
+        }
+
+        detector = new CombinedDetector(
+                optimaize, optimaizeOnly, charsoup, charsoupOnly);
+    }
+
+    /**
+     * Detects with up to two detectors, keeping the best score for each
+     * language. Language codes are normalized to two letters whenever one
+     * exists.
+     */
+    private static class CombinedDetector {
+        private final LanguageDetector optimaize;
+        private final LanguageDetector charsoup;
+        // when not null, restrict a detector's results to these languages
+        private final Set<String> optimaizeOnly;
+        private final Set<String> charsoupOnly;
+
+        CombinedDetector(
+                LanguageDetector optimaize,
+                Set<String> optimaizeOnly,
+                LanguageDetector charsoup,
+                Set<String> charsoupOnly) {
+            this.optimaize = optimaize;
+            this.optimaizeOnly = optimaizeOnly;
+            this.charsoup = charsoup;
+            this.charsoupOnly = charsoupOnly;
+        }
+
+        List<LanguageResult> detectAll(String text) {
+            Map<String, LanguageResult> best = new HashMap<>();
+            for (LanguageDetector d : new LanguageDetector[] {
+                    optimaize, charsoup }) {
+                if (d == null) {
+                    continue;
+                }
+                d.reset();
+                d.addText(text);
+                for (LanguageResult r : d.detectAll()) {
+                    if (LanguageResult.NULL.equals(r)
+                            || StringUtils.isBlank(r.getLanguage())) {
+                        continue;
+                    }
+                    var lang = LanguageCodes.toTwoLetters(r.getLanguage());
+                    var only = d == charsoup ? charsoupOnly : optimaizeOnly;
+                    if (only != null && !only.contains(lang)) {
+                        continue;
+                    }
+                    var res = new LanguageResult(
+                            lang, r.getConfidence(), r.getRawScore());
+                    best.merge(
+                            lang, res,
+                            (x, y) -> x.getRawScore() >= y.getRawScore()
+                                    ? x
+                                    : y);
+                }
+            }
+            return new ArrayList<>(best.values());
         }
     }
 }

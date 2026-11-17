@@ -384,10 +384,6 @@
               </exclusion>
               <exclusion>
                 <groupId>org.apache.tika</groupId>
-                <artifactId>tika-parser-advancedmedia-module</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>org.apache.tika</groupId>
                 <artifactId>tika-parser-sqlite3-module</artifactId>
               </exclusion>
               <exclusion>

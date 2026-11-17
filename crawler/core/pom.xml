@@ -30,7 +30,7 @@
     <sonar.projectKey>${project.groupId}:${project.artifactId}</sonar.projectKey>      
 
     <classgraph.version>4.8.181</classgraph.version>
-    <cxf.version>4.2.2</cxf.version>
+    <cxf.version>4.2.4</cxf.version>
     <h2.version>2.4.240</h2.version>
     <hazelcast.version>5.7.0</hazelcast.version>
     <jdom2.version>2.0.6.1</jdom2.version>
@@ -184,7 +184,6 @@
     <dependency>
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
-      <version>42.7.11</version>
       <!--<scope>runtime</scope>-->
     </dependency>
     <dependency>

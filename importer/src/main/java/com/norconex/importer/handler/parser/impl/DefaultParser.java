@@ -25,15 +25,14 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang3.reflect.FieldUtils;
+import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.exception.ZeroByteFileException;
 import org.apache.tika.metadata.HttpHeaders;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.parser.AutoDetectParser;
-import org.apache.tika.parser.CompositeParser;
 import org.apache.tika.parser.ParseContext;
 import org.apache.tika.parser.Parser;
-import org.apache.tika.parser.ParserDecorator;
 import org.apache.tika.parser.pdf.PDFParserConfig;
 import org.apache.tika.sax.BodyContentHandler;
 
@@ -72,19 +71,12 @@ public class DefaultParser
 
     private static final String TIKA_TESSERACT_OCR_PARSER =
             "org.apache.tika.parser.ocr.TesseractOCRParser";
-    private static final String TIKA_SQLITE_PARSER =
-            "org.apache.tika.parser.jdbc.SQLite3Parser";
-    private static final String GROBID_REST_PARSER =
-            "org.apache.tika.parser.journal.GrobidRESTParser";
-    private static final String JOURNAL_PARSER =
-            "org.apache.tika.parser.journal.JournalParser";
 
     @Override
     public void init() throws IOException {
 
         fixTikaInitWarning();
-        tikaParser = new AutoDetectParser(
-                DefTikaConfigurer.configure(configuration));
+        tikaParser = DefTikaConfigurer.configure(configuration);
         // Use the same custom MIME-type detector as ContentTypeDetector so
         // that types like application/vnd.xfdl are correctly routed to their
         // registered parsers (e.g. XfdlTikaParser).
@@ -129,13 +121,16 @@ public class DefaultParser
             if (!configuration.getOcrConfig().isDisabled()) {
                 pdfConfig.setExtractInlineImages(true);
             } else {
-                pdfConfig.setOcrStrategy(PDFParserConfig.OCR_STRATEGY.NO_OCR);
+                var pdfOcr = new org.apache.tika.parser.pdf.OcrConfig();
+                pdfOcr.setStrategy(
+                        org.apache.tika.parser.pdf.OcrConfig.Strategy.NO_OCR);
+                pdfConfig.setOcr(pdfOcr);
             }
             pdfConfig.setSuppressDuplicateOverlappingText(true);
             context.set(PDFParserConfig.class, pdfConfig);
 
             recursiveParser.parse(
-                    input,
+                    TikaInputStream.get(input),
                     new BodyContentHandler(output), tikaMetadata, context);
         } catch (ZeroByteFileException e) {
             LOG.info("Document has no content: {}", ctx.reference());
@@ -186,22 +181,13 @@ public class DefaultParser
 
     /**
      * Applies the Grobid configuration. When Grobid is disabled (the default),
-     * the JournalParser (which wraps GrobidRESTParser internally) is removed
-     * from the AutoDetectParser's internal parser list via reflection to
-     * prevent network calls to a Grobid service that is not running.
+     * the JournalParser (which relies on a Grobid service) is excluded from
+     * the parsers by {@link DefTikaConfigurer}, preventing network calls to
+     * a Grobid service that is not running.
      */
     private void applyGrobidConfig() {
         var grobidCfg = configuration.getGrobidConfig();
-        if (!grobidCfg.isEnabled()) {
-            boolean removed = removeGrobidParsersFromList(
-                    (CompositeParser) tikaParser);
-            if (removed) {
-                LOG.debug("Grobid parsing is disabled. "
-                        + "JournalParser has been removed from the Tika "
-                        + "parser chain. Set GrobidConfig enabled=true "
-                        + "to activate it.");
-            }
-        } else {
+        if (grobidCfg.isEnabled()) {
             var serviceUrl = grobidCfg.getServiceUrl();
             if (serviceUrl != null && !serviceUrl.isBlank()) {
                 System.setProperty("grobid.server.url", serviceUrl);
@@ -209,49 +195,6 @@ public class DefaultParser
             LOG.info("Grobid parsing is enabled (service URL: {}).",
                     serviceUrl);
         }
-    }
-
-    @SuppressWarnings("unchecked")
-    private boolean removeGrobidParsersFromList(CompositeParser cp) {
-        try {
-            var field = CompositeParser.class.getDeclaredField("parsers");
-            field.setAccessible(true);
-            List<Parser> list = (List<Parser>) field.get(cp);
-            List<Parser> mutable = new ArrayList<>(list);
-            boolean removed = mutable.removeIf(p -> {
-                Parser unwrapped = unwrapDecorator(p);
-                if (isGrobidParser(unwrapped)) {
-                    return true;
-                }
-                if (unwrapped instanceof CompositeParser) {
-                    removeGrobidParsersFromList((CompositeParser) unwrapped);
-                }
-                return false;
-            });
-            if (removed) {
-                field.set(cp, mutable);
-            }
-            return removed;
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            LOG.warn("Could not disable Grobid parsers via reflection; "
-                    + "Grobid-related warnings may appear.", e);
-            return false;
-        }
-    }
-
-    private static Parser unwrapDecorator(Parser p) {
-        while (p instanceof ParserDecorator) {
-            p = ((ParserDecorator) p).getWrappedParser();
-        }
-        return p;
-    }
-
-    private boolean isGrobidParser(Parser p) {
-        if (p == null) {
-            return false;
-        }
-        var name = p.getClass().getName();
-        return GROBID_REST_PARSER.equals(name) || JOURNAL_PARSER.equals(name);
     }
 
     private void fixTikaInitWarning() {
@@ -263,18 +206,15 @@ public class DefaultParser
                 "HAS_WARNED",
                 "Could not disable invalid Tesseract OCR warning. "
                         + "If you see such warning, you can ignore.");
-        // A check for SQLite is also done and we do not want it.
-        disableTikaWarningFlag(
-                TIKA_SQLITE_PARSER,
-                "HAS_WARNED",
-                "Could not disable \"sqlite-jdbc\" warning. "
-                        + "If you see such warning, you can ignore.");
     }
 
     private void disableTikaWarningFlag(
             String className, String fieldName, String failureMessage) {
         try {
             Class<?> clazz = Class.forName(className);
+            if (FieldUtils.getField(clazz, fieldName, true) == null) {
+                return;
+            }
             FieldUtils.writeStaticField(clazz, fieldName, true, true);
         } catch (ClassNotFoundException e) {
             LOG.debug("Tika class not found: {}", className);

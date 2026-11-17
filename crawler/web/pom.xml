@@ -31,9 +31,7 @@
     <sonar.projectKey>${project.groupId}:${project.artifactId}</sonar.projectKey>      
     <shared-resources.include>scripts/**</shared-resources.include> 
       
-    <guava.version>33.6.0-jre</guava.version>
     <littleproxy.version>2.7.0</littleproxy.version>
-    <netty.version>4.2.15.Final</netty.version>
 
     <mockserver.version>5.15.0</mockserver.version>      
     <playwright.version>1.61.0</playwright.version>
@@ -47,25 +45,6 @@
   </properties>
 
   <inceptionYear>2009</inceptionYear>
-
-  <dependencyManagement>
-    <dependencies>
-      <!-- Import netty BOM to pin all netty artifacts to the same version,
-           overriding any older 4.1.x versions pulled in by Selenium or others. -->
-      <dependency>
-        <groupId>io.netty</groupId>
-        <artifactId>netty-bom</artifactId>
-        <version>${netty.version}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-      <dependency>
-        <groupId>com.google.guava</groupId>
-        <artifactId>guava</artifactId>
-        <version>${guava.version}</version>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
 
   <!-- Base dependencies shared by all distributions -->
   <dependencies>
@@ -401,10 +380,6 @@
               <exclusion>
                 <groupId>org.apache.tika</groupId>
                 <artifactId>tika-parser-scientific-package</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>org.apache.tika</groupId>
-                <artifactId>tika-parser-advancedmedia-module</artifactId>
               </exclusion>
               <exclusion>
                 <groupId>org.apache.tika</groupId>

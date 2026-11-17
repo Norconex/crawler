@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.metadata.HttpHeaders;
 import org.apache.tika.metadata.Metadata;
@@ -65,7 +66,7 @@ class RecursiveEmbeddedSplitter extends ParserDecorator {
 
     @Override
     public void parse(
-            InputStream input,
+            TikaInputStream input,
             ContentHandler handler,
             Metadata tikaMeta,
             ParseContext context)

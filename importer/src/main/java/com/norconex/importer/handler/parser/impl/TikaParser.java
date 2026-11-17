@@ -1,4 +1,4 @@
-/* Copyright 2010-2024 Norconex Inc.
+/* Copyright 2010-2026 Norconex Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +17,17 @@ package com.norconex.importer.handler.parser.impl;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.List;
 
-import org.apache.tika.config.TikaConfig;
+import org.apache.commons.lang3.StringUtils;
+
+import org.apache.tika.io.TikaInputStream;
+import org.apache.tika.config.loader.TikaLoader;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.metadata.HttpHeaders;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.metadata.TikaCoreProperties;
-import org.apache.tika.parser.AutoDetectParser;
 import org.apache.tika.parser.ParseContext;
 import org.apache.tika.parser.Parser;
 import org.apache.tika.sax.BodyContentHandler;
@@ -57,9 +60,12 @@ public class TikaParser
     @Override
     public void init() throws IOException {
         try {
-            parser = new AutoDetectParser(
-                    new TikaConfig(configuration.getTikaConfigFile()));
-        } catch (TikaException | IOException | SAXException e) {
+            var file = configuration.getTikaConfigFile();
+            var loader = StringUtils.isBlank(file)
+                    ? TikaLoader.loadDefault()
+                    : TikaLoader.load(Path.of(file));
+            parser = loader.loadAutoDetectParser();
+        } catch (TikaException | IOException e) {
             throw new IOException("Could not initialize TikaParser.", e);
         }
     }
@@ -76,7 +82,7 @@ public class TikaParser
             context.set(Parser.class, parser);
             try {
                 parser.parse(
-                        input,
+                        TikaInputStream.get(input),
                         new BodyContentHandler(output),
                         tikaMetadata,
                         context);
@@ -94,7 +100,7 @@ public class TikaParser
             Metadata tikaMeta, Properties metadata) {
         var names = tikaMeta.names();
         for (String name : names) {
-            if (TikaCoreProperties.RESOURCE_NAME_KEY.equals(name)) {
+            if (TikaCoreProperties.RESOURCE_NAME_KEY.getName().equals(name)) {
                 continue;
             }
             var nxValues = metadata.getStrings(name);
@@ -113,8 +119,8 @@ public class TikaParser
             String name, List<String> nxValues, String tikaValue) {
         if (EqualsUtil.equalsAnyIgnoreCase(
                 name,
-                HttpHeaders.CONTENT_TYPE,
-                HttpHeaders.CONTENT_ENCODING)) {
+                HttpHeaders.CONTENT_TYPE.getName(),
+                HttpHeaders.CONTENT_ENCODING.getName())) {
             var tk = tikaValue.replaceAll("[\\s]", "");
             for (String nxValue : nxValues) {
                 if (nxValue.replaceAll("[\\s]", "").equalsIgnoreCase(tk)) {

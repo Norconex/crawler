@@ -18,13 +18,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatException;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
-import java.util.List;
-
-import org.apache.tika.parser.AutoDetectParser;
 import org.apache.tika.parser.CompositeParser;
 import org.apache.tika.parser.Parser;
 import org.apache.tika.parser.ParserDecorator;
-import org.apache.tika.parser.sentiment.SentimentAnalysisParser;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -46,36 +42,29 @@ class DefTikaConfigurerTest {
                 .isThrownBy(() -> DefTikaConfigurer.configure(cfg));
     }
 
-    // Sentiment analysis is disabled by default because
-    // SentimentAnalysisParser downloads a model from the network the
-    // moment it is initialized. It must therefore be entirely absent from
-    // the resulting parser tree unless explicitly enabled, so no such
-    // network call is ever attempted on a default configuration.
+    // The journal parser relies on a Grobid service and must be absent
+    // unless Grobid is explicitly enabled.
     @Test
-    void testSentimentAnalysisDisabledByDefault() throws Exception {
-        var tikaConfig = DefTikaConfigurer.configure(new DefaultParserConfig());
-        var tikaParser = new AutoDetectParser(tikaConfig);
-        assertThat(containsParser(tikaParser, SentimentAnalysisParser.class))
-                .isFalse();
+    void testJournalParserExcludedUnlessGrobidEnabled() throws Exception {
+        var cfg = new DefaultParserConfig();
+        assertThat(containsParser(
+                DefTikaConfigurer.configure(cfg), "JournalParser")).isFalse();
+        cfg.getGrobidConfig().setEnabled(true);
+        assertThat(containsParser(
+                DefTikaConfigurer.configure(cfg), "JournalParser")).isTrue();
     }
 
-    private boolean containsParser(
-            Parser parser, Class<? extends Parser> targetClass)
-            throws ReflectiveOperationException {
+    private boolean containsParser(Parser parser, String simpleName) {
         var unwrapped = parser;
         while (unwrapped instanceof ParserDecorator decorator) {
             unwrapped = decorator.getWrappedParser();
         }
-        if (targetClass.isInstance(unwrapped)) {
+        if (unwrapped.getClass().getSimpleName().equals(simpleName)) {
             return true;
         }
         if (unwrapped instanceof CompositeParser composite) {
-            var field = CompositeParser.class.getDeclaredField("parsers");
-            field.setAccessible(true);
-            @SuppressWarnings("unchecked")
-            List<Parser> children = (List<Parser>) field.get(composite);
-            for (Parser child : children) {
-                if (containsParser(child, targetClass)) {
+            for (Parser child : composite.getAllComponentParsers()) {
+                if (containsParser(child, simpleName)) {
                     return true;
                 }
             }
