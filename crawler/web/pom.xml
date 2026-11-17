@@ -36,7 +36,7 @@
     <netty.version>4.2.15.Final</netty.version>
 
     <mockserver.version>5.15.0</mockserver.version>      
-    <playwright.version>1.59.0</playwright.version>
+    <playwright.version>1.61.0</playwright.version>
     <selenium.version>4.43.0</selenium.version>
     <selenium-htmlunit3.version>4.44.0</selenium-htmlunit3.version>
 
@@ -202,7 +202,7 @@
     <dependency>
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
-      <version>42.7.11</version>
+      <version>42.7.12</version>
       <scope>test</scope>
     </dependency>
     <dependency>

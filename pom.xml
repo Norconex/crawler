@@ -75,8 +75,8 @@
     <!-- Other dependencies -->
     <ant.version>1.10.17</ant.version>
     <h2.version>2.4.240</h2.version>
-    <httpclient5.version>5.6</httpclient5.version>
-    <jackson.version>3.2.0</jackson.version>
+    <httpclient5.version>5.6.3</httpclient5.version>
+    <jackson.version>3.2.1</jackson.version>
     <!-- Shared jackson-annotations pin (Jackson 2 AND Jackson 3 use this single 2.x
          artifact). Must satisfy the newest Jackson on the classpath; see the
          dependencyManagement note. Match to the Jackson 3 line: 3.0.x -> 2.20, 3.2.x -> 2.22. -->
@@ -84,14 +84,14 @@
     <!-- Jackson 2.x line, used ONLY by transitive test deps (MockServer).
          Keep aligned with the Jackson 3 line's annotations
          generation: Jackson 3.0.x -> 2.20.x; 3.2.x -> 2.22.x. -->
-    <jackson2.version>2.22.0</jackson2.version>
+    <jackson2.version>2.22.1</jackson2.version>
     <jakarta-activation.version>2.1.4</jakarta-activation.version>
     <jakarta-el-api.version>6.0.1</jakarta-el-api.version>
     <jaxb-runtime.version>2.3.5</jaxb-runtime.version>
     <jetty.version>11.0.25</jetty.version>
     <json.version>1.8</json.version>
     <!-- 1.17.1+ required by Tika 3.x JSoupParser (TagSet class) -->
-    <jsoup.version>1.22.2</jsoup.version>
+    <jsoup.version>1.23.1</jsoup.version>
     <log4j.version>2.24.3</log4j.version>
     <picocli.version>4.7.7</picocli.version>
     <slf4j.version>2.0.17</slf4j.version>
@@ -141,8 +141,8 @@
     <maven-javadoc-plugin.version>3.12.0</maven-javadoc-plugin.version>
     <maven-remote-resources-plugin.version>3.2.0</maven-remote-resources-plugin.version>
     <maven-source-plugin.version>3.4.0</maven-source-plugin.version>
-    <maven-failsafe-plugin.version>3.5.5</maven-failsafe-plugin.version>
-    <maven-surefire-plugin.version>3.5.5</maven-surefire-plugin.version>
+    <maven-failsafe-plugin.version>3.5.6</maven-failsafe-plugin.version>
+    <maven-surefire-plugin.version>3.5.6</maven-surefire-plugin.version>
     <sonar-maven-plugin.version>3.10.0.2594</sonar-maven-plugin.version>
     <therapi.version>0.15.0</therapi.version>
     <versions-maven-plugin.version>2.21.0</versions-maven-plugin.version>
