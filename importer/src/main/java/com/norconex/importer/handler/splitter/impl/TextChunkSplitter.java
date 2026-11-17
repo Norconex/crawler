@@ -25,9 +25,9 @@ import com.norconex.commons.lang.io.TextReader;
 import com.norconex.commons.lang.map.Properties;
 import com.norconex.importer.doc.Doc;
 import com.norconex.importer.doc.DocMetaConstants;
+import com.norconex.importer.handler.ConfigurableDocHandler;
 import com.norconex.importer.handler.DocHandlerContext;
 import com.norconex.importer.handler.DocHandlerException;
-import com.norconex.importer.handler.splitter.AbstractDocumentSplitter;
 
 import lombok.Data;
 
@@ -56,7 +56,8 @@ import lombok.Data;
  * A document short enough to fit in a single chunk is left untouched (no
  * child documents are created). A document that is split is discarded in
  * favor of its chunks, unless
- * {@link TextChunkSplitterConfig#isDiscardOriginal()} is turned off.
+ * {@link TextChunkSplitterConfig#isKeepOriginal()} is turned on (the reverse
+ * of what the other splitters do by default: see that class for why).
  * </p>
  *
  * @see <a href="https://crawler.norconex.com/docs/reference/importer/TextChunkSplitter">
@@ -64,7 +65,7 @@ import lombok.Data;
  */
 @Data
 public class TextChunkSplitter
-        extends AbstractDocumentSplitter<TextChunkSplitterConfig> {
+        implements ConfigurableDocHandler<TextChunkSplitterConfig> {
 
     public static final String DOC_CHUNK_INDEX = "document.chunk.index";
     public static final String DOC_CHUNK_COUNT = "document.chunk.count";
@@ -104,6 +105,23 @@ public class TextChunkSplitter
     }
 
     @Override
+    public boolean handle(DocHandlerContext docCtx) throws IOException {
+        split(docCtx);
+        if (!docCtx.childDocs().isEmpty() && !configuration.isKeepOriginal()) {
+            docCtx.rejectedBy(this);
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Cuts the document's text into chunks, added to the context as child
+     * documents. Does nothing if the text fits in one chunk.
+     *
+     * @param docCtx the document to split
+     * @throws DocHandlerException if the text could not be read, or the
+     *     configuration cannot be used
+     */
     public void split(DocHandlerContext docCtx) throws DocHandlerException {
         validate();
         try {

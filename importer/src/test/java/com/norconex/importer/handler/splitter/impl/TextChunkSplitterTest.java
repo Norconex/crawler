@@ -64,12 +64,19 @@ class TextChunkSplitterTest {
     }
 
     @Test
+    void testKeepOriginalIsFalseByDefaultLikeEveryOtherBoolean() {
+        // This splitter discards the original by default, unlike the other
+        // splitters, but through a "keep" that is false by default.
+        assertThat(new TextChunkSplitterConfig().isKeepOriginal()).isFalse();
+    }
+
+    @Test
     void testOriginalCanBeKeptOnceSplit() throws IOException {
         var splitter = new TextChunkSplitter();
         splitter.getConfiguration()
                 .setMaxChunkSize(50)
                 .setChunkOverlap(0)
-                .setDiscardOriginal(false);
+                .setKeepOriginal(true);
 
         var docCtx = TestUtil.newHandlerContext(
                 "Paragraph number one is here.\n\n"
@@ -297,7 +304,8 @@ class TextChunkSplitterTest {
         splitter.getConfiguration()
                 .setMaxChunkSize(500)
                 .setChunkOverlap(50)
-                .setReferenceChunkPrefix("#part");
+                .setReferenceChunkPrefix("#part")
+                .setKeepOriginal(true);
         assertThatNoException().isThrownBy(
                 () -> BeanMapper.DEFAULT.assertWriteRead(splitter));
     }

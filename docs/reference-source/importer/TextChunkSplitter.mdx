@@ -36,11 +36,18 @@ own, going through the importer again from its first handler, and are not
 split a second time.
 
 Each chunk produced carries a `document.chunk.index` field (1-based) and a
-`document.chunk.count` field with the total number of chunks. Unlike other
-splitters, the original document is discarded by default once it has been
-split: a document long enough to need chunking is too long to embed whole,
-so passing it along next to its chunks would make the embedding step fail.
-Set `discardOriginal` to `false` if you do want to keep it.
+`document.chunk.count` field with the total number of chunks. Each chunk is a
+document of its own, and is processed as such right after the split: it goes
+through the importer again from its first handler and is committed (or
+rejected) like any other document, whatever becomes of the original.
+
+Unlike other splitters, the original document is discarded by default once it
+has been split: a document long enough to need chunking is too long to embed
+whole, so passing it along next to its chunks would make the embedding step
+fail. The other splitters keep it unless told to `discardOriginal`; this one
+has `keepOriginal` instead, `false` by default, so that no boolean property of
+the crawler's configuration defaults to `true`. Set `keepOriginal` to `true` if
+you do want to keep the original.
 
 ## Properties
 
@@ -51,10 +58,13 @@ the next one. They count toward `maxChunkSize`, and must not be more than half
 of it. Default is 100, so a `maxChunkSize` under 200 needs a smaller overlap
 set as well. Set to 0 to disable.
 
-### discardOriginal
+### keepOriginal
 
-Discard the original document after the split is performed. Default is
-`true` for this splitter.
+Keep the original document, next to its chunks, after it was split. Only
+applies when the document was actually split. Default is `false`: the
+original is discarded in favor of its chunks. This is the reverse of the other
+splitters (which have `discardOriginal`, `false` by default), for the reason
+given above.
 
 ### label
 
