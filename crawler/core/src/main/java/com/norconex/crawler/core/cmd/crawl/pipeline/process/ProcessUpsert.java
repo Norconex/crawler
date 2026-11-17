@@ -71,13 +71,15 @@ final class ProcessUpsert {
     // commit is upsert this method is recursively invoked for children
     private static void processImportResponse(ProcessContext ctx) {
 
-        if (!commitOrRejectDocument(ctx)) {
-            ProcessFinalize.execute(ctx);
-            return;
-        }
+        // Committed or rejected, the document itself is dealt with first.
+        // What happens to it says nothing of its children: a handler can
+        // split a document into parts and have the original discarded
+        // (a text chunk splitter does), which rejects the parent but is
+        // meant to leave the parts to go on, as documents of their own.
+        commitOrRejectDocument(ctx);
 
-        // Finalize (i.e., write to the crawl ledger) on the success path
-        // too, not just on rejection. Without this, a successfully
+        // Finalize (i.e., write to the crawl ledger) whether the document
+        // was committed or rejected. Without this, a successfully
         // committed document is never marked processed in the ledger:
         // for the top-level document this is harmless (CrawlerProcessStep
         // finalizes it afterward regardless), but for a child/embedded

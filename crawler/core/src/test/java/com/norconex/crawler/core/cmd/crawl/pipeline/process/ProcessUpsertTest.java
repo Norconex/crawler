@@ -305,4 +305,84 @@ class ProcessUpsertTest {
         // attachment removed from an email, or a file removed from a zip).
         verify(ledger).updateEntry(childEntry);
     }
+    // -----------------------------------------------------------------
+    // Rejected response with nested (child) documents: a handler that
+    // splits a document and discards the original (e.g. a text chunk
+    // splitter) rejects the parent, but its parts must go on.
+    // -----------------------------------------------------------------
+
+    @Test
+    void execute_rejectedResponseWithChildren_stillCommitsTheChildren() {
+        var child1 = new ImporterResponse("ref:part-1", Status.SUCCESS);
+        child1.setDoc(new Doc("ref:part-1"));
+        var child2 = new ImporterResponse("ref:part-2", Status.SUCCESS);
+        child2.setDoc(new Doc("ref:part-2"));
+
+        var parent = new ImporterResponse("ref:split", Status.REJECTED);
+        parent.setNestedResponses(List.of(child1, child2));
+
+        when(importerPipeline.apply(any())).thenReturn(parent);
+        when(crawlCtx.createCrawlEntry("ref:part-1"))
+                .thenReturn(new CrawlerEntry("ref:part-1"));
+        when(crawlCtx.createCrawlEntry("ref:part-2"))
+                .thenReturn(new CrawlerEntry("ref:part-2"));
+
+        var ctx = buildCtx("ref:split", ProcessingOutcome.NEW);
+        ProcessUpsert.execute(ctx);
+
+        // The parent is rejected, and is not committed...
+        assertThat(
+                ctx.docContext().getCurrentCrawlEntry()
+                        .getProcessingOutcome())
+                                .isEqualTo(ProcessingOutcome.REJECTED);
+        assertThat(ctx.finalized()).isTrue();
+        // ...but each of its parts is: two commits, none for the parent.
+        verify(committerPipeline, times(2)).accept(any());
+    }
+
+    @Test
+    void execute_rejectedResponseWithChildren_tracksTheChildrenInTheLedger() {
+        var child = new ImporterResponse("ref:part-ledger", Status.SUCCESS);
+        child.setDoc(new Doc("ref:part-ledger"));
+
+        var parent = new ImporterResponse("ref:split-ledger", Status.REJECTED);
+        parent.setNestedResponses(List.of(child));
+
+        when(importerPipeline.apply(any())).thenReturn(parent);
+        var childEntry = new CrawlerEntry("ref:part-ledger");
+        when(crawlCtx.createCrawlEntry("ref:part-ledger"))
+                .thenReturn(childEntry);
+
+        var ctx = buildCtx("ref:split-ledger", ProcessingOutcome.NEW);
+        ProcessUpsert.execute(ctx);
+
+        assertThat(childEntry.getProcessingOutcome())
+                .isEqualTo(ProcessingOutcome.NEW);
+        verify(ledger).updateEntry(childEntry);
+    }
+
+    @Test
+    void execute_rejectedResponseWithRejectedChild_rejectsOnlyTheChild() {
+        var kept = new ImporterResponse("ref:part-kept", Status.SUCCESS);
+        kept.setDoc(new Doc("ref:part-kept"));
+        var dropped = new ImporterResponse("ref:part-dropped", Status.REJECTED);
+        dropped.setDoc(new Doc("ref:part-dropped"));
+
+        var parent = new ImporterResponse("ref:split-mixed", Status.REJECTED);
+        parent.setNestedResponses(List.of(kept, dropped));
+
+        when(importerPipeline.apply(any())).thenReturn(parent);
+        var keptEntry = new CrawlerEntry("ref:part-kept");
+        var droppedEntry = new CrawlerEntry("ref:part-dropped");
+        when(crawlCtx.createCrawlEntry("ref:part-kept")).thenReturn(keptEntry);
+        when(crawlCtx.createCrawlEntry("ref:part-dropped"))
+                .thenReturn(droppedEntry);
+
+        ProcessUpsert
+                .execute(buildCtx("ref:split-mixed", ProcessingOutcome.NEW));
+
+        verify(committerPipeline, times(1)).accept(any());
+        assertThat(droppedEntry.getProcessingOutcome())
+                .isEqualTo(ProcessingOutcome.REJECTED);
+    }
 }
