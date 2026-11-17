@@ -23,6 +23,7 @@ import com.norconex.crawler.core.CrawlerConfig;
 import com.norconex.crawler.core.doc.operations.filter.MetadataFilter;
 import com.norconex.crawler.core.doc.operations.filter.ReferenceFilter;
 import com.norconex.crawler.core.fetch.Fetcher;
+import com.norconex.crawler.fs.doc.operations.checksum.FsMetadataChecksummer;
 import com.norconex.crawler.fs.fetch.impl.local.LocalFetcher;
 
 import lombok.Data;
@@ -34,7 +35,16 @@ import lombok.experimental.FieldNameConstants;
 /**
  * <p>
  * File System Crawler configuration. Behaves like {@link CrawlerConfig},
- * with two additions.
+ * with three additions.
+ * </p>
+ *
+ * <h2>Default metadata checksummer</h2>
+ * <p>
+ * An {@link FsMetadataChecksummer} is set by default, so a file that has not
+ * changed (same last modified date and size) since the previous crawl is
+ * recognized before it is read and imported again, as pages are on the web.
+ * Set the metadata checksummer to {@code null} to turn this off and have
+ * every file processed on every crawl.
  * </p>
  *
  * <h2>Default fetcher</h2>
@@ -85,6 +95,7 @@ public class FsCrawlerConfig extends CrawlerConfig {
 
     public FsCrawlerConfig() {
         setFetchers(List.<Fetcher>of(new LocalFetcher()));
+        setMetadataChecksummer(new FsMetadataChecksummer());
     }
 
     /**
