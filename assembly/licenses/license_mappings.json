@@ -182,7 +182,7 @@
     {
       "spdx_id": "Unicode-3.0",
       "full_name": "Unicode License v3",
-      "patterns": ["^unicode icu license$", "^unicode license v 3$"]
+      "patterns": ["^unicode icu license$", "^unicode license v 3$", "^unicode 3$", "^unicode 3 0$"]
     },
     {
       "spdx_id": "MIT",
