@@ -14,221 +14,150 @@
  */
 package com.norconex.importer.handler.parser.impl;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.tika.config.TikaConfig;
+import org.apache.tika.config.loader.TikaJsonConfig;
+import org.apache.tika.config.loader.TikaLoader;
 import org.apache.tika.exception.TikaException;
-import org.apache.tika.metadata.filter.FieldNameMappingFilter;
-import org.apache.tika.parser.ocr.TesseractOCRParser;
-import org.apache.tika.parser.sentiment.SentimentAnalysisParser;
-import org.w3c.dom.Element;
+import org.apache.tika.parser.AutoDetectParser;
+import org.apache.tika.parser.Parser;
 
-import com.norconex.commons.lang.xml.Xml;
-import com.norconex.commons.lang.xml.XmlUtil;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 final class DefTikaConfigurer {
+
+    private static final String TESSERACT_PARSER_NAME = "tesseract-ocr-parser";
+    private static final String JOURNAL_PARSER_NAME = "journal-parser";
+
+    private static final String TESSERACT_CLASS =
+            "org.apache.tika.parser.ocr.TesseractOCRParser";
+    private static final String JOURNAL_CLASS =
+            "org.apache.tika.parser.journal.JournalParser";
 
     private DefTikaConfigurer() {
     }
 
-    // Useful: https://tika.apache.org/2.7.0/configuring.html
-    // and: https://cwiki.apache.org/confluence/display/tika/TikaOCR
-    // and: https://cwiki.apache.org/confluence/display/TIKA/Metadata+Filters
-    static TikaConfig configure(DefaultParserConfig config) throws IOException {
+    private static boolean isPresent(String className) {
         try {
-            var docBuilderfactory = XmlUtil.createDocumentBuilderFactory();
-            docBuilderfactory.setNamespaceAware(true);
-            var tikaXml = Xml.of("properties")
-                    .setDocumentBuilderFactory(docBuilderfactory)
-                    .create();
+            Class.forName(className, false,
+                    DefTikaConfigurer.class.getClassLoader());
+            return true;
+        } catch (ClassNotFoundException | LinkageError e) {
+            return false;
+        }
+    }
 
-            tikaXml.addXML("""
-                    <service-loader
-                        loadErrorHandler="WARN"
-                        initializableProblemHandler="IGNORE"/>
-                    """);
-
-            //TODO How to handle Tika 2.x changing original metadata
-            // to different ones? Here we do title being an obvious one
-            // people expects from HTML.
-            // shall we do our own normalization above those standards?
-            // Adopt and document tika normalization rules?
-
-            //TODO why the following isn't working?
-            tikaXml.addXML("""
-                    <metadataFilters>
-                      <metadataFilter class="%s">
-                        <params>
-                          <excludeUnmapped>false</excludeUnmapped>
-                          <!--
-                          <mappings>
-                            <mapping from="dc:title" to="title"/>
-                          </mappings>
-                          -->
-                        </params>
-                      </metadataFilter>
-                    </metadataFilters>
-                    """.formatted(FieldNameMappingFilter.class.getName()));
-
-            var parsersXml = tikaXml.addElement("parsers");
+    // Useful: https://tika.apache.org/4.x/configuring.html
+    // and: https://cwiki.apache.org/confluence/display/tika/TikaOCR
+    static AutoDetectParser configure(DefaultParserConfig config)
+            throws IOException {
+        try {
             var ocr = config.getOcrConfig();
-            var sentiment = config.getSentimentConfig();
 
             // Exclude parsers from the default parser composite that must
             // not be auto-initialized with their default settings:
-            // - Tesseract OCR, when explicitly configured (re-added below
-            //   with the supplied settings).
-            // - Sentiment analysis, always. Unlike most Tika parsers,
-            //   SentimentAnalysisParser downloads a model from the network
-            //   the moment it is initialized, regardless of whether it
-            //   ever gets used. Left unexcluded, this network call happens
-            //   for every document parser initialization (i.e., typically
-            //   on startup), which can slow down or fail startup when the
-            //   model URL is unreachable. It is re-added below, with our
-            //   own configured settings, only when explicitly enabled.
-            var excludesXml = new StringBuilder();
-            if (!ocr.isDisabled()) {
-                excludesXml.append("<parser-exclude class=\"%s\"/>"
-                        .formatted(TesseractOCRParser.class.getName()));
+            // - Tesseract OCR, when enabled (re-added below with the
+            //   supplied settings).
+            // - Journal parser (relies on a Grobid service), unless Grobid
+            //   is explicitly enabled.
+            List<String> excludes = new ArrayList<>();
+            var withOcr = !ocr.isDisabled() && isPresent(TESSERACT_CLASS);
+            if (!ocr.isDisabled() && !withOcr) {
+                LOG.warn("OCR is enabled but the Tika Tesseract OCR module is "
+                        + "not on the classpath. OCR will not be performed.");
             }
-            excludesXml.append("<parser-exclude class=\"%s\"/>"
-                    .formatted(SentimentAnalysisParser.class.getName()));
-            parsersXml.addXML(
-                    """
-                            <parser class="%s">
-                                %s
-                            </parser>
-                            """.formatted(
-                            org.apache.tika.parser.DefaultParser.class
-                                    .getName(),
-                            excludesXml));
-
-            // https://cwiki.apache.org/confluence/display/TIKA/TikaOCR
-            if (!ocr.isDisabled()) {
-                // Configure Tesseract OCR
-                parsersXml.addXML(
-                        new TesseractParserConfigBuilder()
-                                .append("applyRotation", ocr.getApplyRotation())
-                                .append("colorSpace", ocr.getColorSpace())
-                                .append("density", ocr.getDensity())
-                                .append("depth", ocr.getDepth())
-                                .append(
-                                        "enableImagePreprocessing",
-                                        ocr.getEnableImagePreprocessing())
-                                .append("filter", ocr.getFilter())
-                                .append(
-                                        "imageMagickPath",
-                                        ocr.getImageMagickPath())
-                                .append("language", ocr.getLanguage())
-                                .append(
-                                        "maxFileSizeToOcr",
-                                        ocr.getMaxFileSizeToOcr())
-                                .append(
-                                        "minFileSizeToOcr",
-                                        ocr.getMinFileSizeToOcr())
-                                .append("pageSegMode", ocr.getPageSegMode())
-                                .append("pageSeparator", ocr.getPageSeparator())
-                                .append(
-                                        "preserveInterwordSpacing",
-                                        ocr.getPreserveInterwordSpacing())
-                                .append("resize", ocr.getResize())
-                                .append("skipOcr", ocr.isDisabled())
-                                .append("tessdataPath", ocr.getTessdataPath())
-                                .append("tesseractPath", ocr.getTesseractPath())
-                                .append(
-                                        "timeoutSeconds",
-                                        ocr.getTimeoutSeconds())
-                                .build());
+            if (withOcr) {
+                excludes.add(TESSERACT_PARSER_NAME);
+            }
+            // Names that are not registered (module absent) make Tika fail.
+            if (!config.getGrobidConfig().isEnabled()
+                    && isPresent(JOURNAL_CLASS)) {
+                excludes.add(JOURNAL_PARSER_NAME);
             }
 
-            // Configure sentiment analysis, only when explicitly enabled.
-            if (sentiment.isEnabled()) {
-                parsersXml.addXML(
-                        """
-                                <parser class="%s">
-                                    <params>
-                                        <param name="modelPath" type="string">%s</param>
-                                    </params>
-                                </parser>
-                                """.formatted(
-                                SentimentAnalysisParser.class.getName(),
-                                StringUtils.defaultIfBlank(
-                                        sentiment.getModelPath(),
-                                        SentimentConfig.DEFAULT_MODEL_PATH)));
-            }
+            var mapper = new ObjectMapper();
+            var defaultParser = mapper.createObjectNode();
+            defaultParser.putArray("exclude").addAll(
+                    excludes.stream()
+                            .map(mapper.getNodeFactory()::textNode)
+                            .toList());
+            var root = mapper.createObjectNode();
+            root.putArray("parsers")
+                    .addObject().set("default-parser", defaultParser);
 
+            var tikaConfig = TikaJsonConfig.load(
+                    new ByteArrayInputStream(
+                            mapper.writeValueAsBytes(root)));
+            var loader = TikaLoader.load(
+                    tikaConfig, DefTikaConfigurer.class.getClassLoader());
+
+            List<Parser> parsers = new ArrayList<>();
+            parsers.add(loader.loadParsers());
+            if (withOcr) {
+                parsers.add(TesseractParserFactory.create(ocr));
+            }
             // XFDL Parser
             // https://issues.apache.org/jira/browse/TIKA-2222
-            parsersXml.addXML(
-                    """
-                            <parser class="%s">
-                                <mime>application/vnd.xfdl</mime>
-                            </parser>
-                            """
-                            .formatted(XfdlTikaParser.class.getName()));
-
-            return new TikaConfig((Element) tikaXml.getNode());
+            parsers.add(new XfdlTikaParser());
+            return new AutoDetectParser(parsers.toArray(Parser[]::new));
         } catch (TikaException e) {
             throw new IOException("Could not configure Tika.", e);
         }
     }
 
-    static class TesseractParserConfigBuilder {
-        private final Xml parser = new Xml("parser")
-                .setAttribute("class", TesseractOCRParser.class.getName());
-        private final Xml params = parser.addElement("params");
+    /**
+     * Kept in its own class so the Tesseract parser (an optional Tika module)
+     * is only loaded when OCR is enabled.
+     */
+    static final class TesseractParserFactory {
+        private TesseractParserFactory() {
+        }
 
-        TesseractParserConfigBuilder append(String name, Boolean value) {
-            if (value != null) {
-                return append(name, "bool", Boolean.toString(value));
+        static Parser create(OcrConfig ocr) throws TikaException {
+            var cfg = new org.apache.tika.parser.ocr.TesseractOCRConfig();
+            set(ocr.getApplyRotation(), cfg::setApplyRotation);
+            set(ocr.getColorSpace(), cfg::setColorspace);
+            set(ocr.getDensity(), cfg::setDensity);
+            set(ocr.getDepth(), cfg::setDepth);
+            set(ocr.getEnableImagePreprocessing(),
+                    cfg::setEnableImagePreprocessing);
+            set(ocr.getFilter(), cfg::setFilter);
+            set(ocr.getLanguage(), cfg::setLanguage);
+            set(ocr.getMaxFileSizeToOcr(), cfg::setMaxFileSizeToOcr);
+            set(ocr.getMinFileSizeToOcr(), cfg::setMinFileSizeToOcr);
+            set(ocr.getPageSegMode(), cfg::setPageSegMode);
+            set(ocr.getPageSeparator(), cfg::setPageSeparator);
+            set(ocr.getPreserveInterwordSpacing(),
+                    cfg::setPreserveInterwordSpacing);
+            set(ocr.getResize(), cfg::setResize);
+            set(ocr.getSkipOcr(), cfg::setSkipOcr);
+            set(ocr.getTimeoutSeconds(), s -> cfg.setTimeoutMillis(s * 1000L));
+            if (ocr.getImageMagickPath() != null) {
+                cfg.setImageMagickPath(abs(ocr.getImageMagickPath()));
             }
-            return this;
-        }
-
-        TesseractParserConfigBuilder append(String name, String value) {
-            if (value != null) {
-                return append(name, "string", value);
+            if (ocr.getTessdataPath() != null) {
+                cfg.setTessdataPath(abs(ocr.getTessdataPath()));
             }
-            return this;
-        }
-
-        TesseractParserConfigBuilder append(String name, Integer value) {
-            if (value != null) {
-                return append(name, "int", Integer.toString(value));
+            if (ocr.getTesseractPath() != null) {
+                cfg.setTesseractPath(abs(ocr.getTesseractPath()));
             }
-            return this;
+            return new org.apache.tika.parser.ocr.TesseractOCRParser(cfg);
         }
 
-        TesseractParserConfigBuilder append(String name, Long value) {
-            if (value != null) {
-                return append(name, "long", Long.toString(value));
-            }
-            return this;
+        private static String abs(java.nio.file.Path p) {
+            return p.toAbsolutePath().toString();
         }
 
-        TesseractParserConfigBuilder append(String name, Path value) {
-            return append(
-                    name, "string", Optional.ofNullable(value)
-                            .map(Path::toAbsolutePath)
-                            .map(Path::toString).orElse(null));
-        }
-
-        private TesseractParserConfigBuilder append(
-                String name, String type, String value) {
-            if (StringUtils.isNotBlank(value)) {
-                params.addElement("param")
-                        .setAttribute("name", name)
-                        .setAttribute("type", type)
-                        .setTextContent(value);
-            }
-            return this;
-        }
-
-        public Xml build() {
-            return parser;
+        private static <T> void set(T value, java.util.function.Consumer<T> c) {
+            Optional.ofNullable(value).ifPresent(c);
         }
     }
 }

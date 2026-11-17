@@ -61,8 +61,8 @@ class TikaUtil {
             String name, List<String> nxValues, String tikaValue) {
         if (EqualsUtil.equalsAnyIgnoreCase(
                 name,
-                HttpHeaders.CONTENT_TYPE,
-                HttpHeaders.CONTENT_ENCODING)) {
+                HttpHeaders.CONTENT_TYPE.getName(),
+                HttpHeaders.CONTENT_ENCODING.getName())) {
             var tk = tikaValue.replaceAll("[\\s]", "");
             for (String nxValue : nxValues) {
                 if (nxValue.replaceAll("[\\s]", "").equalsIgnoreCase(tk)) {

@@ -168,6 +168,37 @@ public class LanguageTransformerConfig extends BaseDocHandlerConfig
      */
     private boolean keepProbabilities;
 
+    /**
+     * Which Tika language detector to use.
+     */
+    public enum Detector {
+        /**
+         * The Optimaize detector (default). Supports about 70 languages
+         * and handles short text best.
+         */
+        OPTIMAIZE,
+        /**
+         * The Tika "charsoup" detector. Supports over 200 languages but
+         * is less accurate on short text.
+         */
+        CHARSOUP,
+        /**
+         * Optimaize, plus charsoup restricted to the configured
+         * <code>languages</code> that Optimaize does not support.
+         * Without configured languages, same as {@link #OPTIMAIZE}.
+         */
+        AUTO
+    }
+
+    /**
+     * The language detector to use. Default is {@link Detector#OPTIMAIZE}.
+     * Detected languages are reported with two-letter codes whenever one
+     * exists, else with the detector's three-letter code.
+     * @param detector the detector
+     * @return the detector
+     */
+    private Detector detector = Detector.OPTIMAIZE;
+
     private final List<String> languages = new ArrayList<>();
 
     private final TextMatcher fieldMatcher = new TextMatcher();

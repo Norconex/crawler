@@ -232,7 +232,7 @@ public class CharsetDetector {
             return fallbackCharset;
         }
 
-        var cd = new org.apache.tika.parser.txt.CharsetDetector();
+        var cd = new com.ibm.icu.text.CharsetDetector();
         if (declaredCharset != null) {
             cd.setDeclaredEncoding(declaredCharset.toString());
         }
@@ -259,7 +259,7 @@ public class CharsetDetector {
      * and if so, we return UTF-8 instead.
      */
     private static Charset doDetect(
-            org.apache.tika.parser.txt.CharsetDetector cd) {
+            com.ibm.icu.text.CharsetDetector cd) {
         var matches = cd.detectAll();
         if (ArrayUtils.isEmpty(matches)) {
             return null;

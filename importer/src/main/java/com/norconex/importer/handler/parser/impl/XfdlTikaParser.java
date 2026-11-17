@@ -27,6 +27,7 @@ import java.util.zip.GZIPInputStream;
 import org.apache.commons.codec.binary.Base64InputStream;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.mime.MediaType;
@@ -71,7 +72,7 @@ public class XfdlTikaParser extends XMLParser {
 
     @Override
     public void parse(
-            InputStream stream, ContentHandler handler,
+            TikaInputStream stream, ContentHandler handler,
             Metadata metadata, ParseContext context)
             throws IOException, SAXException, TikaException {
 
@@ -85,7 +86,7 @@ public class XfdlTikaParser extends XMLParser {
         } else {
             is.reset();
         }
-        super.parse(is, handler, metadata, context);
+        super.parse(TikaInputStream.get(is), handler, metadata, context);
     }
 
     @Override

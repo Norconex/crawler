@@ -107,6 +107,16 @@ If you do not restrict the list of language candidates to detect, the default be
 
 ## Properties
 
+### detector
+
+Which Tika language detector to use:
+
+- `OPTIMAIZE` (default): about 70 languages, and the more reliable choice for short text such as titles.
+- `CHARSOUP`: over 200 languages, but it is noticeably less accurate on short text.
+- `AUTO`: Optimaize, plus charsoup for the languages you list in `languages` that Optimaize does not support. The best score wins. Without `languages`, it behaves like `OPTIMAIZE`.
+
+Detected languages are reported with two-letter codes (`en`, `fr`) whenever one exists. Charsoup languages that have none (for example `diq`) are reported with their three-letter code.
+
 ### fallbackLanguage
 
 Defines a default language to assign if detection fails.

@@ -44,8 +44,8 @@ class TikaParserTest {
     @Test
     void testParse(@TempDir Path tempDir) throws IOException {
 
-        var tikaConfig = tempDir.resolve("tika.xml");
-        Files.writeString(tikaConfig, "<properties></properties>");
+        var tikaConfig = tempDir.resolve("tika-config.json");
+        Files.writeString(tikaConfig, "{}");
 
         var parser = Configurable.configure(
                 new TikaParser(),

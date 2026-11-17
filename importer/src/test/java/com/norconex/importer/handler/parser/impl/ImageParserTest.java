@@ -91,8 +91,8 @@ class ImageParserTest {
                 .hasContentType("image/x-jbig2")
                 .hasContentFamily("Image")
                 .hasExtension("jb2")
-                .hasMetaValue("width", "125")
-                .hasMetaValue("height", "16");
+                .hasMetaValue("img:width", "125")
+                .hasMetaValue("img:height", "16");
     }
 
     private void testParsing(String contentType, String extension)

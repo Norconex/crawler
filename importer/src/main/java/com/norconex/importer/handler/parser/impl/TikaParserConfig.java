@@ -24,7 +24,7 @@ import lombok.experimental.Accessors;
 public class TikaParserConfig extends BaseDocHandlerConfig {
 
     /**
-     * The path to a Tika configuration file.
+     * The path to a Tika JSON configuration file (Tika 4 no longer supports XML).
      */
     private String tikaConfigFile;
 }

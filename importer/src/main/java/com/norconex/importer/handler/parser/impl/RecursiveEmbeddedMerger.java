@@ -20,6 +20,7 @@ import java.io.Writer;
 import java.util.LinkedList;
 import java.util.Optional;
 
+import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.metadata.TikaCoreProperties;
@@ -60,7 +61,7 @@ class RecursiveEmbeddedMerger extends ParserDecorator {
 
     @Override
     public void parse(
-            InputStream stream,
+            TikaInputStream stream,
             ContentHandler handler,
             Metadata tikaMeta,
             ParseContext context)

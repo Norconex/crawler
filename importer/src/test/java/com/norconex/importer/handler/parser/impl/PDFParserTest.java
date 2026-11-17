@@ -96,10 +96,10 @@ class PDFParserTest {
                 "Exception found: " + metadatas.get(0).get(
                         "X-TIKA:EXCEPTION:warn"));
         Assertions.assertEquals(
-                "91", metadatas.get(1).get("height"),
+                "91", metadatas.get(1).get("img:height"),
                 "Invalid height.");
         Assertions.assertEquals(
-                "352", metadatas.get(1).get("width"),
+                "352", metadatas.get(1).get("img:width"),
                 "Invalid width.");
 
         //        System.out.println("OUTPUT:" + output);

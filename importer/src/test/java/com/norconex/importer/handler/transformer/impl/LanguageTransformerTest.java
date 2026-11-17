@@ -60,6 +60,53 @@ class LanguageTransformerTest {
     }
 
     @Test
+    void testLanguageCodes() {
+        assertThat(LanguageCodes.toTwoLetters("eng")).isEqualTo("en");
+        assertThat(LanguageCodes.toTwoLetters("fra")).isEqualTo("fr");
+        assertThat(LanguageCodes.toTwoLetters("zho")).isEqualTo("zh");
+        assertThat(LanguageCodes.toTwoLetters("nob")).isEqualTo("no");
+        // no two-letter code, or already two-letter
+        assertThat(LanguageCodes.toTwoLetters("diq")).isEqualTo("diq");
+        assertThat(LanguageCodes.toTwoLetters("en")).isEqualTo("en");
+        assertThat(LanguageCodes.toThreeLetters("en")).isEqualTo("eng");
+        assertThat(LanguageCodes.toThreeLetters("zh-cn")).isEqualTo("zho");
+    }
+
+    @Test
+    void testCharsoupDetector() throws IOException {
+        var meta = detect(
+                LanguageTransformerConfig.Detector.CHARSOUP, List.of(),
+                "Le gouvernement a annoncé hier une nouvelle série de "
+                        + "mesures pour soutenir les familles.");
+        // normalized from "fra"
+        assertThat(meta.getString(DocMetaConstants.LANGUAGE)).isEqualTo("fr");
+    }
+
+    @Test
+    void testAutoDetectorUsesCharsoupForUnsupportedLanguages()
+            throws IOException {
+        // Optimaize has no Faroese, charsoup does ("fao").
+        var meta = detect(
+                LanguageTransformerConfig.Detector.AUTO,
+                List.of("en", "fo"),
+                "Hetta er ein stuttur tekstur á føroyskum, sum verður "
+                        + "brúktur til at royna málsgreining.");
+        assertThat(meta.getString(DocMetaConstants.LANGUAGE)).isEqualTo("fo");
+    }
+
+    private Properties detect(
+            LanguageTransformerConfig.Detector detector,
+            List<String> languages, String text) throws IOException {
+        var factory = new CachedStreamFactory(10 * 1024, 10 * 1024);
+        var t = new LanguageTransformer();
+        t.getConfiguration().setDetector(detector).setLanguages(languages);
+        var meta = new Properties();
+        t.handle(TestUtil.newHandlerContext(
+                "n/a", factory.newInputStream(text), meta, ParseState.POST));
+        return meta;
+    }
+
+    @Test
     void testNonMatchingDocLanguage() throws IOException {
         var factory = new CachedStreamFactory(10 * 1024, 10 * 1024);
         var t = new LanguageTransformer();

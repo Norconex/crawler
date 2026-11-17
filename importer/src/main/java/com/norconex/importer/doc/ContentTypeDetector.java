@@ -175,7 +175,8 @@ public final class ContentTypeDetector {
                     TikaCoreProperties.RESOURCE_NAME_KEY,
                     "file:///detect" + extension);
         }
-        var media = DETECTOR.detect(tikaStream, meta);
+        var media = DETECTOR.detect(tikaStream, meta,
+                new org.apache.tika.parser.ParseContext());
 
         LOG.debug("Detected \"{}\" content-type for file: {}", media, fileName);
         return ContentType.valueOf(media.toString());

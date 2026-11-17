@@ -14,6 +14,7 @@
  */
 package com.norconex.crawler.web.doc.operations.link.impl;
 
+import static org.apache.commons.lang3.StringUtils.firstNonBlank;
 import static org.apache.commons.lang3.StringUtils.trimToNull;
 
 import java.io.ByteArrayInputStream;
@@ -123,7 +124,8 @@ public class TikaLinkExtractor
 
         var parser = new JSoupParser();
         try (is) {
-            parser.parse(is, linkHandler, metadata, parseContext);
+            parser.parse(org.apache.tika.io.TikaInputStream.get(is),
+                    linkHandler, metadata, parseContext);
             var tikaLinks = linkHandler.getLinks();
             tikaLinks.forEach(
                     tikaLink -> toNxLink(referrerUrl, tikaLink)
@@ -131,7 +133,9 @@ public class TikaLinkExtractor
 
             //grab refresh URL from metadata (if present)
             Optional.ofNullable(
-                    trimToNull(getCaseInsensitive(metadata, "refresh")))
+                    trimToNull(firstNonBlank(
+                            getCaseInsensitive(metadata, "html:refresh"),
+                            getCaseInsensitive(metadata, "refresh"))))
                     .map(LinkUtil::extractHttpEquivRefreshContentUrl)
                     .map(
                             url -> trimToNull(
