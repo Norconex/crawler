@@ -17,6 +17,7 @@ package com.norconex.crawler.core.cmd.crawl.pipeline.process;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -28,11 +29,13 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.mockito.ArgumentCaptor;
 
 import com.norconex.committer.core.service.CommitterService;
 import com.norconex.crawler.core.CrawlerConfig;
 import com.norconex.crawler.core.context.CrawlerContext;
 import com.norconex.crawler.core.doc.CrawlerDocContext;
+import com.norconex.crawler.core.doc.pipelines.ChecksumStageUtil;
 import com.norconex.crawler.core.doc.pipelines.CrawlerDocPipelines;
 import com.norconex.crawler.core.doc.pipelines.committer.CommitterPipeline;
 import com.norconex.crawler.core.doc.pipelines.importer.ImporterPipeline;
@@ -384,5 +387,54 @@ class ProcessUpsertTest {
         verify(committerPipeline, times(1)).accept(any());
         assertThat(droppedEntry.getProcessingOutcome())
                 .isEqualTo(ProcessingOutcome.REJECTED);
+    }
+    // -----------------------------------------------------------------
+    // What the next crawl knows of a document that was rejected
+    // -----------------------------------------------------------------
+
+    @Test
+    void execute_rejectedDocument_isKeptWithItsMetadataChecksumAndSkippedByTheNextRunWhenUnchanged() {
+        // First run. The metadata checksum is set on the entry by the fetch
+        // stage, before the importer sees the document, which then rejects it
+        // (a container discarded once split, say).
+        when(importerPipeline.apply(any())).thenReturn(
+                new ImporterResponse("ref:container", Status.REJECTED));
+        var ctx = buildCtx("ref:container", ProcessingOutcome.NEW);
+        ctx.docContext().getCurrentCrawlEntry().setMetaChecksum("meta-1");
+
+        ProcessUpsert.execute(ctx);
+
+        // What the ledger was given to keep for it.
+        var saved = ArgumentCaptor.forClass(CrawlerEntry.class);
+        verify(ledger, atLeastOnce()).updateEntry(saved.capture());
+        var kept = saved.getValue();
+        assertThat(kept.getProcessingOutcome())
+                .isEqualTo(ProcessingOutcome.REJECTED);
+        assertThat(kept.getMetaChecksum()).isEqualTo("meta-1");
+        // The content checksum is for what is committed: never made here.
+        assertThat(kept.getContentChecksum()).isNull();
+
+        // Next run, with that entry as the previous one: unchanged metadata
+        // is recognized, so the document is not fetched and imported again...
+        var unchanged = CrawlerDocContext.builder()
+                .doc(new Doc("ref:container"))
+                .currentCrawlEntry(new CrawlerEntry("ref:container"))
+                .previousCrawlEntry(kept)
+                .build();
+        assertThat(ChecksumStageUtil.resolveMetaChecksum("meta-1", unchanged))
+                .isFalse();
+        assertThat(unchanged.getCurrentCrawlEntry().getProcessingOutcome())
+                .isEqualTo(ProcessingOutcome.UNMODIFIED);
+
+        // ...and changed metadata is.
+        var changed = CrawlerDocContext.builder()
+                .doc(new Doc("ref:container"))
+                .currentCrawlEntry(new CrawlerEntry("ref:container"))
+                .previousCrawlEntry(kept)
+                .build();
+        assertThat(ChecksumStageUtil.resolveMetaChecksum("meta-2", changed))
+                .isTrue();
+        assertThat(changed.getCurrentCrawlEntry().getProcessingOutcome())
+                .isEqualTo(ProcessingOutcome.MODIFIED);
     }
 }
