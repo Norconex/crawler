@@ -251,9 +251,9 @@ public class LanguageTransformer
         Set<String> charsoupOnly = null;
         Set<String> optimaizeOnly = null;
 
-        if (mode != LanguageTransformerConfig.Detector.CHARSOUP) {
+        if (mode != LanguageTransformerConfig.LanguageDetector.CHARSOUP) {
             var d = new OptimaizeLangDetector();
-            if (mode == LanguageTransformerConfig.Detector.AUTO
+            if (mode == LanguageTransformerConfig.LanguageDetector.AUTO
                     && !candidates.isEmpty()) {
                 // Scores are only meaningful against all competing models,
                 // so load them all and restrict results afterwards.
@@ -273,8 +273,8 @@ public class LanguageTransformer
             }
         }
 
-        if (mode == LanguageTransformerConfig.Detector.CHARSOUP
-                || (mode == LanguageTransformerConfig.Detector.AUTO
+        if (mode == LanguageTransformerConfig.LanguageDetector.CHARSOUP
+                || (mode == LanguageTransformerConfig.LanguageDetector.AUTO
                         && !candidates.isEmpty())) {
             // Charsoup cannot load a subset of models: all are loaded and
             // results are then restricted to the wanted languages.
@@ -285,7 +285,7 @@ public class LanguageTransformer
             } else {
                 var wanted = new HashSet<String>();
                 for (String lang : candidates) {
-                    if (mode == LanguageTransformerConfig.Detector.AUTO
+                    if (mode == LanguageTransformerConfig.LanguageDetector.AUTO
                             && probe.hasModel(lang)) {
                         continue;
                     }

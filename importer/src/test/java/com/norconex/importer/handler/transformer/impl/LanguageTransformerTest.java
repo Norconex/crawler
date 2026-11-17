@@ -75,7 +75,7 @@ class LanguageTransformerTest {
     @Test
     void testCharsoupDetector() throws IOException {
         var meta = detect(
-                LanguageTransformerConfig.Detector.CHARSOUP, List.of(),
+                LanguageTransformerConfig.LanguageDetector.CHARSOUP, List.of(),
                 "Le gouvernement a annoncé hier une nouvelle série de "
                         + "mesures pour soutenir les familles.");
         // normalized from "fra"
@@ -87,7 +87,7 @@ class LanguageTransformerTest {
             throws IOException {
         // Optimaize has no Faroese, charsoup does ("fao").
         var meta = detect(
-                LanguageTransformerConfig.Detector.AUTO,
+                LanguageTransformerConfig.LanguageDetector.AUTO,
                 List.of("en", "fo"),
                 "Hetta er ein stuttur tekstur á føroyskum, sum verður "
                         + "brúktur til at royna málsgreining.");
@@ -95,7 +95,7 @@ class LanguageTransformerTest {
     }
 
     private Properties detect(
-            LanguageTransformerConfig.Detector detector,
+            LanguageTransformerConfig.LanguageDetector detector,
             List<String> languages, String text) throws IOException {
         var factory = new CachedStreamFactory(10 * 1024, 10 * 1024);
         var t = new LanguageTransformer();
