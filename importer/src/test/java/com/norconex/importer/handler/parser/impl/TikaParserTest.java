@@ -57,5 +57,10 @@ class TikaParserTest {
         parser.handle(ctx);
 
         assertThat(ctx.input().asString()).isEqualTo("content");
+        // Tika's resource name is for its own use only.
+        assertThat(ctx.metadata().keySet()).noneMatch(
+                k -> k.equalsIgnoreCase(
+                        org.apache.tika.metadata.TikaCoreProperties.RESOURCE_NAME_KEY
+                                .getName()));
     }
 }

@@ -32,7 +32,7 @@ class TikaUtil {
             Metadata tikaMeta, Properties metadata) {
         var names = tikaMeta.names();
         for (String name : names) {
-            if (TikaCoreProperties.RESOURCE_NAME_KEY.equals(name)) {
+            if (TikaCoreProperties.RESOURCE_NAME_KEY.getName().equals(name)) {
                 continue;
             }
             // When Tika 3.x returns dc: prefixed metadata (e.g. dc:title),
