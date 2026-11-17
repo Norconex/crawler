@@ -40,7 +40,9 @@ class DefaultParserTest {
                         .setSkipEmbeddedContentTypes(
                                 List.of(TextMatcher.regex(".*embedBlah.*")))
                         .setSkipEmbeddedOfContentTypes(
-                                List.of(TextMatcher.regex(".*embedOfBlah.*"))),
+                                List.of(TextMatcher.regex(".*embedOfBlah.*")))
+                        .setDiscardContainerContentTypes(
+                                List.of(TextMatcher.regex(".*discardBlah.*"))),
                 cfg -> cfg.getOcrConfig()
                         .setContentTypeMatcher(TextMatcher.regex(".*blah.*"))
                         .setLanguage("eng+fra")

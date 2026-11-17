@@ -146,16 +146,31 @@ public class DefaultParser
         }
         ctx.parseState(ParseState.POST);
         ctx.childDocs().addAll(embeddedDocs);
+        // A container that was split into documents of their own can be
+        // discarded, leaving those to carry on. Never one that is merged,
+        // nor one that held nothing to split off.
+        if (!embeddedDocs.isEmpty() && isSplit(ctx) && TextMatcher.anyMatches(
+                configuration.getEmbeddedConfig()
+                        .getDiscardContainerContentTypes(),
+                ctx.contentType().toBaseTypeString())) {
+            ctx.rejectedBy(this);
+            return false;
+        }
         return true;
+    }
+
+    /** Whether the document's embedded documents are split, not merged. */
+    private boolean isSplit(DocHandlerContext docCtx) {
+        return TextMatcher.anyMatches(
+                configuration.getEmbeddedConfig().getSplitContentTypes(),
+                docCtx.contentType().toBaseTypeString());
     }
 
     protected Parser createRecursiveParser(
             DocHandlerContext docCtx, Writer output, List<Doc> embeddedDocs) {
         // if the current file (container) matches, we extract (split)
         // its embedded documents (else, we merge).
-        if (TextMatcher.anyMatches(
-                configuration.getEmbeddedConfig().getSplitContentTypes(),
-                docCtx.contentType().toBaseTypeString())) {
+        if (isSplit(docCtx)) {
             return new RecursiveEmbeddedSplitter(
                     tikaParser,
                     docCtx,

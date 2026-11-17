@@ -17,6 +17,12 @@ Controls how the DefaultParser handles embedded documents (such as email attachm
 
 ## Properties
 
+### discardContainerContentTypes
+
+Content types of **container** files to discard once their embedded documents were split off (see `splitContentTypes`). A split container is otherwise a document of its own, with whatever content it has itself, and is committed like any other: the body of an email, the text of an office document holding pictures. A zip file has none, so you may not want it. Its embedded documents are not affected: they are documents of their own and carry on.
+
+Only applies to a container whose type is also split, and that held embedded documents. A container that is merged is the one document holding everything and is never discarded, whatever is listed here. Each level is looked at on its own: a split container inside a split container is discarded too when its type is listed. Default is to discard none.
+
 ### maxEmbeddedDepth
 
 How deep to follow embedded documents. `0` is the container itself, `1` its immediate attachments, and so on. Default is `-1`, unlimited. Embedded documents nest — a zip holding an email holding a PDF — so a limit is worth setting when containers are untrusted.

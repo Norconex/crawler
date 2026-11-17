@@ -126,6 +126,106 @@ class DefaultParserEmbeddedTest {
         ParseAssertions.assertThat(pptResponse).contains("column 1");
     }
 
+    // -----------------------------------------------------------------
+    // Discarding a container once its embedded documents were split off
+    // -----------------------------------------------------------------
+
+    @Test
+    void testDiscardContainerIsOffByDefault() throws IOException {
+        assertThat(new EmbeddedConfig().getDiscardContainerContentTypes())
+                .isEmpty();
+
+        // A zip that is split is kept, with its embedded documents.
+        var zipResponse = importFileZipFile(
+                cfg -> cfg.setSplitContentTypes(
+                        List.of(TextMatcher.basic(ZIP))));
+
+        assertThat(zipResponse.isSuccess()).isTrue();
+        assertThat(zipResponse.getNestedResponses()).hasSize(2);
+    }
+
+    @Test
+    void testDiscardContainerOfASplitZipKeepsItsEmbeddedDocuments()
+            throws IOException {
+        var zipResponse = importFileZipFile(
+                cfg -> cfg
+                        .setSplitContentTypes(List.of(TextMatcher.regex(".*")))
+                        .setDiscardContainerContentTypes(
+                                List.of(TextMatcher.basic(ZIP))));
+
+        // The zip itself is discarded...
+        assertThat(zipResponse.isRejected()).isTrue();
+        // ...but what it held carries on, as documents of their own.
+        assertThat(zipResponse.getNestedResponses()).hasSize(2);
+        assertThat(zipResponse.getNestedResponses())
+                .allMatch(ImporterResponse::isSuccess);
+
+        // A container of another type that was split is not discarded, and
+        // keeps its own embedded documents.
+        var pptResponse = findResponse(zipResponse, PPT);
+        assertThat(pptResponse.isSuccess()).isTrue();
+        assertThat(pptResponse.getNestedResponses())
+                .hasSizeGreaterThanOrEqualTo(2);
+        ParseAssertions.assertThat(
+                findResponse(pptResponse, XLS)).contains("column 1");
+    }
+
+    @Test
+    void testDiscardContainerLooksAtEachLevelOnItsOwn() throws IOException {
+        var zipResponse = importFileZipFile(
+                cfg -> cfg
+                        .setSplitContentTypes(List.of(TextMatcher.regex(".*")))
+                        .setDiscardContainerContentTypes(
+                                List.of(TextMatcher.basic(ZIP),
+                                        TextMatcher.basic(PPT))));
+
+        // Both containers are discarded, and what each held is not.
+        assertThat(zipResponse.isRejected()).isTrue();
+        var pptResponse = findResponse(zipResponse, PPT);
+        assertThat(pptResponse.isRejected()).isTrue();
+        assertThat(pptResponse.getNestedResponses())
+                .hasSizeGreaterThanOrEqualTo(2)
+                .allMatch(ImporterResponse::isSuccess);
+        assertThat(findResponse(zipResponse, TXT).isSuccess()).isTrue();
+    }
+
+    @Test
+    void testDiscardContainerNeverAppliesToADocumentWithNothingSplitOff()
+            throws IOException {
+        // Every type listed, so each document that is split is discarded:
+        // but a text file holds nothing to split off, so it is not one.
+        var zipResponse = importFileZipFile(
+                cfg -> cfg
+                        .setSplitContentTypes(List.of(TextMatcher.regex(".*")))
+                        .setDiscardContainerContentTypes(
+                                List.of(TextMatcher.regex(".*"))));
+
+        assertThat(zipResponse.isRejected()).isTrue();
+        assertThat(findResponse(zipResponse, TXT).isSuccess()).isTrue();
+        ParseAssertions.assertThat(findResponse(zipResponse, TXT))
+                .contains("Simple text file");
+    }
+
+    @Test
+    void testDiscardContainerIsIgnoredWhenTheContainerIsMerged()
+            throws IOException {
+        // Nothing is split, so the zip is the one document, holding all.
+        var merged = importFileZipFile(
+                cfg -> cfg.setDiscardContainerContentTypes(
+                        List.of(TextMatcher.basic(ZIP))));
+        assertThat(merged.isSuccess()).isTrue();
+        assertThat(merged.getNestedResponses()).isEmpty();
+        ParseAssertions.assertThat(merged).contains("column 1");
+
+        // Only another type is split: the zip is still merged.
+        var otherSplit = importFileZipFile(
+                cfg -> cfg
+                        .setSplitContentTypes(List.of(TextMatcher.basic(PPT)))
+                        .setDiscardContainerContentTypes(
+                                List.of(TextMatcher.basic(ZIP))));
+        assertThat(otherSplit.isSuccess()).isTrue();
+    }
+
     @Test
     void testMergeEmbeddedMaxDepth() throws IOException {
 

@@ -38,6 +38,15 @@ import lombok.experimental.Accessors;
  * (just like any regular document would).
  * </p>
  * <p>
+ * A container that was split is still a document of its own, with whatever
+ * content it has itself (the body of an email, the text of a document that
+ * holds pictures), and it goes on through your handlers and is committed like
+ * any other. When it has none (a zip file, say), you may not want it:
+ * list its content types with
+ * {@link #setDiscardContainerContentTypes(List)} to have it discarded once
+ * its embedded documents were split off, which are not affected.
+ * </p>
+ * <p>
  * You can also decide to skip the parsing of embedded documents. Either
  * by the content type of the parent document, or the content types of the
  * embedded documents.
@@ -55,8 +64,6 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class EmbeddedConfig implements Serializable { //{
 
-    //TODO add a "discardRootContainer" property (when split)?
-
     private static final long serialVersionUID = 1L;
 
     private final List<TextMatcher> splitContentTypes = new ArrayList<>();
@@ -64,6 +71,41 @@ public class EmbeddedConfig implements Serializable { //{
             new ArrayList<>();
     private final List<TextMatcher> skipEmbeddedContentTypes =
             new ArrayList<>();
+    private final List<TextMatcher> discardContainerContentTypes =
+            new ArrayList<>();
+
+    /**
+     * Gets the content types of containers to discard, once split. Only
+     * applies to a container that is split (see
+     * {@link #getSplitContentTypes()}) and that did hold embedded documents:
+     * the container is then discarded (rejected) and its embedded documents,
+     * which are documents of their own, carry on. A container of a type that
+     * is not split is merged with its embedded documents and is never
+     * discarded, whatever is set here. Each level is looked at on its own: a
+     * split container found inside a split container is discarded too if its
+     * type is listed.
+     * <p>
+     * Default is to discard none: a split container is kept, as it always was.
+     * </p>
+     * @return list of content type matcher
+     */
+    public List<TextMatcher> getDiscardContainerContentTypes() {
+        return Collections.unmodifiableList(discardContainerContentTypes);
+    }
+
+    /**
+     * Sets the content types of containers to discard, once split.
+     * See {@link #getDiscardContainerContentTypes()}.
+     * @param discardContainerContentTypes list of content type matcher
+     * @return this instance
+     */
+    public EmbeddedConfig setDiscardContainerContentTypes(
+            List<TextMatcher> discardContainerContentTypes) {
+        CollectionUtil.setAll(
+                this.discardContainerContentTypes,
+                discardContainerContentTypes);
+        return this;
+    }
 
     /**
      * Maximum detph of embeded documents to extract. Zero is the
