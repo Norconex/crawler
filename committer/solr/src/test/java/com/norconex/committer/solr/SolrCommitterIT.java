@@ -17,12 +17,8 @@ package com.norconex.committer.solr;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.commons.io.IOUtils.toInputStream;
 
-import java.io.IOException;
+import java.util.Map;
 
-import org.apache.solr.client.solrj.SolrServerException;
-import org.apache.solr.common.SolrDocumentList;
-import org.apache.solr.common.SolrInputDocument;
-import org.apache.solr.common.params.ModifiableSolrParams;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -50,7 +46,7 @@ class SolrCommitterIT extends AbstractSolrIT {
 
         // Check that it's in Solr
         var results = queryId("1");
-        Assertions.assertEquals(1, results.getNumFound());
+        Assertions.assertEquals(1, results);
     }
 
     @Test
@@ -62,7 +58,7 @@ class SolrCommitterIT extends AbstractSolrIT {
 
         //Check that there is 2 documents in Solr
         var results = getAllDocs();
-        Assertions.assertEquals(2, results.getNumFound());
+        Assertions.assertEquals(2, results);
     }
 
     @Test
@@ -78,7 +74,7 @@ class SolrCommitterIT extends AbstractSolrIT {
 
         //Check that there is 2 documents in Solr
         var results = getAllDocs();
-        Assertions.assertEquals(2, results.getNumFound());
+        Assertions.assertEquals(2, results);
     }
 
     @Test
@@ -95,20 +91,17 @@ class SolrCommitterIT extends AbstractSolrIT {
 
         //Check that there is 2 documents in Solr
         var results = getAllDocs();
-        Assertions.assertEquals(1, results.getNumFound());
+        Assertions.assertEquals(1, results);
     }
 
     @Test
     void testCommitDelete() throws Exception {
 
         // Add a document directly to Solr
-        var doc = new SolrInputDocument();
-        doc.addField(SolrCommitterConfig.DEFAULT_SOLR_ID_FIELD, "1");
-        doc.addField(
+        addDirectly(Map.of(
+                SolrCommitterConfig.DEFAULT_SOLR_ID_FIELD, "1",
                 SolrCommitterConfig.DEFAULT_SOLR_CONTENT_FIELD,
-                "Hello world!");
-        getSolrClient().add(doc);
-        getSolrClient().commit();
+                "Hello world!"));
 
         withinCommitterSession(c -> {
             c.delete(new DeleteRequest("1", new Properties()));
@@ -116,28 +109,18 @@ class SolrCommitterIT extends AbstractSolrIT {
 
         // Check that it's remove from Solr
         var results = queryId("1");
-        Assertions.assertEquals(0, results.getNumFound());
+        Assertions.assertEquals(0, results);
     }
 
     //TODO test source + target mappings + other mappings
 
-    private SolrDocumentList queryId(String id)
-            throws SolrServerException, IOException {
-        var solrParams = new ModifiableSolrParams();
-        solrParams.set(
-                "q", String.format(
-                        "%s:%s",
-                        SolrCommitterConfig.DEFAULT_SOLR_ID_FIELD, id));
-        var response = getSolrClient().query(solrParams);
-        return response.getResults();
+    private long queryId(String id) throws Exception {
+        return numFound(
+                SolrCommitterConfig.DEFAULT_SOLR_ID_FIELD + ":" + id);
     }
 
-    private SolrDocumentList getAllDocs()
-            throws SolrServerException, IOException {
-        var solrParams = new ModifiableSolrParams();
-        solrParams.set("q", "*:*");
-        var response = getSolrClient().query(solrParams);
-        return response.getResults();
+    private long getAllDocs() throws Exception {
+        return numFound("*:*");
     }
 
     private UpsertRequest upsertRequest(String id, String content) {

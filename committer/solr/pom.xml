@@ -26,7 +26,6 @@
   <name>Norconex Committer Solr</name>
 
   <properties>
-    <solr.version>10.0.0</solr.version>
     <sonar.skip>false</sonar.skip>
     <sonar.projectKey>${project.groupId}:${project.artifactId}</sonar.projectKey>  
   </properties>
@@ -56,20 +55,6 @@
     </dependency>
 
     <!-- Tests and provided. -->
-    <!-- SolrJ is used by integration tests only, as an independent client
-         to verify what the committer sent to Solr. -->
-    <dependency>
-      <groupId>org.apache.solr</groupId>
-      <artifactId>solr-solrj</artifactId>
-      <version>${solr.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.solr</groupId>
-      <artifactId>solr-solrj-jetty</artifactId>
-      <version>${solr.version}</version>
-      <scope>test</scope>
-    </dependency>
     <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>testcontainers</artifactId>

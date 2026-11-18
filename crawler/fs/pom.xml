@@ -37,6 +37,7 @@
     <commons-net.version>3.13.0</commons-net.version>
     <ftp-fs.version>3.3</ftp-fs.version>
     <ftpserver.version>1.2.1</ftpserver.version>
+    <mina.version>2.2.8</mina.version>
     <google-cloud-nio.version>0.133.0</google-cloud-nio.version>
     <jcifs-ng.version>2.1.10</jcifs-ng.version>
     <log4j-over-slf4j.version>2.0.18</log4j-over-slf4j.version>
@@ -270,6 +271,13 @@
       <groupId>org.apache.ftpserver</groupId>
       <artifactId>ftpserver-core</artifactId>
       <version>${ftpserver.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- Overrides the vulnerable mina-core that ftpserver-core pulls in. -->
+    <dependency>
+      <groupId>org.apache.mina</groupId>
+      <artifactId>mina-core</artifactId>
+      <version>${mina.version}</version>
       <scope>test</scope>
     </dependency>
     
