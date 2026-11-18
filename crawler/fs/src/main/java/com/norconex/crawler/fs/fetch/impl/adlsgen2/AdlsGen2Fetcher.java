@@ -127,6 +127,11 @@ public class AdlsGen2Fetcher extends AbstractNioFetcher<AdlsGen2FetcherConfig> {
 
         if (StringUtils.isNotBlank(cfg.getSasToken())) {
             builder.sasToken(Strings.CS.removeStart(cfg.getSasToken(), "?"));
+        } else if (creds.isSet() && StringUtils.isBlank(creds.getUsername())) {
+            // No account name: the (possibly encrypted) password holds a SAS
+            // token, so it can be kept like any other secret.
+            builder.sasToken(Strings.CS.removeStart(
+                    EncryptionUtil.decryptPassword(creds), "?"));
         } else if (creds.isSet()) {
             builder.credential(new StorageSharedKeyCredential(
                     account,

@@ -37,8 +37,8 @@ components for customer-specific source requirements.
 | EgnyteFetcher      | `egnyte://`                                         | `egnyte://acme/folders/root`                                                         | Set `accessToken`; keep `{domain}` in `apiBaseUrl` unless custom |
 | GoogleDriveFetcher | `gdrive://`                                         | `gdrive://workspace/users/alex@example.com` or `gdrive://workspace/drives/{driveId}` | Set `clientEmail`, `privateKey`, and optionally `delegatedUser`  |
 | M365GraphFetcher   | `m365sp://` or `m365od://`                          | `m365sp://tenant/sites/{siteId}` or `m365od://tenant/users/{userId}`                 | Set `tenantId`, `clientId`, and `clientSecret`                   |
-| AzureBlobFetcher   | `azblob://` or `azureblob://`                       | `azblob://myaccount/mycontainer/corpus/`                                             | Use shared-key credentials or `sasToken`                         |
-| AdlsGen2Fetcher    | `abfs://` or `abfss://`                             | `abfss://filesystem@account.dfs.core.windows.net/corpus/`                            | Use shared-key credentials or `sasToken`                         |
+| AzureBlobFetcher   | `azblob://` or `azureblob://`                       | `azblob://myaccount/mycontainer/corpus/`                                             | Shared-key credentials, or a SAS token as the password (no username) |
+| AdlsGen2Fetcher    | `abfs://` or `abfss://`                             | `abfss://filesystem@account.dfs.core.windows.net/corpus/`                            | Shared-key credentials, or a SAS token as the password (no username) |
 
 ## Minimal template
 
