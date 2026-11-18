@@ -103,6 +103,27 @@ Orphan requeueing is skipped entirely on an incremental session configured with
 `changeDiscovery: SOURCE_DELTA`, because in that mode the absence of a
 reference does not prove the document is gone.
 
+#### Documents split off from another
+
+A document can be split into parts that go on as documents of their own: the
+chunks of a long text, the entries of an archive, the attachments of an email.
+Such a part cannot be fetched by its own reference, and it only exists as long
+as its parent produces it. So a part is never an orphan on its own: what becomes
+of it follows its parent.
+
+| The parent, in this session | The parts it had in the previous one |
+| --- | --- |
+| Skipped because it is unchanged, or ended with a problem that may pass | Kept as they were. They are no longer orphans. |
+| Processed again | Replaced by the ones it makes now. Those it no longer makes are deleted, whatever the `orphansStrategy`. |
+| Deleted, or no longer wanted (rejected) | Deleted with it. |
+
+The ledger keeps what this needs without holding the parts' references: an entry
+has the reference of its parent, and a parent only how many parts it has. A part
+whose parent is nowhere in the ledger can never be made again, and is deleted.
+Ledgers written before this was kept do not know their parts, so the first
+incremental session after an upgrade treats them as it used to: reset the crawl
+state to have them known.
+
 ## The queue pipeline
 
 Before a reference is queued it has to survive this. The web crawler adds four
