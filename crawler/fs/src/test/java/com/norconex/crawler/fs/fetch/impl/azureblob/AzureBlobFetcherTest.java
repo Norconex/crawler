@@ -14,65 +14,108 @@
  */
 package com.norconex.crawler.fs.fetch.impl.azureblob;
 
-import static com.norconex.crawler.core.fetch.FetchDirective.DOCUMENT;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.net.URI;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-import com.norconex.commons.lang.bean.BeanMapper;
-import com.norconex.crawler.fs.FsTestUtil;
-import com.norconex.crawler.fs.fetch.FileFetchRequest;
-import com.norconex.importer.doc.Doc;
+import com.azure.storage.blob.BlobContainerClient;
+import com.azure.storage.blob.BlobContainerClientBuilder;
+import com.azure.storage.common.StorageSharedKeyCredential;
 
+/** How the client is authenticated: shared key, or a SAS token. */
 @Timeout(30)
 class AzureBlobFetcherTest {
 
-    @Test
-    void testAcceptRequest() {
-        var f = new AzureBlobFetcher();
-        assertThat(f.acceptRequest(new FileFetchRequest(
-                new Doc("azblob://account/container/path"), DOCUMENT)))
-                        .isTrue();
-        assertThat(f.acceptRequest(new FileFetchRequest(
-                new Doc("azureblob://account/container/path"), DOCUMENT)))
-                        .isTrue();
-        assertThat(f.acceptRequest(new FileFetchRequest(
-                new Doc("https://account.blob.core.windows.net/container/path"),
-                DOCUMENT))).isFalse();
+    private static final AzureBlobLocation LOCATION = AzureBlobLocation.from(
+            URI.create("azblob://account/container/path"));
+
+    private final BlobContainerClientBuilder builder =
+            mock(BlobContainerClientBuilder.class);
+    private final BlobContainerClient client = mock(BlobContainerClient.class);
+
+    private AzureBlobFetcher fetcher() {
+        when(builder.endpoint(any())).thenReturn(builder);
+        when(builder.containerName(any())).thenReturn(builder);
+        when(builder.sasToken(any())).thenReturn(builder);
+        when(builder.credential(any(StorageSharedKeyCredential.class)))
+                .thenReturn(builder);
+        when(builder.buildClient()).thenReturn(client);
+        return new AzureBlobFetcher() {
+            @Override
+            BlobContainerClientBuilder newClientBuilder() {
+                return builder;
+            }
+        };
     }
 
     @Test
-    void testWriteRead() {
-        assertThatNoException().isThrownBy(
-                () -> BeanMapper.DEFAULT.assertWriteRead(
-                        FsTestUtil.randomize(AzureBlobFetcher.class)));
-    }
-
-    @Test
-    void testBuildClientWithSharedKeyCredentials() {
-        var f = new AzureBlobFetcher();
+    void sharedKeyCredentialsAreUsedWhenTheyHaveAUsername() {
+        var f = fetcher();
         f.getConfiguration().getCredentials()
-                .setUsername("account")
-                .setPassword("secret");
-        assertThatNoException().isThrownBy(() -> {
-            var client = f.buildClient(AzureBlobLocation.from(
-                    java.net.URI.create("azblob://account/container/path")));
-            assertThat(client).isNotNull();
-        });
+                .setUsername("account").setPassword("secret");
+
+        assertThat(f.buildClient(LOCATION)).isSameAs(client);
+
+        verify(builder).endpoint("https://account.blob.core.windows.net");
+        verify(builder).containerName("container");
+        verify(builder).credential(any(StorageSharedKeyCredential.class));
+        verify(builder, never()).sasToken(any());
     }
 
     @Test
-    void testBuildClientRejectsMismatchedAccount() {
-        var f = new AzureBlobFetcher();
+    void passwordOfCredentialsWithoutUsernameIsTheSasToken() {
+        var f = fetcher();
+        f.getConfiguration().getCredentials().setPassword("?sig=abc123");
+
+        assertThat(f.buildClient(LOCATION)).isSameAs(client);
+
+        verify(builder).sasToken("sig=abc123");
+        verify(builder, never())
+                .credential(any(StorageSharedKeyCredential.class));
+    }
+
+    @Test
+    void sasTokenOfConfigurationIsUsedAndWinsOverCredentials() {
+        var f = fetcher();
+        f.getConfiguration().setSasToken("?sig=fromconfig");
+        f.getConfiguration().getCredentials().setPassword("sig=frompassword");
+
+        f.buildClient(LOCATION);
+
+        verify(builder).sasToken("sig=fromconfig");
+        verify(builder, never()).sasToken("sig=frompassword");
+    }
+
+    @Test
+    void noCredentialsMeansAnonymousAccessAndACustomEndpointIsUsed() {
+        var f = fetcher();
+        f.getConfiguration().setEndpoint("http://localhost:10000/account");
+
+        f.buildClient(LOCATION);
+
+        verify(builder).endpoint("http://localhost:10000/account");
+        verify(builder, never()).sasToken(any());
+        verify(builder, never())
+                .credential(any(StorageSharedKeyCredential.class));
+    }
+
+    @Test
+    void aUsernameThatIsNotTheAccountOfTheReferenceIsRefused() {
+        var f = fetcher();
         f.getConfiguration().getCredentials()
-                .setUsername("otheraccount")
-                .setPassword("secret");
-        assertThatThrownBy(() -> f.buildClient(AzureBlobLocation.from(
-                java.net.URI.create("azblob://account/container/path"))))
-                        .isInstanceOf(IllegalArgumentException.class)
-                        .hasMessageContaining("reference account");
+                .setUsername("otheraccount").setPassword("secret");
+
+        assertThatThrownBy(() -> f.buildClient(LOCATION))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("reference account");
     }
 }

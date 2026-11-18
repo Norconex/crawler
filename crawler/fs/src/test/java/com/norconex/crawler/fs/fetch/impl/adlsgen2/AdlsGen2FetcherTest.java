@@ -175,7 +175,7 @@ class AdlsGen2FetcherTest {
                         "abfss://filesystem@account.dfs.core.windows.net/path")));
 
         assertThat(builtClient).isSameAs(client);
-        verify(clientBuilder).sasToken(eq("sig=abc123"));
+        verify(clientBuilder).sasToken("sig=abc123");
         verify(clientBuilder, never())
                 .credential(any(StorageSharedKeyCredential.class));
     }

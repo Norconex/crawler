@@ -101,7 +101,7 @@ public class AzureBlobFetcher
                             + "reference account: " + account);
         }
 
-        var builder = new BlobContainerClientBuilder()
+        var builder = newClientBuilder()
                 .endpoint(resolveEndpoint(location))
                 .containerName(location.container());
 
@@ -118,6 +118,10 @@ public class AzureBlobFetcher
                     EncryptionUtil.decryptPassword(creds)));
         }
         return builder.buildClient();
+    }
+
+    BlobContainerClientBuilder newClientBuilder() {
+        return new BlobContainerClientBuilder();
     }
 
     private String resolveEndpoint(AzureBlobLocation location) {
