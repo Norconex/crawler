@@ -74,6 +74,23 @@ public class CrawlerEntry implements Serializable {
     private boolean deleted;
     private String reference;
 
+    /**
+     * The reference of the document this one was split off from or found
+     * embedded in (a chunk of a text, a zip entry, an attachment), or
+     * {@code null} for a document that stands on its own.
+     */
+    private String parentReference;
+
+    /**
+     * How many documents were split off from or found embedded in this one
+     * the last time it was processed. Zero for most documents. Only a count,
+     * never the references: a parent can have hundreds of thousands of
+     * children, and an entry is read and written many times in a crawl. When
+     * it is above zero, the children are found through their
+     * {@link #getParentReference()}.
+     */
+    private int childCount;
+
     public CrawlerEntry() {
     }
 

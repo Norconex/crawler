@@ -28,6 +28,16 @@ final class ProcessDelete {
         LOG.debug("Deleting reference: {}", ctx.docContext().getReference());
         ctx.docContext().getCurrentCrawlEntry()
                 .setProcessingOutcome(ProcessingOutcome.DELETED);
+        // What was split off from, or embedded in, a document that is deleted
+        // goes with it: nothing would ever produce it again. Not when the
+        // document just went through the importer, and made its children
+        // again: a parent that is rejected because it was split is deleted
+        // by the bad state it ends in, and its new children replace the
+        // previous ones, with the stale ones deleted after.
+        if (!ctx.childrenHandled()) {
+            ProcessChildren.deleteAll(ctx.crawlSession(),
+                    ctx.docContext().getPreviousCrawlEntry());
+        }
         // Event triggered by service
         ctx.crawlSession().getCrawlContext().getCommitterService()
                 .delete(ctx.docContext().getDoc());
