@@ -17,9 +17,11 @@ package com.norconex.crawler.core.cluster;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public interface CacheMap<T> {
@@ -79,7 +81,7 @@ public interface CacheMap<T> {
     /**
      * Queries the cache for entries matching the given query filter.
      * Note: This method loads all results into memory at once.
-     * For large result sets, consider using {@link #queryIterator} instead.
+     * For large result sets, prefer {@link #forEachMatching}.
      *
      * @param filter the query filter
      * @return a list of matching entries or an empty list (never null)
@@ -88,13 +90,27 @@ public interface CacheMap<T> {
 
     /**
      * Queries the cache for entries matching the given filter
-     * and returns an iterator for memory-efficient processing of results.
-     * This avoids loading all results into memory at once.
+     * and returns an iterator. Whether results are loaded eagerly depends on
+     * the cache implementation.
      *
      * @param filter the query filter
      * @return an iterator over the matching entries
      */
     Iterator<T> queryIterator(QueryFilter filter);
+
+    /**
+     * Visits matching entries synchronously. Implementations may override this
+     * method to stream results while keeping traversal resources scoped to the
+     * call. The consumer should not mutate the cache during traversal.
+     *
+     * @param filter the query filter
+     * @param action the action to perform for each matching entry
+     */
+    default void forEachMatching(
+            QueryFilter filter, Consumer<? super T> action) {
+        Objects.requireNonNull(action, "action");
+        queryIterator(filter).forEachRemaining(action);
+    }
 
     /**
      * Queries the cache for entries matching the given query filter

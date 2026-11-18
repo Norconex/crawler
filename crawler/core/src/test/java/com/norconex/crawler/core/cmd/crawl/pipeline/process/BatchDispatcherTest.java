@@ -25,6 +25,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -90,5 +94,57 @@ class BatchDispatcherTest {
         when(ledger.nextQueuedBatch(anyInt())).thenReturn(List.of());
 
         assertThat(dispatcher().take()).isNull();
+    }
+
+    @Test
+    void readyEntryDoesNotWaitForAnotherThreadsRefill() throws Exception {
+        var first = mock(CrawlerEntry.class);
+        var second = mock(CrawlerEntry.class);
+        var third = mock(CrawlerEntry.class);
+        var refilling = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        var calls = new AtomicInteger();
+        when(ledger.getQueuedEntryCount()).thenReturn(100L);
+        when(ledger.nextQueuedBatch(anyInt())).thenAnswer(invocation -> {
+            if (calls.getAndIncrement() == 0) {
+                return List.of(first, second, third);
+            }
+            refilling.countDown();
+            assertThat(release.await(10, TimeUnit.SECONDS)).isTrue();
+            return List.of();
+        });
+        var dispatcher = BatchDispatcher.builder().session(session)
+                .maxBatchSize(10).lowWatermark(1).maxReadAttempts(1).build();
+        assertThat(dispatcher.take()).isSameAs(first);
+        try (var workers = Executors.newFixedThreadPool(2)) {
+            try {
+                var refill = workers.submit(dispatcher::take);
+                assertThat(refilling.await(10, TimeUnit.SECONDS)).isTrue();
+                var ready = workers.submit(dispatcher::take);
+                assertThat(ready.get(2, TimeUnit.SECONDS)).isSameAs(third);
+                release.countDown();
+                assertThat(refill.get(10, TimeUnit.SECONDS)).isSameAs(second);
+            } finally {
+                release.countDown();
+            }
+        }
+    }
+
+    @Test
+    void refillFailureReleasesLockForAnotherThread() throws Exception {
+        var entry = mock(CrawlerEntry.class);
+        when(ledger.getQueuedEntryCount()).thenReturn(100L);
+        when(ledger.nextQueuedBatch(anyInt()))
+                .thenThrow(new IllegalStateException("temporary failure"))
+                .thenReturn(List.of(entry));
+        var dispatcher = BatchDispatcher.builder().session(session)
+                .maxBatchSize(10).lowWatermark(0).maxReadAttempts(1).build();
+        assertThatExceptionOfType(IllegalStateException.class)
+                .isThrownBy(dispatcher::take);
+        try (var worker = Executors.newSingleThreadExecutor()) {
+            assertThat(
+                    worker.submit(dispatcher::take).get(10, TimeUnit.SECONDS))
+                            .isSameAs(entry);
+        }
     }
 }

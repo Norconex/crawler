@@ -27,6 +27,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -244,19 +245,25 @@ public class MVStoreCacheMap<T> implements CacheMap<T> {
     @Override
     public List<T> query(QueryFilter filter) {
         var matching = new ArrayList<T>();
-        scan((k, json) -> {
-            var value = deserialize(json);
-            if (filter == null || filter.getFieldName() == null
-                    || matches(value, filter)) {
-                matching.add(value);
-            }
-        });
+        forEachMatching(filter, matching::add);
         return matching;
     }
 
     @Override
     public Iterator<T> queryIterator(QueryFilter filter) {
         return query(filter).iterator();
+    }
+
+    @Override
+    public void forEachMatching(
+            QueryFilter filter, Consumer<? super T> action) {
+        Objects.requireNonNull(action, "action");
+        scan((key, json) -> {
+            var value = deserialize(json);
+            if (matches(value, filter)) {
+                action.accept(value);
+            }
+        });
     }
 
     @Override
@@ -404,6 +411,8 @@ public class MVStoreCacheMap<T> implements CacheMap<T> {
         while (true) {
             var store = map.getStore();
             var pinned = store.registerVersionUsage();
+            MVStoreException readFailure;
+            boolean visiting = false;
             try {
                 var cursor = map.cursor(last);
                 while (cursor.hasNext()) {
@@ -411,15 +420,23 @@ public class MVStoreCacheMap<T> implements CacheMap<T> {
                     if (key.equals(last)) {
                         continue;
                     }
-                    visitor.accept(key, cursor.getValue());
+                    var json = cursor.getValue();
+                    visiting = true;
+                    visitor.accept(key, json);
+                    visiting = false;
                     last = key;
                 }
                 return;
             } catch (MVStoreException e) {
-                failures = onChunkNotFound(e, failures);
+                // A visitor may have performed side effects before throwing.
+                if (visiting) {
+                    throw e;
+                }
+                readFailure = e;
             } finally {
                 store.deregisterVersionUsage(pinned);
             }
+            failures = onChunkNotFound(readFailure, failures);
         }
     }
 

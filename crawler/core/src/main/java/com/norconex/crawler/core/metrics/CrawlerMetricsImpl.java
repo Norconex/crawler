@@ -217,6 +217,12 @@ public class CrawlerMetricsImpl implements CrawlerMetrics {
 
     private static void atomicIncrement(
             CacheMap<Long> store, String key, long increment) {
+        if (Boolean.getBoolean("norconex.cluster.atomicCounters")
+                && store instanceof com.norconex.crawler.core.cluster.impl.hazelcast.HazelcastMapAdapter<
+                        ?> hz) {
+            ClusterCounterIncrement.increment(hz.vendor(), key, increment);
+            return;
+        }
         for (var attempt = 0; attempt < ATOMIC_INCREMENT_MAX_ATTEMPTS;
                 attempt++) {
             var currentValue = store.get(key);
