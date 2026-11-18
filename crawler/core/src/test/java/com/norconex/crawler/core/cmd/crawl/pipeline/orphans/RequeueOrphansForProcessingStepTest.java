@@ -135,4 +135,105 @@ class RequeueOrphansForProcessingStepTest {
         assertThat(processed).extracting(CrawlerEntry::getReference)
                 .containsExactlyInAnyOrder("ref-a", "ref-b");
     }
+
+    // A document split off from another cannot be fetched by its own reference
+
+    private CrawlerSession sessionWithCommitter(
+            CrawlerEntryLedger ledger, QueuePipeline queuePipeline,
+            com.norconex.committer.core.service.CommitterService committer) {
+        var session = buildSession(ledger, queuePipeline);
+        when(session.getCrawlContext().getCommitterService())
+                .thenReturn(committer);
+        return session;
+    }
+
+    @Test
+    void aChildWhoseParentIsAmongTheOrphans_isNotQueued_theParentIs() {
+        var ledger = mock(CrawlerEntryLedger.class);
+        var queuePipeline = mock(QueuePipeline.class);
+        var parent = new CrawlerEntry("doc");
+        parent.setChildCount(2);
+        var child1 = new CrawlerEntry("doc#1");
+        child1.setParentReference("doc");
+        var child2 = new CrawlerEntry("doc#2");
+        child2.setParentReference("doc");
+        var queued = new ArrayList<CrawlerEntry>();
+
+        when(ledger.getBaselineCount()).thenReturn(3L);
+        when(ledger.getBaselineEntry("doc"))
+                .thenReturn(java.util.Optional.of(parent));
+        // Whatever order the ledger returns them in: the children come first.
+        doAnswer(inv -> {
+            Consumer<CrawlerEntry> consumer = inv.getArgument(0);
+            consumer.accept(child1);
+            consumer.accept(child2);
+            consumer.accept(parent);
+            return null;
+        }).when(ledger).forEachBaseline(any());
+        doAnswer(inv -> {
+            QueuePipelineContext ctx = inv.getArgument(0);
+            queued.add(ctx.getCrawlEntry());
+            return null;
+        }).when(queuePipeline).accept(any());
+        var committer = mock(
+                com.norconex.committer.core.service.CommitterService.class);
+
+        new RequeueOrphansForProcessingStep("step-id").execute(
+                sessionWithCommitter(ledger, queuePipeline, committer));
+
+        assertThat(queued).extracting(CrawlerEntry::getReference)
+                .containsExactly("doc");
+        verify(committer, never()).delete(any());
+    }
+
+    @Test
+    void aChildWhoseParentWasProcessedThisCrawl_isNotQueuedEither() {
+        var ledger = mock(CrawlerEntryLedger.class);
+        var queuePipeline = mock(QueuePipeline.class);
+        var child = new CrawlerEntry("doc#1");
+        child.setParentReference("doc");
+
+        when(ledger.getBaselineCount()).thenReturn(1L);
+        when(ledger.exists("doc")).thenReturn(true);
+        doAnswer(inv -> {
+            Consumer<CrawlerEntry> consumer = inv.getArgument(0);
+            consumer.accept(child);
+            return null;
+        }).when(ledger).forEachBaseline(any());
+        var committer = mock(
+                com.norconex.committer.core.service.CommitterService.class);
+
+        new RequeueOrphansForProcessingStep("step-id").execute(
+                sessionWithCommitter(ledger, queuePipeline, committer));
+
+        verify(queuePipeline, never()).accept(any());
+        verify(committer, never()).delete(any());
+    }
+
+    @Test
+    void aChildWhoseParentIsNowhere_isDeleted_notFetched() {
+        var ledger = mock(CrawlerEntryLedger.class);
+        var queuePipeline = mock(QueuePipeline.class);
+        var child = new CrawlerEntry("gone#1");
+        child.setParentReference("gone");
+        child.setProcessingOutcome(
+                com.norconex.crawler.core.ledger.ProcessingOutcome.NEW);
+
+        when(ledger.getBaselineCount()).thenReturn(1L);
+        when(ledger.getBaselineEntry("gone"))
+                .thenReturn(java.util.Optional.empty());
+        doAnswer(inv -> {
+            Consumer<CrawlerEntry> consumer = inv.getArgument(0);
+            consumer.accept(child);
+            return null;
+        }).when(ledger).forEachBaseline(any());
+        var committer = mock(
+                com.norconex.committer.core.service.CommitterService.class);
+
+        new RequeueOrphansForProcessingStep("step-id").execute(
+                sessionWithCommitter(ledger, queuePipeline, committer));
+
+        verify(queuePipeline, never()).accept(any());
+        verify(committer).delete(any());
+    }
 }

@@ -78,6 +78,14 @@ final class ProcessUpsert {
         // meant to leave the parts to go on, as documents of their own.
         commitOrRejectDocument(ctx);
 
+        // Whatever it did, the document says how many children it has, and
+        // what it did with its children is settled here, not by what the
+        // previous crawl knew of them.
+        var parentEntry = ctx.docContext().getCurrentCrawlEntry();
+        var children = ctx.importerResponse().getNestedResponses();
+        parentEntry.setChildCount(children.size());
+        ctx.childrenHandled(true);
+
         // Finalize (i.e., write to the crawl ledger) whether the document
         // was committed or rejected. Without this, a successfully
         // committed document is never marked processed in the ledger:
@@ -93,7 +101,6 @@ final class ProcessUpsert {
         // again afterward by its caller.
         ProcessFinalize.execute(ctx);
 
-        var children = ctx.importerResponse().getNestedResponses();
         for (ImporterResponse childResponse : children) {
 
             //TODO have a createEmbeddedDoc method instead?
@@ -116,6 +123,7 @@ final class ProcessUpsert {
             // outcome on them. Without this, ProcessFinalize would treat
             // a freshly-committed child as having an "unknown" outcome
             // and mistakenly run it through bad-state/deletion handling.
+            childCurrentEntry.setParentReference(parentEntry.getReference());
             childCurrentEntry.setProcessingOutcome(
                     childPreviousEntry == null
                             ? ProcessingOutcome.NEW
@@ -146,6 +154,11 @@ final class ProcessUpsert {
 
             processImportResponse(childCtx);
         }
+
+        // What the previous crawl of this document made, and it did not make
+        // again, is still in the baseline: stale.
+        ProcessChildren.deleteStale(
+                ctx.crawlSession(), ctx.docContext().getPreviousCrawlEntry());
     }
 
     private static boolean commitOrRejectDocument(ProcessContext ctx) {

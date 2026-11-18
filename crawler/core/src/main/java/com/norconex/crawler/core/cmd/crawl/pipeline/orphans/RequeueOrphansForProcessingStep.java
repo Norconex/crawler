@@ -17,7 +17,9 @@ package com.norconex.crawler.core.cmd.crawl.pipeline.orphans;
 import org.apache.commons.lang3.mutable.MutableLong;
 
 import com.norconex.crawler.core.cluster.pipeline.BaseStep;
+import com.norconex.crawler.core.cmd.crawl.pipeline.process.ProcessChildren;
 import com.norconex.crawler.core.doc.pipelines.queue.QueuePipelineContext;
+import com.norconex.crawler.core.ledger.CrawlerEntry;
 import com.norconex.crawler.core.session.CrawlerSession;
 
 import lombok.extern.slf4j.Slf4j;
@@ -50,7 +52,19 @@ public class RequeueOrphansForProcessingStep extends BaseStep {
         }
         LOG.info("Queueing orphan references for processing...");
         var count = new MutableLong();
+        var dangling = new java.util.ArrayList<CrawlerEntry>();
         ctx.getCrawlEntryLedger().forEachBaseline(entry -> {
+            if (entry.getParentReference() != null) {
+                // A document split off from another one cannot be fetched
+                // again by its own reference. What becomes of it is decided
+                // by its parent, which is among the orphans, or was
+                // processed already. Only one whose parent is nowhere is
+                // left, and nothing will ever make it again.
+                if (!ProcessChildren.hasKnownParent(session, entry)) {
+                    dangling.add(entry);
+                }
+                return;
+            }
             entry.setOrphan(true);
             ctx.getDocPipelines()
                     .getQueuePipeline()
@@ -58,6 +72,9 @@ public class RequeueOrphansForProcessingStep extends BaseStep {
             count.increment();
         });
 
+        // Not while going through the baseline: deleting takes them out of it.
+        dangling.forEach(
+                child -> ProcessChildren.deleteDangling(session, child));
         LOG.info("{} orphan references queued for processing.", count);
     }
 }

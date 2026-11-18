@@ -98,6 +98,15 @@ final class ProcessFinalize {
                     docCtx.getReference(), e.getMessage(), e);
         }
 
+        //--- Settle what becomes of its children ------------------------------
+        try {
+            settleChildren(ctx);
+        } catch (Exception e) {
+            LOG.error(
+                    "Could not settle the children of: {} ({})",
+                    docCtx.getReference(), e.getMessage(), e);
+        }
+
         //--- Mark reference as Processed --------------------------------------
         try {
             currentEntry.setProcessingStatus(ProcessingStatus.PROCESSED);
@@ -234,7 +243,7 @@ final class ProcessFinalize {
      * a good previous outcome and is still deleted &mdash; correctly.
      * </p>
      */
-    private static boolean mayExistInTarget(CrawlerEntry previousEntry) {
+    static boolean mayExistInTarget(CrawlerEntry previousEntry) {
         if (previousEntry == null) {
             // Never seen before this run, so nothing was ever sent for it.
             return false;
@@ -243,6 +252,36 @@ final class ProcessFinalize {
                 ProcessingOutcome.DELETED,
                 ProcessingOutcome.REJECTED,
                 ProcessingOutcome.NON_DOCUMENT);
+    }
+
+    /**
+     * A document that did not go through the importer this time (so its
+     * children, if it has any, were not made again) says what becomes of the
+     * children it had in the previous crawl. One that did go through it has
+     * dealt with them already.
+     */
+    private static void settleChildren(ProcessContext ctx) {
+        var docCtx = ctx.docContext();
+        var previous = docCtx.getPreviousCrawlEntry();
+        if (ctx.childrenHandled()
+                || previous == null
+                || previous.getChildCount() <= 0) {
+            return;
+        }
+        var current = docCtx.getCurrentCrawlEntry();
+        var outcome = current.getProcessingOutcome();
+        if (outcome.isOneOf(ProcessingOutcome.DELETED)) {
+            // Taken care of when it was deleted.
+            return;
+        }
+        if (outcome.isOneOf(ProcessingOutcome.REJECTED,
+                ProcessingOutcome.NOT_FOUND)) {
+            // No longer wanted (or gone): what it made is no longer wanted.
+            ProcessChildren.deleteAll(ctx.crawlSession(), previous);
+            return;
+        }
+        // Unchanged, or a problem that may pass: what it made stays as it was.
+        ProcessChildren.keep(ctx.crawlSession(), current, previous);
     }
 
     private static void markReferenceVariationsAsProcessed(

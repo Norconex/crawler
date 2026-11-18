@@ -17,6 +17,7 @@ package com.norconex.crawler.core.cmd.crawl.pipeline.orphans;
 import org.apache.commons.lang3.mutable.MutableLong;
 
 import com.norconex.crawler.core.cluster.pipeline.BaseStep;
+import com.norconex.crawler.core.cmd.crawl.pipeline.process.ProcessChildren;
 import com.norconex.crawler.core.session.CrawlerSession;
 
 import lombok.extern.slf4j.Slf4j;
@@ -75,6 +76,11 @@ public class RequeueOrphansForDeletionStep extends BaseStep {
 
         var count = new MutableLong();
         ctx.getCrawlEntryLedger().forEachBaseline(entry -> {
+            // What was split off from a document goes when its parent does,
+            // so it is not asked for twice.
+            if (ProcessChildren.hasKnownParent(session, entry)) {
+                return;
+            }
             entry.setDeleted(true);
             ctx.getCrawlEntryLedger().queue(entry);
             count.increment();

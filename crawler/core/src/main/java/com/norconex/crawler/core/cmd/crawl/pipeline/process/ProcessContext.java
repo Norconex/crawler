@@ -30,4 +30,10 @@ class ProcessContext {
     private ImporterResponse importerResponse;
     //    private boolean orphan;
     private boolean finalized;
+    /**
+     * Whether what becomes of the document's children was already settled,
+     * because the document went through the importer and its children, if
+     * any, were processed with it.
+     */
+    private boolean childrenHandled;
 }

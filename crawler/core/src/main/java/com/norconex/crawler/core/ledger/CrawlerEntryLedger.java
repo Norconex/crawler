@@ -15,8 +15,11 @@
 package com.norconex.crawler.core.ledger;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
 
@@ -71,6 +74,9 @@ public final class CrawlerEntryLedger {
     private CacheMap<CrawlerEntry> baselineLedger;
     private String currentLedgerAlias;
     private String baselineLedgerAlias;
+    /** Children of the baseline by parent, built the first time it is needed. */
+    private Map<String, List<String>> baselineChildIndex;
+    private String baselineChildIndexAlias;
     // The queue owns FIFO ordering; the map owns authoritative entry state.
     // These two structures are intentionally separate: one provides ordering,
     // the other provides status-based queries and key-value access.
@@ -587,6 +593,52 @@ public final class CrawlerEntryLedger {
         return baseline == null
                 ? Optional.empty()
                 : baseline.get(id);
+    }
+
+    /**
+     * Gets the entries of the previous crawl that were split off from or
+     * embedded in the given document, and that have not been processed yet in
+     * this crawl. A child that was processed in this crawl is no longer part
+     * of the baseline, so what is returned is what the parent did not produce
+     * again, plus what has not been dealt with yet.
+     * <p>
+     * Costs one pass over the baseline the first time it is called in a
+     * crawl, to index the children by their parent. It is not meant to be
+     * called for every document: only for a parent known to have children
+     * ({@link CrawlerEntry#getChildCount()} above zero).
+     * </p>
+     * @param parentReference the reference of the parent
+     * @return the children still in the baseline, never {@code null}
+     */
+    public List<CrawlerEntry> getBaselineChildren(String parentReference) {
+        var baseline = getBaselineLedger();
+        if (baseline == null || parentReference == null) {
+            return List.of();
+        }
+        var children = new ArrayList<CrawlerEntry>();
+        for (var ref : baselineChildIndex(baseline)
+                .getOrDefault(parentReference, List.of())) {
+            baseline.get(ref).ifPresent(children::add);
+        }
+        return children;
+    }
+
+    private synchronized Map<String, List<String>> baselineChildIndex(
+            CacheMap<CrawlerEntry> baseline) {
+        if (baselineChildIndex == null
+                || !Objects.equals(baselineChildIndexAlias,
+                        baselineLedgerAlias)) {
+            var index = new HashMap<String, List<String>>();
+            baseline.forEach((ref, entry) -> {
+                if (entry.getParentReference() != null) {
+                    index.computeIfAbsent(entry.getParentReference(),
+                            k -> new ArrayList<>()).add(ref);
+                }
+            });
+            baselineChildIndex = index;
+            baselineChildIndexAlias = baselineLedgerAlias;
+        }
+        return baselineChildIndex;
     }
 
     //--- Misc. ---
