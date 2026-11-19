@@ -73,7 +73,13 @@ Azure AD application (client) ID.
 
 ### clientSecret
 
-Azure AD client secret used for client-credentials token acquisition.
+Azure AD client secret used for client-credentials token acquisition, kept as is in the configuration. To keep
+it secret, leave it empty and give it as the password of `credentials`.
+
+### credentials
+
+Credentials holding the application: the client ID as the username and the client secret as the password,
+used when `clientId` or `clientSecret` are empty. The password can be encrypted.
 
 ### graphBaseUrl
 
@@ -215,6 +221,22 @@ Valid `SOURCE_DELTA` start references with that setting include:
 - `m365sp://contoso.onmicrosoft.com/sites/{siteId}`
 - `m365sp://contoso.onmicrosoft.com/siteurl?url=https%3A%2F%2Fcontoso.sharepoint.com%2Fsites%2Fengineering`
 - `m365od://contoso.onmicrosoft.com/users/{userId}`
+
+The following example keeps the secret out of the configuration with encrypted credentials.
+
+<ConfigBlock
+  json={{
+    "class": "M365GraphFetcher",
+    "credentials": {
+      "username": "<client-id>",
+      "password": "${clientSecret}",
+      "passwordKey": {
+        "source": "ENVIRONMENT",
+        "value": "MY_KEY_VAR"
+      }
+    }
+  }}
+/>
 
 ## Permissions
 

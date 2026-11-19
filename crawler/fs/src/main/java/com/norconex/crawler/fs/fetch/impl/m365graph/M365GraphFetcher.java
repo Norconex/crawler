@@ -56,6 +56,7 @@ import com.norconex.crawler.fs.doc.FsDocMetadata;
 import com.norconex.crawler.fs.fetch.FileFetchRequest;
 import com.norconex.crawler.fs.fetch.FolderPathsFetchRequest;
 import com.norconex.crawler.fs.fetch.FsPath;
+import com.norconex.crawler.fs.fetch.impl.FetcherCredentials;
 import com.norconex.crawler.fs.fetch.impl.GenericFileFetchResponse;
 import com.norconex.crawler.fs.fetch.impl.GenericFolderPathsFetchResponse;
 import com.norconex.importer.doc.Doc;
@@ -617,6 +618,31 @@ public class M365GraphFetcher extends AbstractFetcher<M365GraphFetcherConfig> {
         }
     }
 
+    /**
+     * The body of the request for an access token. The client ID and secret
+     * are the ones of the configuration, or else the username and password of
+     * the credentials.
+     * @return the form
+     * @throws IOException if the tenant, client ID or secret is missing
+     */
+    String tokenForm() throws IOException {
+        var cfg = configuration;
+        var clientId = FetcherCredentials.id(
+                cfg.getClientId(), cfg.getCredentials());
+        var clientSecret = FetcherCredentials.secret(
+                cfg.getClientSecret(), cfg.getCredentials());
+        if (StringUtils.isAnyBlank(
+                cfg.getTenantId(), clientId, clientSecret)) {
+            throw new IOException(
+                    "Microsoft Graph app-only auth requires tenantId, "
+                            + "clientId, and clientSecret.");
+        }
+        return "grant_type=client_credentials"
+                + "&client_id=" + urlEncode(clientId)
+                + "&client_secret=" + urlEncode(clientSecret)
+                + "&scope=" + urlEncode("https://graph.microsoft.com/.default");
+    }
+
     private synchronized String getAccessToken() throws IOException {
         if (StringUtils.isNotBlank(accessToken)
                 && Instant.now().isBefore(accessTokenExpiry.minusSeconds(30))) {
@@ -624,20 +650,10 @@ public class M365GraphFetcher extends AbstractFetcher<M365GraphFetcherConfig> {
         }
 
         var cfg = configuration;
-        if (StringUtils.isAnyBlank(
-                cfg.getTenantId(), cfg.getClientId(), cfg.getClientSecret())) {
-            throw new IOException(
-                    "Microsoft Graph app-only auth requires tenantId, "
-                            + "clientId, and clientSecret.");
-        }
-
+        var form = tokenForm();
         var tokenUrl = normalizeBaseUrl(cfg.getAuthorityHost())
                 + "/" + urlEncode(cfg.getTenantId())
                 + "/oauth2/v2.0/token";
-        var form = "grant_type=client_credentials"
-                + "&client_id=" + urlEncode(cfg.getClientId())
-                + "&client_secret=" + urlEncode(cfg.getClientSecret())
-                + "&scope=" + urlEncode("https://graph.microsoft.com/.default");
 
         var request = HttpRequest.newBuilder()
                 .uri(URI.create(tokenUrl))

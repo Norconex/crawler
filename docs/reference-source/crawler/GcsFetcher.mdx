@@ -18,11 +18,24 @@ Fetches documents from Google Cloud Storage using references such as
 
 This fetcher relies on the official `google-cloud-nio` provider.
 
-Authentication is delegated to Google Application Default Credentials (ADC).
+Authentication is by default delegated to Google Application Default Credentials (ADC): the file the
+`GOOGLE_APPLICATION_CREDENTIALS` variable points to, or the account the machine is logged in as. A bucket is read
+anonymously if there are none.
+
+A Google service account key can also be given as the `password` of `credentials`: the content of the JSON key file.
+Like any credentials password, it can be encrypted with a `passwordKey` or supplied from a variable, so the key stays out
+of the configuration.
+
 When `endpoint` is set, the fetcher assumes a local/emulated GCS-compatible
 service and connects without authentication.
 
 ## Properties
+
+### credentials
+
+Credentials holding a Google service account key: the JSON key file content as the password (the username is not
+used). The password can be encrypted. When empty, the Application Default Credentials are used. Ignored when `endpoint` is
+set.
 
 ### endpoint
 
@@ -51,5 +64,20 @@ The following example targets a local GCS-compatible endpoint.
   json={{
     "class": "GcsFetcher",
     "endpoint": "http://localhost:4443"
+  }}
+/>
+
+The following example keeps the secret out of the configuration with encrypted credentials.
+
+<ConfigBlock
+  json={{
+    "class": "GcsFetcher",
+    "credentials": {
+      "password": "${serviceAccountKey}",
+      "passwordKey": {
+        "source": "ENVIRONMENT",
+        "value": "MY_KEY_VAR"
+      }
+    }
   }}
 />

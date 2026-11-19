@@ -22,6 +22,7 @@ import java.util.List;
 import org.apache.hc.core5.http.HttpStatus;
 
 import com.norconex.commons.lang.collection.CollectionUtil;
+import com.norconex.commons.lang.security.Credentials;
 import com.norconex.crawler.core.fetch.BaseFetcherConfig;
 
 import lombok.Data;
@@ -73,15 +74,26 @@ public class M365GraphFetcherConfig extends BaseFetcherConfig {
     private String tenantId;
 
     /**
-     * Azure AD application (client) ID.
+     * Azure AD application (client) ID. Used instead of the username of the
+     * {@link #getCredentials() credentials} when set.
      */
     private String clientId;
 
     /**
-     * Azure AD client secret.
+     * Azure AD client secret, kept as is in the configuration. To keep it
+     * secret (encrypted, or supplied as a variable), leave this empty and give
+     * it as the password of the {@link #getCredentials() credentials}.
      */
     @ToString.Exclude
     private String clientSecret;
+
+    /**
+     * Credentials holding the application: the client ID as the username
+     * and the client secret as the password, used when
+     * {@link #getClientId()} or {@link #getClientSecret()} are empty. The
+     * password can be encrypted.
+     */
+    private final Credentials credentials = new Credentials();
 
     /**
      * Authentication authority host.

@@ -33,7 +33,13 @@ Incremental source-delta mode:
 
 ### accessToken
 
-OAuth access token used for Box API requests.
+OAuth access token used for Box API requests, kept as is in the configuration. To keep it secret,
+leave it empty and give it as the password of `credentials`.
+
+### credentials
+
+Credentials holding the OAuth access token as their password (the username is not used), used when
+`accessToken` is empty. The password can be encrypted.
 
 ### apiBaseUrl
 
@@ -72,6 +78,21 @@ The following example starts from the Box root folder boundary.
 Use a start reference such as:
 
 `box://my-enterprise/folders/0`
+
+The following example keeps the secret out of the configuration with encrypted credentials.
+
+<ConfigBlock
+  json={{
+    "class": "BoxFetcher",
+    "credentials": {
+      "password": "${accessToken}",
+      "passwordKey": {
+        "source": "ENVIRONMENT",
+        "value": "MY_KEY_VAR"
+      }
+    }
+  }}
+/>
 
 ## Example Crawl
 

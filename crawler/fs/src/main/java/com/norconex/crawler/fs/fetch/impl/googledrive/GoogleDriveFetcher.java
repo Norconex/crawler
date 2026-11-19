@@ -57,6 +57,7 @@ import com.norconex.crawler.fs.doc.FsDocMetadata;
 import com.norconex.crawler.fs.fetch.FileFetchRequest;
 import com.norconex.crawler.fs.fetch.FolderPathsFetchRequest;
 import com.norconex.crawler.fs.fetch.FsPath;
+import com.norconex.crawler.fs.fetch.impl.FetcherCredentials;
 import com.norconex.crawler.fs.fetch.impl.GenericFileFetchResponse;
 import com.norconex.crawler.fs.fetch.impl.GenericFolderPathsFetchResponse;
 import com.norconex.importer.doc.Doc;
@@ -535,7 +536,11 @@ public class GoogleDriveFetcher
         }
 
         var cfg = configuration;
-        if (StringUtils.isAnyBlank(cfg.getClientEmail(), cfg.getPrivateKey())) {
+        var clientEmail = FetcherCredentials.id(
+                cfg.getClientEmail(), cfg.getCredentials());
+        var privateKey = FetcherCredentials.secret(
+                cfg.getPrivateKey(), cfg.getCredentials());
+        if (StringUtils.isAnyBlank(clientEmail, privateKey)) {
             throw new IOException(
                     "Google Drive service-account auth requires clientEmail "
                             + "and privateKey.");
@@ -543,9 +548,9 @@ public class GoogleDriveFetcher
 
         var now = Instant.now();
         var jwt = createJwtAssertion(
-                cfg.getClientEmail(),
+                clientEmail,
                 cfg.getDelegatedUser(),
-                cfg.getPrivateKey(),
+                privateKey,
                 now,
                 now.plusSeconds(3600));
 

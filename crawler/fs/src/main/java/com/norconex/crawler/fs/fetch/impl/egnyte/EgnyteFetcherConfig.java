@@ -21,6 +21,7 @@ import java.util.List;
 import org.apache.hc.core5.http.HttpStatus;
 
 import com.norconex.commons.lang.collection.CollectionUtil;
+import com.norconex.commons.lang.security.Credentials;
 import com.norconex.crawler.core.fetch.BaseFetcherConfig;
 
 import lombok.Data;
@@ -45,7 +46,10 @@ public class EgnyteFetcherConfig extends BaseFetcherConfig {
             CollectionUtil.unmodifiableList(HttpStatus.SC_NOT_FOUND);
 
     /**
-     * OAuth access token used for Egnyte API requests.
+     * OAuth access token used for Egnyte API requests, kept as is in the
+     * configuration. To keep it secret (encrypted, or supplied as a
+     * variable), leave this empty and give it as the password of the
+     * {@link #getCredentials() credentials}.
      */
     @ToString.Exclude
     private String accessToken;
@@ -54,6 +58,13 @@ public class EgnyteFetcherConfig extends BaseFetcherConfig {
      * Egnyte API base URL. Supports {domain} placeholder.
      */
     private String apiBaseUrl = "https://{domain}.egnyte.com/pubapi/v1";
+
+    /**
+     * Credentials for the Egnyte API, an alternative to the plain text
+     * {@link #getAccessToken() access token}: their password is the token (the
+     * username is not used), and it can be encrypted.
+     */
+    private final Credentials credentials = new Credentials();
 
     /**
      * HTTP status codes considered successful for Egnyte API calls.

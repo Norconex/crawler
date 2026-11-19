@@ -17,6 +17,7 @@ package com.norconex.crawler.fs.fetch.impl.googledrive;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import com.norconex.commons.lang.security.Credentials;
 import com.norconex.crawler.core.fetch.BaseFetcherConfig;
 
 import lombok.Data;
@@ -62,15 +63,27 @@ public class GoogleDriveFetcherConfig extends BaseFetcherConfig {
                     "application/vnd.openxmlformats-officedocument.presentationml.presentation");
 
     /**
-     * Service account client email.
+     * Service account client email. Used instead of the username of the
+     * {@link #getCredentials() credentials} when set.
      */
     private String clientEmail;
 
     /**
-     * PEM private key content or secure key reference.
+     * PEM private key content or secure key reference, kept as is in the
+     * configuration. To keep it secret (encrypted, or supplied as a variable),
+     * leave this empty and give it as the password of the
+     * {@link #getCredentials() credentials}.
      */
     @ToString.Exclude
     private String privateKey;
+
+    /**
+     * Credentials holding the service account: the client email as the
+     * username and the PEM private key as the password, used when
+     * {@link #getClientEmail()} or {@link #getPrivateKey()} are empty. The
+     * password can be encrypted.
+     */
+    private final Credentials credentials = new Credentials();
 
     /**
      * Optional delegated Google Workspace user email for domain-wide
