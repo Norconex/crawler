@@ -34,6 +34,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BooleanSupplier;
 
 import com.norconex.commons.lang.file.ContentType;
 import com.norconex.commons.lang.map.Properties;
@@ -330,11 +331,31 @@ public abstract class AbstractNioFetcher<C extends BaseFetcherConfig>
             meta.set(PREFIX + "writable",
                     perms.contains(PosixFilePermission.OWNER_WRITE));
         } else {
-            meta.set(PREFIX + "executable", Files.isExecutable(path));
-            meta.set(PREFIX + "readable", Files.isReadable(path));
-            meta.set(PREFIX + "writable", Files.isWritable(path));
+            meta.set(PREFIX + "executable",
+                    isAllowed(() -> Files.isExecutable(path)));
+            meta.set(PREFIX + "readable",
+                    isAllowed(() -> Files.isReadable(path)));
+            meta.set(PREFIX + "writable",
+                    isAllowed(() -> Files.isWritable(path)));
         }
         meta.set(PREFIX + "hidden", Files.isHidden(path));
+    }
+
+    /**
+     * Runs an access check, such as {@link Files#isExecutable(Path)}. Some
+     * providers cannot tell for a kind of access and throw an
+     * {@link UnsupportedOperationException} (the Google Cloud Storage one does
+     * for executing, which a bucket has no notion of). It is not allowed then,
+     * rather than a reason to fail the document.
+     * @param check the check to run
+     * @return the result of the check, or {@code false} if it is unsupported
+     */
+    static boolean isAllowed(BooleanSupplier check) {
+        try {
+            return check.getAsBoolean();
+        } catch (UnsupportedOperationException e) {
+            return false;
+        }
     }
 
     protected boolean fetchContent(Doc doc, @NonNull Path path)
