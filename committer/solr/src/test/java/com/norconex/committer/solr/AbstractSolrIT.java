@@ -16,13 +16,15 @@ package com.norconex.committer.solr;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse.BodyHandlers;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 
-import org.apache.solr.client.solrj.SolrClient;
-import org.apache.solr.client.solrj.SolrServerException;
-import org.apache.solr.client.solrj.jetty.HttpJettySolrClient;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
@@ -36,6 +38,8 @@ import org.testcontainers.utility.DockerImageName;
 import com.norconex.committer.core.CommitterContext;
 import com.norconex.committer.core.CommitterException;
 import com.norconex.commons.lang.TimeIdGenerator;
+
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Base class for Solr tests requiring a running Solr server.  One Solr
@@ -57,24 +61,47 @@ public abstract class AbstractSolrIT {
     @TempDir
     static File tempDir;
 
-    private SolrClient solrClient;
-
-    @BeforeAll
-    private void beforeAll() {
-        solrClient = new HttpJettySolrClient.Builder(
-                getSolrTestURL()).build();
-    }
+    // Independent verification of what the committer sent, over plain HTTP
+    // (not the committer's own client).
+    private final HttpClient http = HttpClient.newHttpClient();
 
     @BeforeEach
-    private void beforeEach() throws SolrServerException, IOException {
-        solrClient.deleteByQuery("*:*");
-        solrClient.commit();
+    private void beforeEach() throws IOException, InterruptedException {
+        postUpdate(Map.of("delete", Map.of("query", "*:*")));
     }
 
-    @AfterAll
-    private void afterAll() throws Exception {
-        if (solrClient != null) {
-            solrClient.close();
+    /** Adds a document directly to Solr and commits. */
+    protected void addDirectly(Map<String, Object> doc)
+            throws IOException, InterruptedException {
+        postUpdate(Map.of("add", Map.of("doc", doc)));
+    }
+
+    /** Number of documents in Solr matching a query. */
+    protected long numFound(String query)
+            throws IOException, InterruptedException {
+        var url = getSolrTestURL() + "/select?rows=0&q="
+                + URLEncoder.encode(query, StandardCharsets.UTF_8);
+        var resp = http.send(
+                HttpRequest.newBuilder(URI.create(url)).GET().build(),
+                BodyHandlers.ofString());
+        return JsonMapper.builder().build().readTree(resp.body())
+                .path("response").path("numFound").asLong(-1);
+    }
+
+    private void postUpdate(Map<String, Object> body)
+            throws IOException, InterruptedException {
+        var json = JsonMapper.builder().build().writeValueAsString(body);
+        var resp = http.send(
+                HttpRequest.newBuilder(
+                        URI.create(getSolrTestURL() + "/update?commit=true"))
+                        .header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString(json))
+                        .build(),
+                BodyHandlers.ofString());
+        if (resp.statusCode() != 200) {
+            throw new IOException(
+                    "Solr update failed: " + resp.statusCode()
+                            + " " + resp.body());
         }
     }
 
@@ -85,10 +112,6 @@ public abstract class AbstractSolrIT {
     public String getSolrBaseURL() {
         return "http://" + solrContainer.getHost() + ":"
                 + solrContainer.getSolrPort() + "/solr";
-    }
-
-    public SolrClient getSolrClient() {
-        return solrClient;
     }
 
     protected SolrCommitter createSolrCommitter() throws CommitterException {

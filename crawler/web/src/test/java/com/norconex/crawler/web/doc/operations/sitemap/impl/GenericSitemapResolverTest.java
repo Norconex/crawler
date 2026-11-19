@@ -21,11 +21,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockserver.model.HttpRequest.request;
 import static org.mockserver.model.HttpResponse.response;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.zip.GZIPOutputStream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -54,7 +52,8 @@ class GenericSitemapResolverTest {
             throws IOException {
 
         // We test having a sitemap index file pointing to sitemap files, and
-        // We test compression.
+        // We test compression (MockServer compresses the body itself when
+        // told the content encoding is gzip).
         // We test redirect
 
         client.when(request().withPath("/sitemap-index"))
@@ -84,7 +83,7 @@ class GenericSitemapResolverTest {
                                 "gzip")
                         .withHeader("Content-type",
                                 "text/xml; charset=utf-8")
-                        .withBody(compressSitemap(
+                        .withBody(sitemapContent(
                                 serverUrl(client,
                                         ""))));
 
@@ -115,7 +114,7 @@ class GenericSitemapResolverTest {
                 serverUrl(client, "/pageB.html"));
     }
 
-    private byte[] compressSitemap(String baseUrl) throws IOException {
+    private String sitemapContent(String baseUrl) {
         var content = """
                 <urlset>
                   <url>
@@ -133,15 +132,8 @@ class GenericSitemapResolverTest {
                 </urlset>
                 """.formatted(
                 baseUrl + "pageA.html",
-                baseUrl + "pageB.html")
-                .getBytes();
-        var bos = new ByteArrayOutputStream(content.length);
-        var gzip = new GZIPOutputStream(bos);
-        gzip.write(content);
-        gzip.close();
-        var compressed = bos.toByteArray();
-        bos.close();
-        return compressed;
+                baseUrl + "pageB.html");
+        return content;
     }
 
     @Test
