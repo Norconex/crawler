@@ -55,16 +55,16 @@ public class EgnyteFetcherConfig extends BaseFetcherConfig {
     private String accessToken;
 
     /**
-     * Credentials holding the OAuth access token as their password (the
-     * username is not used). Used when {@link #getAccessToken()} is
-     * empty. The password can be encrypted.
-     */
-    private final Credentials credentials = new Credentials();
-
-    /**
      * Egnyte API base URL. Supports {domain} placeholder.
      */
     private String apiBaseUrl = "https://{domain}.egnyte.com/pubapi/v1";
+
+    /**
+     * Credentials for the Egnyte API, an alternative to the plain text
+     * {@link #getAccessToken() access token}: their password is the token (the
+     * username is not used), and it can be encrypted.
+     */
+    private final Credentials credentials = new Credentials();
 
     /**
      * HTTP status codes considered successful for Egnyte API calls.
