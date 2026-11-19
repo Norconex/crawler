@@ -1036,7 +1036,7 @@
             <argLine>
               ${jacocoArgLine}
               -Xms512m
-              -Xmx1024m
+              -Xmx512m
               -Djava.net.preferIPv4Stack=true
               -Dio.netty.tryReflectionSetAccessible=true
             </argLine>
@@ -1055,7 +1055,7 @@
             <argLine>
               ${jacocoArgLine}
               -Xms512m
-              -Xmx1024m
+              -Xmx512m
               -Djava.net.preferIPv4Stack=true
               -Dio.netty.tryReflectionSetAccessible=true
             </argLine>

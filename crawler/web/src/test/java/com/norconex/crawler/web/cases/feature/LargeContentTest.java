@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.parallel.Isolated;
 import org.mockserver.integration.ClientAndServer;
 import org.mockserver.junit.jupiter.MockServerSettings;
 
@@ -36,8 +37,11 @@ import com.norconex.crawler.web.junit.WebCrawlingTest;
 import com.norconex.crawler.web.junit.WebCrawlingTestCapturer;
 
 /**
- * Test that large files are processed properly (&gt; 2MB).
+ * Test that large files are processed properly (&gt; 2MB). It holds several
+ * copies of a multi-MB page at once, and is the slowest of the crawl tests,
+ * so it runs alone when test classes run in parallel.
  */
+@Isolated
 @MockServerSettings
 @Timeout(30)
 class LargeContentTest {
