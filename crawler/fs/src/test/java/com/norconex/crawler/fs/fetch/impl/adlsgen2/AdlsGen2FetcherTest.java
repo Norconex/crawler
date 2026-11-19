@@ -153,6 +153,34 @@ class AdlsGen2FetcherTest {
     }
 
     @Test
+    void testBuildClientWithSasTokenAsPasswordOfCredentialsWithoutUsername() {
+        var clientBuilder = mock(DataLakeFileSystemClientBuilder.class);
+        var client = mock(DataLakeFileSystemClient.class);
+        when(clientBuilder.endpoint(any())).thenReturn(clientBuilder);
+        when(clientBuilder.fileSystemName(any()))
+                .thenReturn(clientBuilder);
+        when(clientBuilder.sasToken(any())).thenReturn(clientBuilder);
+        when(clientBuilder.buildClient()).thenReturn(client);
+
+        var f = new AdlsGen2Fetcher() {
+            @Override
+            DataLakeFileSystemClientBuilder newClientBuilder() {
+                return clientBuilder;
+            }
+        };
+        f.getConfiguration().getCredentials().setPassword("?sig=abc123");
+
+        var builtClient =
+                f.buildClient(AdlsGen2Location.from(URI.create(
+                        "abfss://filesystem@account.dfs.core.windows.net/path")));
+
+        assertThat(builtClient).isSameAs(client);
+        verify(clientBuilder).sasToken("sig=abc123");
+        verify(clientBuilder, never())
+                .credential(any(StorageSharedKeyCredential.class));
+    }
+
+    @Test
     void testResolvePathAndShutdown() throws Exception {
         var client = mock(DataLakeFileSystemClient.class);
         var fetcher = new AdlsGen2Fetcher() {

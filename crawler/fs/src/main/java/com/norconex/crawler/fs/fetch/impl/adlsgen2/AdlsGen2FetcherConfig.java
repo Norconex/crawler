@@ -28,6 +28,12 @@ import lombok.experimental.Accessors;
  * username is the Azure storage account name and the password is the
  * storage account key.
  * </p>
+ * <p>
+ * A SAS token can be given in {@link #setSasToken(String)}, or as the
+ * password of the credentials when they have no username. The latter is
+ * the way to keep the token secret: like any credentials password, it can
+ * be encrypted.
+ * </p>
  */
 @Data
 @Accessors(chain = true)
@@ -41,7 +47,10 @@ public class AdlsGen2FetcherConfig extends BaseAuthNioFetcherConfig {
     private String endpoint;
 
     /**
-     * Optional SAS token used instead of shared-key credentials.
+     * Optional SAS (Shared Access Signature) token used instead of shared-key
+     * credentials. It is kept as is in the configuration. To keep it secret
+     * (encrypted, or supplied as a variable), leave this empty and give it
+     * as the password of the credentials, with no username.
      */
     private String sasToken;
 

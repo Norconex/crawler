@@ -19,7 +19,8 @@ Fetches documents from Azure Data Lake Storage Gen2 using references such as
 Supports:
 
 - Shared key authentication via `credentials`
-- SAS token authentication via `sasToken`
+- SAS token authentication via `sasToken`, or as the `password` of `credentials` that
+  have no `username` (see [Keeping a SAS token secret](#keeping-a-sas-token-secret))
 - Optional endpoint override via `endpoint`
 - Optional ACL/owner/group extraction control via `aclDisabled`
 
@@ -63,7 +64,8 @@ skipped.
 
 ### sasToken
 
-Optional SAS token used instead of shared-key credentials.
+Optional SAS token used instead of shared-key credentials, kept as is in the configuration.
+To keep it secret, leave it empty and give it as the password of `credentials`, with no username.
 
 ## Examples
 
@@ -89,6 +91,23 @@ The following example uses a SAS token.
   }}
 />
 
+The following example keeps a SAS token secret. With no `username`, the `password` of the
+credentials is the SAS token, so it can be supplied by a variable and encrypted like any
+other password.
+
+<ConfigBlock
+  json={{
+    "class": "AdlsGen2Fetcher",
+    "credentials": {
+      "password": "${azureSasToken}",
+      "passwordKey": {
+        "source": "ENVIRONMENT",
+        "value": "MY_KEY_VAR"
+      }
+    }
+  }}
+/>
+
 The following example disables ACL extraction.
 
 <ConfigBlock
@@ -97,3 +116,15 @@ The following example disables ACL extraction.
     "aclDisabled": true
   }}
 />
+
+## Keeping a SAS token secret
+
+A SAS (Shared Access Signature) token grants limited access to a storage account: it can be
+restricted to one container, to read and list only, and to a period of time, without
+revealing the account key. It is what to ask for when the account key cannot be shared.
+
+A token in `sasToken` is part of the configuration as written. To keep it out of it, give it
+as the `password` of `credentials` and leave the `username` empty: the fetcher then uses the
+decrypted password as the SAS token. Encrypt it with a `passwordKey`, or supply it from a
+variable, as for any other password. A `sasToken` in the configuration, if any, wins.
+

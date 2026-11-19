@@ -101,18 +101,27 @@ public class AzureBlobFetcher
                             + "reference account: " + account);
         }
 
-        var builder = new BlobContainerClientBuilder()
+        var builder = newClientBuilder()
                 .endpoint(resolveEndpoint(location))
                 .containerName(location.container());
 
         if (StringUtils.isNotBlank(cfg.getSasToken())) {
             builder.sasToken(Strings.CS.removeStart(cfg.getSasToken(), "?"));
+        } else if (creds.isSet() && StringUtils.isBlank(creds.getUsername())) {
+            // No account name: the (possibly encrypted) password holds a SAS
+            // token, so it can be kept like any other secret.
+            builder.sasToken(Strings.CS.removeStart(
+                    EncryptionUtil.decryptPassword(creds), "?"));
         } else if (creds.isSet()) {
             builder.credential(new StorageSharedKeyCredential(
                     account,
                     EncryptionUtil.decryptPassword(creds)));
         }
         return builder.buildClient();
+    }
+
+    BlobContainerClientBuilder newClientBuilder() {
+        return new BlobContainerClientBuilder();
     }
 
     private String resolveEndpoint(AzureBlobLocation location) {
