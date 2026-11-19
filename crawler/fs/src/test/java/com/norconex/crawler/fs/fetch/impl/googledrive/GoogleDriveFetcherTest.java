@@ -392,6 +392,37 @@ class GoogleDriveFetcherTest {
     }
 
     @Test
+    void testServiceAccountFromUsernameAndPasswordOfCredentials()
+            throws Exception {
+        var f = new HttpQueueGoogleDriveFetcher();
+        f.getConfiguration().getCredentials()
+                .setUsername("svc@example.com")
+                .setPassword(generatePrivateKeyPem());
+        f.enqueueJson(200, """
+                {
+                  "access_token":"token-1",
+                  "expires_in":3600
+                }
+                """);
+        f.enqueueJson(200, """
+                {
+                  "id":"item123",
+                  "name":"Doc A",
+                  "mimeType":"application/pdf"
+                }
+                """);
+
+        var response = (FileFetchResponse) f
+                .fetch(new FileFetchRequest(
+                        new Doc("gdrive://workspace-01/drives/drive123/items/item123"),
+                        METADATA));
+
+        assertThat(response.getProcessingOutcome())
+                .isEqualTo(ProcessingOutcome.NEW);
+        assertThat(f.authHeaders).contains("Bearer token-1");
+    }
+
+    @Test
     void testFetchFileBadStatusWhenTokenEndpointFails() throws Exception {
         var f = new HttpQueueGoogleDriveFetcher();
         f.getConfiguration().setClientEmail("svc@example.com");

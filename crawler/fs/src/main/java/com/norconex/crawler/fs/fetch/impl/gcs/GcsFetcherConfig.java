@@ -14,6 +14,7 @@
  */
 package com.norconex.crawler.fs.fetch.impl.gcs;
 
+import com.norconex.commons.lang.security.Credentials;
 import com.norconex.crawler.core.fetch.BaseFetcherConfig;
 
 import lombok.Data;
@@ -39,4 +40,17 @@ public class GcsFetcherConfig extends BaseFetcherConfig {
      * servers such as fake-gcs-server.
      */
     private String endpoint;
+
+    /**
+     * Credentials holding a Google service account key: the JSON key file
+     * content as the password (the username is not used). The password can
+     * be encrypted, so the key stays out of the configuration.
+     * When empty, the Google Application Default Credentials of the
+     * environment are used (the file the
+     * <code>GOOGLE_APPLICATION_CREDENTIALS</code> variable points to, the
+     * account the machine is logged in as), or the bucket is read
+     * anonymously if there are none. Ignored when {@link #getEndpoint()}
+     * is set.
+     */
+    private final Credentials credentials = new Credentials();
 }

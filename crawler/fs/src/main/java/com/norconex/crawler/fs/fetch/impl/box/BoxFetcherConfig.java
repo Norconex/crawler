@@ -21,6 +21,7 @@ import java.util.List;
 import org.apache.hc.core5.http.HttpStatus;
 
 import com.norconex.commons.lang.collection.CollectionUtil;
+import com.norconex.commons.lang.security.Credentials;
 import com.norconex.crawler.core.fetch.BaseFetcherConfig;
 
 import lombok.Data;
@@ -45,10 +46,20 @@ public class BoxFetcherConfig extends BaseFetcherConfig {
             CollectionUtil.unmodifiableList(HttpStatus.SC_NOT_FOUND);
 
     /**
-     * OAuth access token used for Box API requests.
+     * OAuth access token used for Box API requests, kept as is in the
+     * configuration. To keep it secret (encrypted, or supplied as a
+     * variable), leave this empty and give it as the password of the
+     * {@link #getCredentials() credentials}.
      */
     @ToString.Exclude
     private String accessToken;
+
+    /**
+     * Credentials holding the OAuth access token as their password (the
+     * username is not used). Used when {@link #getAccessToken()} is
+     * empty. The password can be encrypted.
+     */
+    private final Credentials credentials = new Credentials();
 
     /**
      * Box API base URL.

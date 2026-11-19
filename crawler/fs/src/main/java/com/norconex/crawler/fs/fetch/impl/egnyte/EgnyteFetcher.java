@@ -50,6 +50,7 @@ import com.norconex.crawler.fs.doc.FsDocMetadata;
 import com.norconex.crawler.fs.fetch.FileFetchRequest;
 import com.norconex.crawler.fs.fetch.FolderPathsFetchRequest;
 import com.norconex.crawler.fs.fetch.FsPath;
+import com.norconex.crawler.fs.fetch.impl.FetcherCredentials;
 import com.norconex.crawler.fs.fetch.impl.GenericFileFetchResponse;
 import com.norconex.crawler.fs.fetch.impl.GenericFolderPathsFetchResponse;
 import com.norconex.importer.doc.Doc;
@@ -436,12 +437,23 @@ public class EgnyteFetcher extends AbstractFetcher<EgnyteFetcherConfig> {
                 page.path("start_cursor").asText(null)));
     }
 
+    /**
+     * The Authorization header value: the access token of the configuration, or
+     * the password of the credentials.
+     * @return the header value
+     */
+    String authorization() {
+        return "Bearer " + FetcherCredentials.secret(
+                configuration.getAccessToken(),
+                configuration.getCredentials());
+    }
+
     byte[] fetchContentBytes(EgnyteReference ref, String path)
             throws IOException {
         var request = HttpRequest.newBuilder()
                 .uri(buildUri(ref.domain(), path))
                 .header("Authorization",
-                        "Bearer " + configuration.getAccessToken())
+                        authorization())
                 .GET()
                 .build();
 
@@ -469,7 +481,7 @@ public class EgnyteFetcher extends AbstractFetcher<EgnyteFetcherConfig> {
         var request = HttpRequest.newBuilder()
                 .uri(buildUri(ref.domain(), path))
                 .header("Authorization",
-                        "Bearer " + configuration.getAccessToken())
+                        authorization())
                 .header("Accept", "application/json")
                 .GET()
                 .build();

@@ -97,7 +97,13 @@ Default is `TEXT`.
 
 ### privateKey
 
-PEM private key content used with the service account.
+PEM private key content used with the service account, kept as is in the configuration. To keep it secret,
+leave it empty and give it as the password of `credentials`.
+
+### credentials
+
+Credentials holding the service account: the client email as the username and the PEM private key as the
+password, used when `clientEmail` or `privateKey` are empty. The password can be encrypted.
 
 ### referenceFilters
 
@@ -162,6 +168,22 @@ Then use one of these start references:
 
 - `gdrive://example-workspace/users/alex@example.com`
 - `gdrive://example-workspace/drives/{driveId}`
+
+The following example keeps the secret out of the configuration with encrypted credentials.
+
+<ConfigBlock
+  json={{
+    "class": "GoogleDriveFetcher",
+    "credentials": {
+      "username": "svc@my-project.iam.gserviceaccount.com",
+      "password": "${privateKey}",
+      "passwordKey": {
+        "source": "ENVIRONMENT",
+        "value": "MY_KEY_VAR"
+      }
+    }
+  }}
+/>
 
 ## Example Crawls
 

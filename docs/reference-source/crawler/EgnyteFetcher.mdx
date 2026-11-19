@@ -42,7 +42,13 @@ Incremental source-delta mode:
 
 ### accessToken
 
-OAuth access token used for Egnyte API requests.
+OAuth access token used for Egnyte API requests, kept as is in the configuration. To keep it secret,
+leave it empty and give it as the password of `credentials`.
+
+### credentials
+
+Credentials holding the OAuth access token as their password (the username is not used), used when
+`accessToken` is empty. The password can be encrypted.
 
 ### apiBaseUrl
 
@@ -93,6 +99,21 @@ crawler-level options:
 Then use this start reference:
 
 - `egnyte://acme/folders/root`
+
+The following example keeps the secret out of the configuration with encrypted credentials.
+
+<ConfigBlock
+  json={{
+    "class": "EgnyteFetcher",
+    "credentials": {
+      "password": "${accessToken}",
+      "passwordKey": {
+        "source": "ENVIRONMENT",
+        "value": "MY_KEY_VAR"
+      }
+    }
+  }}
+/>
 
 ## Example Crawl
 

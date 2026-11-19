@@ -16,8 +16,10 @@ package com.norconex.crawler.fs.fetch.impl.gcs;
 
 import static com.norconex.crawler.fs.fetch.impl.FileFetchUtil.referenceStartsWith;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
 
+import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.NoCredentials;
 import com.google.cloud.storage.HttpStorageOptions;
 import com.google.cloud.storage.StorageOptions;
@@ -33,6 +36,7 @@ import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem;
 import com.norconex.crawler.core.fetch.FetchRequest;
 import com.norconex.crawler.core.session.CrawlerSession;
 import com.norconex.crawler.fs.fetch.impl.AbstractNioFetcher;
+import com.norconex.crawler.fs.fetch.impl.FetcherCredentials;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -99,10 +103,29 @@ public class GcsFetcher extends AbstractNioFetcher<GcsFetcherConfig> {
                 buildStorageOptions());
     }
 
+    private static GoogleCredentials serviceAccount(String key) {
+        try (var in = new ByteArrayInputStream(
+                key.getBytes(StandardCharsets.UTF_8))) {
+            return GoogleCredentials.fromStream(in);
+        } catch (IOException e) {
+            throw new IllegalArgumentException(
+                    "The password of the credentials is not a Google "
+                            + "service account key (JSON).",
+                    e);
+        }
+    }
+
     StorageOptions buildStorageOptions() {
         var endpoint = configuration.getEndpoint();
         if (StringUtils.isBlank(endpoint)) {
-            return StorageOptions.getDefaultInstance();
+            var key = FetcherCredentials.secret(
+                    null, configuration.getCredentials());
+            if (StringUtils.isBlank(key)) {
+                return StorageOptions.getDefaultInstance();
+            }
+            return StorageOptions.newBuilder()
+                    .setCredentials(serviceAccount(key))
+                    .build();
         }
         return HttpStorageOptions.newBuilder()
                 .setHost(endpoint)
