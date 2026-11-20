@@ -23,6 +23,7 @@
 hs_err_pid*
 /.project
 /.settings/
+/.continue/
 /target/
 /**/target/
 /.classpath

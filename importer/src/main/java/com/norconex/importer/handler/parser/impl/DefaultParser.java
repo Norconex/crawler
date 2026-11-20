@@ -65,7 +65,9 @@ public class DefaultParser
 
     @Getter
     private final DefaultParserConfig configuration = new DefaultParserConfig();
-    private AutoDetectParser tikaParser;
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private Parser tikaParser;
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     private AtomicBoolean initialized = new AtomicBoolean();
@@ -82,15 +84,29 @@ public class DefaultParser
     @Override
     public void init() throws IOException {
 
+        TikaXmlParserPool.configure(configuration.getXmlParserPoolSize());
         fixTikaInitWarning();
-        tikaParser = new AutoDetectParser(
+        tikaParser = TikaParserPool.create(
+                configuration.getPoolSize(), this::createTikaParser);
+        initialized.set(true);
+    }
+
+    private AutoDetectParser createTikaParser() throws IOException {
+        var parser = new AutoDetectParser(
                 DefTikaConfigurer.configure(configuration));
         // Use the same custom MIME-type detector as ContentTypeDetector so
         // that types like application/vnd.xfdl are correctly routed to their
         // registered parsers (e.g. XfdlTikaParser).
-        tikaParser.setDetector(ContentTypeDetector.getDetector());
-        applyGrobidConfig();
-        initialized.set(true);
+        parser.setDetector(ContentTypeDetector.getDetector());
+        applyGrobidConfig(parser);
+        return parser;
+    }
+
+    @Override
+    public void close() {
+        if (tikaParser instanceof TikaParserPool pool) {
+            pool.close();
+        }
     }
 
     @Override
@@ -175,11 +191,11 @@ public class DefaultParser
      * from the AutoDetectParser's internal parser list via reflection to
      * prevent network calls to a Grobid service that is not running.
      */
-    private void applyGrobidConfig() {
+    private void applyGrobidConfig(AutoDetectParser parser) {
         var grobidCfg = configuration.getGrobidConfig();
         if (!grobidCfg.isEnabled()) {
             boolean removed = removeGrobidParsersFromList(
-                    (CompositeParser) tikaParser);
+                    (CompositeParser) parser);
             if (removed) {
                 LOG.debug("Grobid parsing is disabled. "
                         + "JournalParser has been removed from the Tika "

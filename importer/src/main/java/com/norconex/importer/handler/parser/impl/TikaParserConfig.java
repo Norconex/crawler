@@ -22,6 +22,21 @@ import lombok.experimental.Accessors;
 @Data
 @Accessors(chain = true)
 public class TikaParserConfig extends BaseDocHandlerConfig {
+    /**
+     * Number of independent Tika parsers. Zero (the default) preserves the
+     * shared parser used in earlier releases. Positive values bound parsing
+     * concurrency and give each active document its own parser.
+     */
+    private int poolSize;
+
+    public TikaParserConfig setPoolSize(int poolSize) {
+        if (poolSize < 0) {
+            throw new IllegalArgumentException(
+                    "poolSize must be zero or greater.");
+        }
+        this.poolSize = poolSize;
+        return this;
+    }
 
     /**
      * The path to a Tika configuration file.

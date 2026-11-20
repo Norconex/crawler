@@ -33,6 +33,38 @@ import lombok.experimental.Accessors;
 @Data
 @Accessors(chain = true)
 public class DefaultParserConfig extends BaseDocHandlerConfig {
+    /**
+     * Number of independent Tika parsers. Zero (the default) preserves the
+     * shared parser used in earlier releases. Positive values bound parsing
+     * concurrency and give each active document its own parser.
+     */
+    private int poolSize;
+
+    /**
+     * JVM-wide reusable SAX parser and DOM builder pool size. Null preserves
+     * Tika's current size. Must be positive when specified. The first default
+     * parser initialized fixes the size for the lifetime of this JVM.
+     */
+    private Integer xmlParserPoolSize;
+
+    public DefaultParserConfig setXmlParserPoolSize(Integer size) {
+        if (size != null && size <= 0) {
+            throw new IllegalArgumentException(
+                    "xmlParserPoolSize must be positive.");
+        }
+        xmlParserPoolSize = size;
+        return this;
+    }
+
+    public DefaultParserConfig setPoolSize(int poolSize) {
+        if (poolSize < 0) {
+            throw new IllegalArgumentException(
+                    "poolSize must be zero or greater.");
+        }
+        this.poolSize = poolSize;
+        return this;
+    }
+
     private Path errorsSaveDir;
 
     @JsonProperty("ocr")

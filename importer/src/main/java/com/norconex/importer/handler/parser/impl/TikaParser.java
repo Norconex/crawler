@@ -52,15 +52,29 @@ public class TikaParser
     @Getter
     private final TikaParserConfig configuration = new TikaParserConfig();
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private Parser parser;
 
     @Override
     public void init() throws IOException {
+        parser = TikaParserPool.create(
+                configuration.getPoolSize(), this::createTikaParser);
+    }
+
+    private Parser createTikaParser() throws IOException {
         try {
-            parser = new AutoDetectParser(
+            return new AutoDetectParser(
                     new TikaConfig(configuration.getTikaConfigFile()));
         } catch (TikaException | IOException | SAXException e) {
             throw new IOException("Could not initialize TikaParser.", e);
+        }
+    }
+
+    @Override
+    public void close() {
+        if (parser instanceof TikaParserPool pool) {
+            pool.close();
         }
     }
 
