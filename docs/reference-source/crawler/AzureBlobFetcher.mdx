@@ -28,6 +28,18 @@ as `https://<account>.blob.core.windows.net`.
 
 The credentials username must match the account in the reference URI.
 
+### Keeping a SAS token secret
+
+
+A SAS (Shared Access Signature) token grants limited access to a storage account: it can be
+restricted to one container, to read and list only, and to a period of time, without
+revealing the account key. It is what to ask for when the account key cannot be shared.
+
+A token in `sasToken` is part of the configuration as written. To keep it out of it, give it
+as the `password` of `credentials` and leave the `username` empty: the fetcher then uses the
+decrypted password as the SAS token. Encrypt it with a `passwordKey`, or supply it from a
+variable, as for any other password. A `sasToken` in the configuration, if any, wins.
+
 ## Properties
 
 ### credentials
@@ -98,15 +110,3 @@ other password.
     }
   }}
 />
-
-## Keeping a SAS token secret
-
-A SAS (Shared Access Signature) token grants limited access to a storage account: it can be
-restricted to one container, to read and list only, and to a period of time, without
-revealing the account key. It is what to ask for when the account key cannot be shared.
-
-A token in `sasToken` is part of the configuration as written. To keep it out of it, give it
-as the `password` of `credentials` and leave the `username` empty: the fetcher then uses the
-decrypted password as the SAS token. Encrypt it with a `passwordKey`, or supply it from a
-variable, as for any other password. A `sasToken` in the configuration, if any, wins.
-
