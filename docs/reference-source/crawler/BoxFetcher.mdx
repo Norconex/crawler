@@ -21,7 +21,9 @@ Supported scheme:
 - `box://{enterpriseId}/folders/{folderId}`
 - `box://{enterpriseId}/folders/{folderId}/items/{itemId}`
 
-V1 authentication is bearer-token based.
+Authentication is either an access token (the default) or, for a crawl that runs on its own, a Box
+application using Client Credentials Grant (`authMethod: CLIENT_CREDENTIALS`). Box access tokens expire,
+and a Client Credentials Grant application asks for a new one whenever the last one does.
 
 Incremental source-delta mode:
 
@@ -30,6 +32,29 @@ Incremental source-delta mode:
   semantics (`changeDiscovery: CRAWLER_SCAN`).
 
 ## Properties
+
+### authMethod
+
+How the fetcher signs in to Box.
+
+Supported values:
+
+- `ACCESS_TOKEN`: use `accessToken` (or the password of `credentials`) as is. Box expires such a token after an
+  hour unless it was issued to last.
+- `CLIENT_CREDENTIALS`: use Client Credentials Grant. The user name of `credentials` is the application's client ID
+  and its password the client secret, and a new access token is asked for when one expires.
+
+Default: `ACCESS_TOKEN`
+
+### enterpriseId
+
+The Box enterprise the application belongs to. Used with `CLIENT_CREDENTIALS`.
+
+### tokenUrl
+
+Box OAuth token address, used with `CLIENT_CREDENTIALS`.
+
+Default: `https://api.box.com/oauth2/token`
 
 ### accessToken
 
@@ -86,6 +111,24 @@ The following example keeps the secret out of the configuration with encrypted c
     "class": "BoxFetcher",
     "credentials": {
       "password": "${accessToken}",
+      "passwordKey": {
+        "source": "ENVIRONMENT",
+        "value": "MY_KEY_VAR"
+      }
+    }
+  }}
+/>
+
+The following example signs in as a Box application, so the access token is asked for again when it expires.
+
+<ConfigBlock
+  json={{
+    "class": "BoxFetcher",
+    "authMethod": "CLIENT_CREDENTIALS",
+    "enterpriseId": "my-enterprise",
+    "credentials": {
+      "username": "<client ID>",
+      "password": "${clientSecret}",
       "passwordKey": {
         "source": "ENVIRONMENT",
         "value": "MY_KEY_VAR"
