@@ -22,10 +22,12 @@ import static com.norconex.crawler.fs.fetch.impl.FileFetchUtil.referenceStartsWi
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -69,6 +71,14 @@ public class BoxFetcher extends AbstractFetcher<BoxFetcherConfig> {
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     private final HttpClient httpClient = HttpClient.newHttpClient();
+
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private String clientToken;
+
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private Instant clientTokenExpiry = Instant.EPOCH;
 
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
@@ -279,16 +289,79 @@ public class BoxFetcher extends AbstractFetcher<BoxFetcherConfig> {
      * @return the header value
      */
     String authorization() {
+        try {
+            return authorizationOrThrow();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private String authorizationOrThrow() throws IOException {
+        if (configuration
+                .getAuthMethod() == BoxFetcherConfig.AuthMethod.CLIENT_CREDENTIALS) {
+            return "Bearer " + clientCredentialsToken();
+        }
         return "Bearer " + FetcherCredentials.secret(
                 configuration.getAccessToken(),
                 configuration.getCredentials());
+    }
+
+    // The access token of the application, asked for again when it is about
+    // to expire.
+    private synchronized String clientCredentialsToken() throws IOException {
+        if (StringUtils.isNotBlank(clientToken)
+                && Instant.now().isBefore(clientTokenExpiry.minusSeconds(30))) {
+            return clientToken;
+        }
+        var cfg = configuration;
+        var clientId = FetcherCredentials.id(null, cfg.getCredentials());
+        var clientSecret =
+                FetcherCredentials.secret(null, cfg.getCredentials());
+        if (StringUtils.isAnyBlank(clientId, clientSecret,
+                cfg.getEnterpriseId())) {
+            throw new IOException(
+                    "Box client-credentials auth requires a client ID and "
+                            + "secret (the credentials) and an enterprise ID.");
+        }
+        var body = "grant_type=client_credentials"
+                + "&client_id=" + urlEncode(clientId)
+                + "&client_secret=" + urlEncode(clientSecret)
+                + "&box_subject_type=enterprise"
+                + "&box_subject_id=" + urlEncode(cfg.getEnterpriseId());
+        var request = HttpRequest.newBuilder()
+                .uri(URI.create(cfg.getTokenUrl()))
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .build();
+        HttpResponse<String> response;
+        try {
+            response = httpClient.send(request,
+                    HttpResponse.BodyHandlers.ofString());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Interrupted while asking Box for a token",
+                    e);
+        }
+        if (response.statusCode() != 200) {
+            throw new BoxHttpStatusException(response.statusCode(),
+                    StringUtils.abbreviate(response.body(), 512));
+        }
+        var json = objectMapper.readTree(response.body());
+        clientToken = json.path("access_token").asText(null);
+        if (StringUtils.isBlank(clientToken)) {
+            throw new IOException("Box token response has no access_token.");
+        }
+        clientTokenExpiry = Instant.now()
+                .plusSeconds(
+                        Math.max(60L, json.path("expires_in").asLong(3600)));
+        return clientToken;
     }
 
     byte[] fetchContentBytes(String path) throws IOException {
         var request = HttpRequest.newBuilder()
                 .uri(buildUri(path))
                 .header("Authorization",
-                        authorization())
+                        authorizationOrThrow())
                 .GET()
                 .build();
 
@@ -316,7 +389,7 @@ public class BoxFetcher extends AbstractFetcher<BoxFetcherConfig> {
         var request = HttpRequest.newBuilder()
                 .uri(buildUri(path))
                 .header("Authorization",
-                        authorization())
+                        authorizationOrThrow())
                 .header("Accept", "application/json")
                 .GET()
                 .build();

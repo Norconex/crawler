@@ -51,6 +51,40 @@ public class BoxFetcherConfig extends BaseFetcherConfig {
      * variable), leave this empty and give it as the password of the
      * {@link #getCredentials() credentials}.
      */
+    /**
+     * How the fetcher gets the access token it calls Box with.
+     */
+    public enum AuthMethod {
+        /**
+         * The access token given as {@code accessToken}, or as the password
+         * of the credentials, is used as is. Box access tokens expire, so
+         * this suits a token issued to last or a short test.
+         */
+        ACCESS_TOKEN,
+        /**
+         * A Box application using Client Credentials Grant: the credentials
+         * hold its client ID (user name) and client secret (password), and
+         * {@code enterpriseId} says which enterprise to act in. A new access
+         * token is requested when the last one expires.
+         */
+        CLIENT_CREDENTIALS
+    }
+
+    private AuthMethod authMethod = AuthMethod.ACCESS_TOKEN;
+
+    /**
+     * The enterprise to act in. Required with
+     * {@link AuthMethod#CLIENT_CREDENTIALS}.
+     */
+    private String enterpriseId;
+
+    /**
+     * The address Box answers token requests on, for
+     * {@link AuthMethod#CLIENT_CREDENTIALS}. Change it only to go through a
+     * proxy or a compatible server.
+     */
+    private String tokenUrl = "https://api.box.com/oauth2/token";
+
     @ToString.Exclude
     private String accessToken;
 
