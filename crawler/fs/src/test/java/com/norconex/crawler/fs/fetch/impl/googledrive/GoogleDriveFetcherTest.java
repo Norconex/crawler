@@ -478,6 +478,25 @@ class GoogleDriveFetcherTest {
     }
 
     @Test
+    void testAFilesRequestsGoUnderTheDriveApiPath() throws Exception {
+        var f = new HttpQueueGoogleDriveFetcher();
+        f.getConfiguration().setClientEmail("svc@example.com");
+        f.getConfiguration().setPrivateKey(generatePrivateKeyPem());
+        f.enqueueJson(200, """
+                {"access_token":"token-1","expires_in":3600}
+                """);
+        f.enqueueJson(200, """
+                {"id":"item123"}
+                """);
+
+        f.fetchItemNode(GoogleDriveReference
+                .parse("gdrive://ws/users/user1/items/item123"));
+
+        assertThat(f.requestedUris).anyMatch(u -> u.startsWith(
+                "https://www.googleapis.com/drive/v3/files/item123?fields="));
+    }
+
+    @Test
     void testHelperRequestsAddScopeSpecificQueryParameters()
             throws Exception {
         var f = new HttpQueueGoogleDriveFetcher();

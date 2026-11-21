@@ -505,10 +505,14 @@ public class GoogleDriveFetcher
 
     private HttpResponse<byte[]> executeGet(String pathOrUrl)
             throws IOException {
+        // Paths of a file are given relative to the Drive API ("/files/..."),
+        // the others from its start ("/drive/v3/...").
         var url = Strings.CS.startsWithAny(pathOrUrl, "http://", "https://")
                 ? pathOrUrl
                 : Strings.CS.removeEnd(configuration.getApiBaseUrl(), "/")
-                        + pathOrUrl;
+                        + (pathOrUrl.startsWith("/drive/")
+                                ? pathOrUrl
+                                : "/drive/v3" + pathOrUrl);
         var request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .header("Authorization", "Bearer " + getAccessToken())
