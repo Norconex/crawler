@@ -17,6 +17,7 @@ package com.norconex.crawler.core.cluster.impl.hazelcast.pipeline;
 import static java.util.Optional.ofNullable;
 
 import java.time.Duration;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,7 +26,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
@@ -71,6 +71,7 @@ public class PipelineWorkerState implements AutoCloseable {
     private final StepRecord currentStepRecord;
     // Worker Status
     private PipelineStatus workerStatus = PipelineStatus.PENDING;
+    private String workerStepId;
 
     private final ScheduledExecutorService statusUpdater =
             Executors.newSingleThreadScheduledExecutor(
@@ -134,7 +135,6 @@ public class PipelineWorkerState implements AutoCloseable {
                     rawHeartbeatMs, heartbeatMs, expiryMs);
         }
 
-        final var iterCount = new AtomicInteger();
         if (cluster.isStandalone()) {
             workerStatusFuture = null;
             return;
@@ -182,28 +182,7 @@ public class PipelineWorkerState implements AutoCloseable {
                 }
             }
 
-            pushWorkerStatus(workerStatus);
-
-            // every ~15 seconds update pipeline status in case we missed it
-            if (iterCount.addAndGet((int) heartbeatMs) >= 15_000L) {
-                iterCount.set(0);
-                updateCurrentStepRecord(currentRec -> {
-                    var rec = pipelineStepCache
-                            .get(pipelineKey).orElse(null);
-                    logStepRecordReceived(rec, "explicit check");
-                    if (rec == null) {
-                        currentRec.setStatus(PipelineStatus.PENDING)
-                                .setStepId(null)
-                                .setUpdatedAt(0);
-                    } else {
-                        currentRec.setStatus(rec.getStatus())
-                                .setStepId(rec.getStepId())
-                                .setUpdatedAt(rec.getUpdatedAt());
-                    }
-                });
-                // Push status immediately so coordinator sees the correct stepId
-                pushWorkerStatus(currentStepRecord.getStatus());
-            }
+            refreshWorkerStatus();
         }, heartbeatMs, heartbeatMs, TimeUnit.MILLISECONDS); // Changed initial delay from 0 to heartbeatMs
     }
 
@@ -242,8 +221,25 @@ public class PipelineWorkerState implements AutoCloseable {
         return pipeline.getStep(currentStepRecord.getStepId());
     }
 
-    public void pushWorkerStatus(PipelineStatus status) {
+    public synchronized void pushWorkerStatus(PipelineStatus status) {
         workerStatus = status;
+        synchronized (currentStepRecord) {
+            workerStepId = currentStepRecord.getStepId();
+        }
+        refreshWorkerStatus();
+    }
+
+    private synchronized void syncWorkerStatus(String stepId,
+            PipelineStatus status) {
+        if (!Objects.equals(workerStepId, stepId)
+                || !workerStatus.isTerminal()) {
+            workerStatus = status;
+            workerStepId = stepId;
+        }
+        refreshWorkerStatus();
+    }
+
+    private synchronized void refreshWorkerStatus() {
         if (!HazelcastUtil.isClusterRunning(cluster)) {
             LOG.debug("Cluster reported as not running by node {}",
                     cluster.getLocalNode().getNodeName());
@@ -255,8 +251,8 @@ public class PipelineWorkerState implements AutoCloseable {
         // writes RUNNING status.
         var rec = new StepRecord()
                 .setPipelineId(pipeline.getId())
-                .setStepId(currentStepRecord.getStepId())
-                .setStatus(status)
+                .setStepId(workerStepId)
+                .setStatus(workerStatus)
                 .setUpdatedAt(System.currentTimeMillis())
                 .setRunId(session.getCrawlRunId());
         try {
@@ -347,6 +343,8 @@ public class PipelineWorkerState implements AutoCloseable {
         StepRecord recordSnapshot;
         boolean shouldRun;
         boolean shouldPushStatus;
+        String publishedStepId;
+        PipelineStatus publishedStepStatus;
 
         synchronized (currentStepRecord) {
             var oldStatus = currentStepRecord.getStatus();
@@ -354,6 +352,8 @@ public class PipelineWorkerState implements AutoCloseable {
             stepUpdater.accept(currentStepRecord);
             var newStatus = currentStepRecord.getStatus();
             var newStepId = currentStepRecord.getStepId();
+            publishedStepId = newStepId;
+            publishedStepStatus = newStatus;
 
             // if newly set to run, run it.
             // if already running, run it if step id has changed
@@ -402,7 +402,7 @@ public class PipelineWorkerState implements AutoCloseable {
 
         // Push status immediately to ensure coordinator sees it
         if (shouldPushStatus) {
-            pushWorkerStatus(currentStepRecord.getStatus());
+            syncWorkerStatus(publishedStepId, publishedStepStatus);
         }
 
         // Execute callback OUTSIDE synchronized block to avoid deadlocks

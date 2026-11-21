@@ -374,18 +374,15 @@ public final class CrawlerEntryLedger {
     public void queue(@NonNull CrawlerEntry crawlEntry) {
         var current = getCurrentLedger();
         var reference = crawlEntry.getReference();
-        if (current.containsKey(reference)) {
-            LOG.debug("Reference already accounted for: {}",
-                    reference);
-            return;
-        }
-
         var queuedEntry = BeanUtil.clone(crawlEntry);
 
         // Store the full entry in the ledger and only the reference
         // in the queue
         queuedEntry.setProcessingStatus(ProcessingStatus.QUEUED);
-        current.put(reference, queuedEntry);
+        if (current.putIfAbsent(reference, queuedEntry) != null) {
+            LOG.debug("Reference already accounted for: {}", reference);
+            return;
+        }
         try {
             queue.add(reference);
         } catch (RuntimeException e) {
@@ -475,10 +472,13 @@ public final class CrawlerEntryLedger {
             var entryOpt = activeLedger.get(reference);
             if (entryOpt.isPresent()) {
                 var entry = entryOpt.get();
-                // Update status to PROCESSING
-                entry.setProcessingStatus(ProcessingStatus.PROCESSING);
-                activeLedger.put(reference, entry);
-                batch.add(entry);
+                if (ProcessingStatus.QUEUED.is(entry.getProcessingStatus())) {
+                    var claimed = BeanUtil.clone(entry);
+                    claimed.setProcessingStatus(ProcessingStatus.PROCESSING);
+                    if (activeLedger.replace(reference, entry, claimed)) {
+                        batch.add(claimed);
+                    }
+                }
             } else {
                 LOG.warn("[{}] Reference {} polled from queue but not "
                         + "found in ledger.", nodeName, reference);
