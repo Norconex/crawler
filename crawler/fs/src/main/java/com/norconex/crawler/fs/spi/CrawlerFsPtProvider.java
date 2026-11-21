@@ -26,6 +26,7 @@ import com.norconex.crawler.fs.fetch.impl.cmis.CmisFetcher;
 import com.norconex.crawler.fs.fetch.impl.egnyte.EgnyteFetcher;
 import com.norconex.crawler.fs.fetch.impl.ftp.FtpFetcher;
 import com.norconex.crawler.fs.fetch.impl.gcs.GcsFetcher;
+import com.norconex.crawler.fs.fetch.impl.googledrive.GoogleDriveFetcher;
 import com.norconex.crawler.fs.fetch.impl.hdfs.HdfsFetcher;
 import com.norconex.crawler.fs.fetch.impl.local.LocalFetcher;
 import com.norconex.crawler.fs.fetch.impl.m365graph.M365GraphFetcher;
@@ -58,6 +59,7 @@ public class CrawlerFsPtProvider extends BasePolymorphicTypeProvider {
                         EgnyteFetcher.class,
                         FtpFetcher.class,
                         GcsFetcher.class,
+                        GoogleDriveFetcher.class,
                         HdfsFetcher.class,
                         LocalFetcher.class,
                         M365GraphFetcher.class,
