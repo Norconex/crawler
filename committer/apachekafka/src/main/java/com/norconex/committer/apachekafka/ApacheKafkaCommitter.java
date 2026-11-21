@@ -1,4 +1,4 @@
-/* Copyright 2023-2024 Norconex Inc.
+/* Copyright 2023-2026 Norconex Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -82,7 +82,7 @@ public class ApacheKafkaCommitter
             throw new CommitterException(EXCEPTION_MSG_INVALID_CONFIG);
         }
 
-        kafkaAdmin = new KafkaAdmin(configuration.getBootstrapServers());
+        kafkaAdmin = new KafkaAdmin(configuration);
 
         if (configuration.isCreateTopic()) {
             if (configuration.getPartitions() == 0
@@ -197,6 +197,7 @@ public class ApacheKafkaCommitter
                 StringSerializer.class);
         props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
         props.put(ProducerConfig.ACKS_CONFIG, "all");
+        KafkaSecurity.apply(props, configuration);
 
         producer = new KafkaProducer<>(props);
 
