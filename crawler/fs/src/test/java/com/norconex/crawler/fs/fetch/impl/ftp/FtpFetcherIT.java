@@ -50,4 +50,15 @@ class FtpFetcherIT extends AbstractFileFetcherTest {
     protected String getStartPath() {
         return server.getStartPath();
     }
+
+    // The server's root is a folder with no name; reading it must not fail.
+    @org.junit.jupiter.api.Test
+    void testCrawlFromServerRoot(@TempDir java.nio.file.Path dir)
+            throws Exception {
+        var root = "ftp://localhost:" + server.getPort() + "/";
+        var mem = com.norconex.crawler.fs.FsTestUtil
+                .crawlWithFetcher(dir, fetcher(), root);
+        org.assertj.core.api.Assertions.assertThat(mem.getUpsertCount())
+                .isPositive();
+    }
 }
