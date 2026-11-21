@@ -26,6 +26,7 @@ import org.mockito.Mock.Strictness;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.norconex.crawler.core.CrawlerConfig;
+import com.norconex.crawler.core.cluster.CacheNames;
 import com.norconex.crawler.core.cluster.Cluster;
 import com.norconex.crawler.core.cluster.ClusterNode;
 import com.norconex.crawler.core.cluster.support.InMemoryCacheManager;
@@ -127,6 +128,19 @@ class CrawlerEntryLedgerTest {
         assertThat(batch.get(0).getReference()).isEqualTo("ref-1");
         assertThat(ledger.getProcessingStatus("ref-1"))
                 .isEqualTo(ProcessingStatus.PROCESSING);
+        assertThat(ledger.getQueueCount()).isZero();
+        assertThat(ledger.getProcessingCount()).isEqualTo(1);
+    }
+
+    @Test
+    void testNextQueuedBatch_skipsDuplicateReferenceAlreadyClaimed() {
+        ledger.queue(entry("ref-1"));
+        cacheManager.getCacheQueue(CacheNames.REFERENCE_QUEUE, String.class)
+                .add("ref-1");
+
+        assertThat(ledger.nextQueuedBatch(10))
+                .extracting(CrawlerEntry::getReference)
+                .containsExactly("ref-1");
         assertThat(ledger.getQueueCount()).isZero();
         assertThat(ledger.getProcessingCount()).isEqualTo(1);
     }

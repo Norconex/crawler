@@ -16,6 +16,7 @@ package com.norconex.crawler.core.cmd.crawl.pipeline.process;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.locks.ReentrantLock;
 
 import com.norconex.crawler.core.ledger.CrawlerEntry;
 import com.norconex.crawler.core.session.CrawlerSession;
@@ -51,7 +52,7 @@ public class BatchDispatcher {
 
     private final BlockingQueue<CrawlerEntry> localQueue =
             new LinkedBlockingQueue<>();
-    private final Object refillLock = new Object();
+    private final ReentrantLock refillLock = new ReentrantLock();
 
     /**
      * Takes the next entry to process, or <code>null</code> if none are
@@ -89,22 +90,26 @@ public class BatchDispatcher {
                 return entry;
             }
             // Only one thread should try to refill when empty
-            synchronized (refillLock) {
-                if (localQueue.isEmpty()) {
-                    var batchSize = computeBatchSize();
-                    var queueCount = ledger.getQueuedEntryCount();
-                    LOG.trace("[{}] BatchDispatcher.take() refilling from "
-                            + "global queue (batchSize={}, queueCount={}).",
-                            nodeName, batchSize, queueCount);
-                    var batch = ledger.nextQueuedBatch(batchSize);
-                    LOG.trace("[{}] BatchDispatcher.take() got batch of {} "
-                            + "entries from global queue.",
-                            nodeName, batch.size());
-                    if (!batch.isEmpty()) {
-                        localQueue.addAll(batch);
-                        continue;
-                    }
+            refillLock.lock();
+            try {
+                if (!localQueue.isEmpty()) {
+                    continue;
                 }
+                var batchSize = computeBatchSize();
+                var queueCount = ledger.getQueuedEntryCount();
+                LOG.trace("[{}] BatchDispatcher.take() refilling from "
+                        + "global queue (batchSize={}, queueCount={}).",
+                        nodeName, batchSize, queueCount);
+                var batch = ledger.nextQueuedBatch(batchSize);
+                LOG.trace("[{}] BatchDispatcher.take() got batch of {} "
+                        + "entries from global queue.",
+                        nodeName, batch.size());
+                if (!batch.isEmpty()) {
+                    localQueue.addAll(batch);
+                    continue;
+                }
+            } finally {
+                refillLock.unlock();
             }
             LOG.trace("[{}] BatchDispatcher.take() found no entries in local "
                     + "or global queue.",
@@ -119,7 +124,10 @@ public class BatchDispatcher {
         var ledger = session.getCrawlContext().getCrawlEntryLedger();
         var nodeName = session.getCluster().getLocalNode().getNodeName();
         if (localQueue.size() <= lowWatermark) {
-            synchronized (refillLock) {
+            if (!refillLock.tryLock()) {
+                return;
+            }
+            try {
                 if (localQueue.size() <= lowWatermark) {
                     var batchSize = computeBatchSize();
                     var queueCount = ledger.getQueuedEntryCount();
@@ -137,6 +145,8 @@ public class BatchDispatcher {
                             + "localQueueSize(after)={}",
                             nodeName, localQueue.size());
                 }
+            } finally {
+                refillLock.unlock();
             }
         }
     }
