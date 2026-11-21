@@ -275,8 +275,11 @@ public abstract class AbstractNioFetcher<C extends BaseFetcherConfig>
                 attrs.lastModifiedTime().toMillis());
         setCreationTime(meta, attrs);
         meta.set(PREFIX + "symbolicLink", attrs.isSymbolicLink());
-        // Costs its own round-trip on remote providers, as for a file.
-        meta.set(PREFIX + "hidden", Files.isHidden(path));
+        // Costs its own round-trip on remote providers, as for a file. A
+        // file system's root has no name to tell by, and some providers
+        // fail on it rather than answer, so it is never hidden.
+        meta.set(PREFIX + "hidden",
+                path.getFileName() != null && Files.isHidden(path));
     }
 
     private static void setCreationTime(

@@ -478,6 +478,37 @@ class GoogleDriveFetcherTest {
     }
 
     @Test
+    void testAFilesRequestsGoUnderTheDriveApiPath() throws Exception {
+        var f = new HttpQueueGoogleDriveFetcher();
+        f.getConfiguration().setClientEmail("svc@example.com");
+        f.getConfiguration().setPrivateKey(generatePrivateKeyPem());
+        f.enqueueJson(200, """
+                {"access_token":"token-1","expires_in":3600}
+                """);
+        f.enqueueJson(200, """
+                {"id":"item123"}
+                """);
+
+        f.fetchItemNode(GoogleDriveReference
+                .parse("gdrive://ws/users/user1/items/item123"));
+
+        assertThat(f.requestedUris).anyMatch(u -> u.startsWith(
+                "https://www.googleapis.com/drive/v3/files/item123?fields="));
+    }
+
+    // A configuration file can name it only when it is a known kind of fetcher.
+    @Test
+    void testAConfigurationNamingItCanBeWrittenAndRead() {
+        var config = new com.norconex.crawler.fs.FsCrawlerConfig();
+        config.setFetchers(java.util.List.of(new GoogleDriveFetcher()));
+
+        org.assertj.core.api.Assertions.assertThatNoException()
+                .isThrownBy(
+                        () -> com.norconex.commons.lang.bean.BeanMapper.DEFAULT
+                                .assertWriteRead(config));
+    }
+
+    @Test
     void testHelperRequestsAddScopeSpecificQueryParameters()
             throws Exception {
         var f = new HttpQueueGoogleDriveFetcher();
