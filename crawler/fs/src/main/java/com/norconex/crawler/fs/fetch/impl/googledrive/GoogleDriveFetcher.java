@@ -83,8 +83,6 @@ public class GoogleDriveFetcher
             "application/vnd.google-apps.";
     private static final String GOOGLE_FOLDER_MIME =
             "application/vnd.google-apps.folder";
-    private static final String TOKEN_URL =
-            "https://oauth2.googleapis.com/token";
     private static final String DRIVE_READONLY_SCOPE =
             "https://www.googleapis.com/auth/drive.readonly";
     private static final String DELTA_CURSOR_KEY_PREFIX =
@@ -509,7 +507,8 @@ public class GoogleDriveFetcher
             throws IOException {
         var url = Strings.CS.startsWithAny(pathOrUrl, "http://", "https://")
                 ? pathOrUrl
-                : "https://www.googleapis.com" + pathOrUrl;
+                : Strings.CS.removeEnd(configuration.getApiBaseUrl(), "/")
+                        + pathOrUrl;
         var request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .header("Authorization", "Bearer " + getAccessToken())
@@ -551,6 +550,7 @@ public class GoogleDriveFetcher
                 clientEmail,
                 cfg.getDelegatedUser(),
                 privateKey,
+                cfg.getTokenUrl(),
                 now,
                 now.plusSeconds(3600));
 
@@ -559,7 +559,7 @@ public class GoogleDriveFetcher
                 + "&assertion=" + urlEncode(jwt);
 
         var request = HttpRequest.newBuilder()
-                .uri(URI.create(TOKEN_URL))
+                .uri(URI.create(cfg.getTokenUrl()))
                 .header("Content-Type",
                         "application/x-www-form-urlencoded")
                 .POST(HttpRequest.BodyPublishers.ofString(body))
@@ -672,6 +672,7 @@ public class GoogleDriveFetcher
             String clientEmail,
             String delegatedUser,
             String privateKey,
+            String tokenUrl,
             Instant issuedAt,
             Instant expiresAt)
             throws IOException {
@@ -681,7 +682,7 @@ public class GoogleDriveFetcher
                 .append("\",\"scope\":\"")
                 .append(jsonEscape(DRIVE_READONLY_SCOPE))
                 .append("\",\"aud\":\"")
-                .append(jsonEscape(TOKEN_URL))
+                .append(jsonEscape(tokenUrl))
                 .append("\",\"iat\":").append(issuedAt.getEpochSecond())
                 .append(",\"exp\":").append(expiresAt.getEpochSecond());
         if (StringUtils.isNotBlank(delegatedUser)) {
