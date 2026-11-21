@@ -25,6 +25,7 @@ import com.norconex.commons.lang.ResourceLoader;
 import com.norconex.commons.lang.bean.BeanMapper;
 import com.norconex.commons.lang.bean.BeanMapper.Format;
 import com.norconex.commons.lang.map.PropertyMatcher;
+import com.norconex.commons.lang.security.Credentials;
 import com.norconex.commons.lang.text.TextMatcher;
 
 @Timeout(30)
@@ -37,8 +38,17 @@ class ApacheKafkaCommitterConfigTest {
                 .setBatchSize(10)
                 .setMaxPerFolder(5);
 
+        var creds = new Credentials();
+        creds.setUsername("myusername");
+        creds.setPassword("mypassword");
+
         var c = new ApacheKafkaCommitter();
         c.getConfiguration()
+                .setSecurityProtocol(
+                        ApacheKafkaCommitterConfig.SecurityProtocol.SASL_SSL)
+                .setSaslMechanism(
+                        ApacheKafkaCommitterConfig.SaslMechanism.SCRAM_SHA_512)
+                .setCredentials(creds)
                 .setBootstrapServers("host1:1234, host2:1234")
                 .setTopicName("my-topic")
                 .setCreateTopic(true)

@@ -48,6 +48,7 @@ class AmazonCloudSearchCommitterConfigTest {
         c.getConfiguration()
                 .setAccessKey("accessKey")
                 .setSecretKey("secretKey")
+                .setCredentials(creds)
                 .setServiceEndpoint("serviceEndpoint")
                 .setSigningRegion("signingRegion")
                 .setFixBadIds(true)
