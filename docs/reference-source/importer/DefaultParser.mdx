@@ -80,6 +80,18 @@ crawler threads can fetch documents or run other handlers. Each parser has its
 own configuration, so larger pools use more memory and take longer to initialize.
 Set the pool size before starting the importer.
 
+### xmlParserPoolSize
+
+Optional positive size of Tika's JVM-wide SAX parser and DOM builder pools.
+Omitting the setting uses Tika's current size, typically `10`. This setting is
+independent of `poolSize`, which controls complete document parser instances.
+
+The first `DefaultParser` initialized in the JVM establishes the XML pool size.
+Later handlers inherit that size when the setting is omitted or reuse it when
+the explicit value matches. A conflicting value fails initialization. Restart
+the JVM to change the size. Keep the shared XML pool size consistent in any
+custom Tika configuration.
+
 ## Examples
 
 Saves documents that fail to parse into a directory for inspection.
@@ -89,6 +101,7 @@ Saves documents that fail to parse into a directory for inspection.
     "handler": {
       "class": "DefaultParser",
       "poolSize": 2,
+      "xmlParserPoolSize": 16,
       "errorsSaveDir": "C:\\reports\\errors"
     }
   }}
