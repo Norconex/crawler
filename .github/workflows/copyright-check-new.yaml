@@ -173,13 +173,15 @@ jobs:
         if: ${{ steps.check_dependabot.outputs.check == '0' && steps.modified-files.outputs.all_changed_files != '' }}
         run: git status
 
-      - name: Upload Modified Files
+      # Not a plain git push: it would leave an unsigned commit, which the
+      # branch protection refuses. A commit created through the GitHub API is
+      # signed by GitHub and shows as verified.
+      - name: Upload Modified Files (as a commit signed by GitHub)
         if: ${{ steps.check_dependabot.outputs.check == '0' && steps.modified-files.outputs.all_changed_files != '' }}
-        uses: stefanzweifel/git-auto-commit-action@v7
-        with:
-          commit_message: Apply Copyright year changes
-          # Author == committer == sign-off identity so the DCO check passes.
-          commit_author: 'github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>'
-          commit_user_name: 'github-actions[bot]'
-          commit_user_email: '41898282+github-actions[bot]@users.noreply.github.com'
-          commit_options: '--signoff'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.head_ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          MESSAGE: Apply Copyright year changes
+        run: bash .github/workflows/scripts/commit-signed.sh
