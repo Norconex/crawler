@@ -30,7 +30,6 @@ import org.apache.tika.exception.ZeroByteFileException;
 import org.apache.tika.metadata.HttpHeaders;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.metadata.TikaCoreProperties;
-import org.apache.tika.parser.AutoDetectParser;
 import org.apache.tika.parser.ParseContext;
 import org.apache.tika.parser.Parser;
 import org.apache.tika.parser.pdf.PDFParserConfig;
@@ -64,7 +63,9 @@ public class DefaultParser
 
     @Getter
     private final DefaultParserConfig configuration = new DefaultParserConfig();
-    private AutoDetectParser tikaParser;
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private Parser tikaParser;
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     private AtomicBoolean initialized = new AtomicBoolean();
@@ -76,13 +77,26 @@ public class DefaultParser
     public void init() throws IOException {
 
         fixTikaInitWarning();
-        tikaParser = DefTikaConfigurer.configure(configuration);
+        tikaParser = TikaParserPool.create(
+                configuration.getPoolSize(), this::createTikaParser);
+        applyGrobidConfig();
+        initialized.set(true);
+    }
+
+    private Parser createTikaParser() throws IOException {
+        var parser = DefTikaConfigurer.configure(configuration);
         // Use the same custom MIME-type detector as ContentTypeDetector so
         // that types like application/vnd.xfdl are correctly routed to their
         // registered parsers (e.g. XfdlTikaParser).
-        tikaParser.setDetector(ContentTypeDetector.getDetector());
-        applyGrobidConfig();
-        initialized.set(true);
+        parser.setDetector(ContentTypeDetector.getDetector());
+        return parser;
+    }
+
+    @Override
+    public void close() {
+        if (tikaParser instanceof TikaParserPool pool) {
+            pool.close();
+        }
     }
 
     @Override

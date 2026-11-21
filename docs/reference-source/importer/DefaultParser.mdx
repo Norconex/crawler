@@ -65,6 +65,21 @@ GIF, BMP, and images embedded in documents). It is slow next to text
 extraction, so restricting it by content type and file size is usually worth
 doing. All settings are described under [OcrConfig](./OcrConfig).
 
+### poolSize
+
+Number of independent Apache Tika parsers created when the handler initializes.
+The default, `0`, uses a shared parser. A positive value limits the number of
+top-level documents parsed concurrently per handler. Negative values are invalid.
+
+When all instances are busy, parsing waits for an instance to become available.
+Embedded documents reuse the parent's instance. Closing the handler wakes
+waiting callers with an error and releases idle parser references.
+
+For example, `"poolSize": 2` allows two concurrent parses per handler while other
+crawler threads can fetch documents or run other handlers. Each parser has its
+own configuration, so larger pools use more memory and take longer to initialize.
+Set the pool size before starting the importer.
+
 ## Examples
 
 Saves documents that fail to parse into a directory for inspection.
@@ -73,6 +88,7 @@ Saves documents that fail to parse into a directory for inspection.
   json={{
     "handler": {
       "class": "DefaultParser",
+      "poolSize": 2,
       "errorsSaveDir": "C:\\reports\\errors"
     }
   }}
