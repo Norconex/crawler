@@ -229,8 +229,22 @@ public class PipelineWorkerState implements AutoCloseable {
         refreshWorkerStatus();
     }
 
+    // Called after the step record lock is released, so the heartbeat and
+    // the step listener can get here in either order. A snapshot the step
+    // record has since moved past is stale: publishing it would overwrite
+    // the newer one, for good if the record does not change again.
     private synchronized void syncWorkerStatus(String stepId,
             PipelineStatus status) {
+        synchronized (currentStepRecord) {
+            if (!Objects.equals(currentStepRecord.getStepId(), stepId)
+                    || currentStepRecord.getStatus() != status) {
+                LOG.debug("Not publishing stale worker status {}:{}; the "
+                        + "step record is now {}:{}.", stepId, status,
+                        currentStepRecord.getStepId(),
+                        currentStepRecord.getStatus());
+                return;
+            }
+        }
         if (!Objects.equals(workerStepId, stepId)
                 || !workerStatus.isTerminal()) {
             workerStatus = status;

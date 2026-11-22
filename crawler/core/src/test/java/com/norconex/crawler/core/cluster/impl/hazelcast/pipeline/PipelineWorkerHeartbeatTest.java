@@ -36,6 +36,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.commons.lang3.reflect.MethodUtils;
 import org.junit.jupiter.api.Test;
 
 import com.norconex.crawler.core.cluster.CacheMap;
@@ -53,7 +54,8 @@ class PipelineWorkerHeartbeatTest {
     @Test
     void completedWorkerSurvivesCoordinatorHeartbeat() throws Exception {
         long now = System.currentTimeMillis();
-        var coordinator = record("crawlDocuments", PipelineStatus.RUNNING, now);
+        var coordinator =
+                stepRecord("crawlDocuments", PipelineStatus.RUNNING, now);
         try (var h = new Harness(Optional.of(coordinator))) {
             var state = h.state;
             state.getCurrentStepRecord().setStepId("crawlDocuments")
@@ -99,7 +101,8 @@ class PipelineWorkerHeartbeatTest {
     @Test
     void missingStepRecordNeitherStopsNorRestartsTheStep() throws Exception {
         long now = System.currentTimeMillis();
-        var coordinator = record("crawlDocuments", PipelineStatus.RUNNING, now);
+        var coordinator =
+                stepRecord("crawlDocuments", PipelineStatus.RUNNING, now);
         var current = new AtomicReference<Optional<StepRecord>>(
                 Optional.of(coordinator));
         try (var h = new Harness(current)) {
@@ -115,27 +118,53 @@ class PipelineWorkerHeartbeatTest {
                         h.published.get().getStatus());
             }
             current.set(Optional.of(
-                    record("crawlDocuments", PipelineStatus.RUNNING, now)
+                    stepRecord("crawlDocuments", PipelineStatus.RUNNING, now)
                             .setRunId("another-run")));
             h.tick();
             assertEquals("crawlDocuments", h.published.get().getStepId());
 
             // It comes back, same step: still running once, not twice.
-            current.set(Optional.of(record(
+            current.set(Optional.of(stepRecord(
                     "crawlDocuments", PipelineStatus.RUNNING, now + 1)));
             h.tick();
             assertEquals(List.of("crawlDocuments"), h.started);
 
             // A new step is picked up as usual.
             current.set(Optional.of(
-                    record("nextStep", PipelineStatus.RUNNING, now + 2)));
+                    stepRecord("nextStep", PipelineStatus.RUNNING, now + 2)));
             h.tick();
             assertEquals(List.of("crawlDocuments", "nextStep"), h.started);
             assertEquals("nextStep", h.published.get().getStepId());
         }
     }
 
-    private static StepRecord record(
+    /**
+     * The heartbeat and the step listener publish after releasing the step
+     * record, so one can publish a snapshot the other has moved past. A
+     * late snapshot of the previous step must not replace the current one.
+     */
+    @Test
+    void staleSnapshotDoesNotOverwriteCurrentStep() throws Exception {
+        long now = System.currentTimeMillis();
+        var coordinator = stepRecord("nextStep", PipelineStatus.RUNNING, now);
+        try (var h = new Harness(Optional.of(coordinator))) {
+            h.tick();
+            assertEquals("nextStep", h.published.get().getStepId());
+
+            // A late publish of the step the record already moved past.
+            MethodUtils.invokeMethod(h.state, true, "syncWorkerStatus",
+                    new Object[] { "crawlDocuments", PipelineStatus.RUNNING },
+                    new Class<?>[] { String.class, PipelineStatus.class });
+            assertEquals("nextStep", h.published.get().getStepId());
+
+            h.tick();
+            assertEquals("nextStep", h.published.get().getStepId());
+            assertEquals(PipelineStatus.RUNNING,
+                    h.published.get().getStatus());
+        }
+    }
+
+    private static StepRecord stepRecord(
             String stepId, PipelineStatus status, long updatedAt) {
         return new StepRecord().setPipelineId("diagnostic").setRunId(RUN)
                 .setStepId(stepId).setStatus(status).setUpdatedAt(updatedAt);
