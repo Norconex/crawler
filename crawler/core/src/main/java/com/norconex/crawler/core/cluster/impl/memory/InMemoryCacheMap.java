@@ -28,6 +28,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.norconex.crawler.core.cluster.CacheEntryUpdate;
 import com.norconex.crawler.core.cluster.CacheMap;
 import com.norconex.crawler.core.cluster.QueryFilter;
 
@@ -134,6 +135,23 @@ public class InMemoryCacheMap<T> implements CacheMap<T> {
     @Override
     public boolean replace(String key, T oldValue, T newValue) {
         return store.replace(key, oldValue, newValue);
+    }
+
+    @Override
+    public Optional<T> update(String key, CacheEntryUpdate<T> update) {
+        Objects.requireNonNull(update, "update");
+        var changed = new Object[1];
+        store.compute(key, (k, current) -> {
+            var next = update.apply(current);
+            if (next == null) {
+                return current;
+            }
+            changed[0] = next;
+            return next;
+        });
+        @SuppressWarnings("unchecked")
+        var next = (T) changed[0];
+        return Optional.ofNullable(next);
     }
 
     @Override

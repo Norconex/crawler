@@ -35,6 +35,7 @@ import org.h2.mvstore.DataUtils;
 import org.h2.mvstore.MVMap;
 import org.h2.mvstore.MVStoreException;
 
+import com.norconex.crawler.core.cluster.CacheEntryUpdate;
 import com.norconex.crawler.core.cluster.CacheMap;
 import com.norconex.crawler.core.cluster.QueryFilter;
 import com.norconex.crawler.core.util.SerialUtil;
@@ -240,6 +241,43 @@ public class MVStoreCacheMap<T> implements CacheMap<T> {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Compare-and-set on the stored JSON text, retried until it holds:
+     * atomic even against the unsynchronized {@link #put(String, Object)},
+     * and exact whatever the value class's <code>equals</code>.
+     */
+    @Override
+    public Optional<T> update(String key, CacheEntryUpdate<T> update) {
+        Objects.requireNonNull(update, "update");
+        while (true) {
+            var json = read(key);
+            var next = update.apply(json == null ? null : deserialize(json));
+            if (next == null) {
+                return Optional.empty();
+            }
+            var nextJson = serialize(next);
+            if (compareAndSet(key, json, nextJson)) {
+                return Optional.of(next);
+            }
+        }
+    }
+
+    private boolean compareAndSet(
+            String key, String expectedJson, String newJson) {
+        indexLock.readLock().lock();
+        try {
+            var stored = expectedJson == null
+                    ? map.putIfAbsent(key, newJson) == null
+                    : map.replace(key, expectedJson, newJson);
+            if (stored) {
+                updateIndexes(expectedJson, newJson);
+            }
+            return stored;
+        } finally {
+            indexLock.readLock().unlock();
+        }
     }
 
     @Override

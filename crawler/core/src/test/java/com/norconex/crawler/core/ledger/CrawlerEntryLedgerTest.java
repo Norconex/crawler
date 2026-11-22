@@ -15,7 +15,14 @@
 package com.norconex.crawler.core.ledger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.spy;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,6 +33,7 @@ import org.mockito.Mock.Strictness;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.norconex.crawler.core.CrawlerConfig;
+import com.norconex.crawler.core.cluster.CacheMap;
 import com.norconex.crawler.core.cluster.CacheNames;
 import com.norconex.crawler.core.cluster.Cluster;
 import com.norconex.crawler.core.cluster.ClusterNode;
@@ -130,6 +138,47 @@ class CrawlerEntryLedgerTest {
                 .isEqualTo(ProcessingStatus.PROCESSING);
         assertThat(ledger.getQueueCount()).isZero();
         assertThat(ledger.getProcessingCount()).isEqualTo(1);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void testNextQueuedBatch_unclaimedButStillQueuedGoesBackInQueue() {
+        // A cache that fails to claim an entry still QUEUED (it cannot
+        // happen with the bundled caches, whose updates are atomic): the
+        // reference, already taken off the queue, must not be lost.
+        var failClaims = new AtomicBoolean(true);
+        var spies = new HashMap<String, CacheMap<?>>();
+        var manager = new InMemoryCacheManager() {
+            @Override
+            public <T> CacheMap<T> getCacheMap(String name, Class<T> type) {
+                var map = super.getCacheMap(name, type);
+                if (!name.startsWith("ledger_")) {
+                    return map;
+                }
+                return (CacheMap<T>) spies.computeIfAbsent(name, n -> {
+                    var spied = spy(map);
+                    doAnswer(inv -> failClaims.get()
+                            ? Map.of()
+                            : inv.callRealMethod())
+                                    .when(spied).updateAll(any(), any());
+                    return spied;
+                });
+            }
+        };
+        lenient().when(cluster.getCacheManager()).thenReturn(manager);
+        var failingLedger = new CrawlerEntryLedger();
+        failingLedger.init(session);
+        failingLedger.ensureCurrentLedgerAliasExists();
+        failingLedger.queue(entry("ref-1"));
+
+        assertThat(failingLedger.nextQueuedBatch(10)).isEmpty();
+        assertThat(failingLedger.getProcessingStatus("ref-1"))
+                .isEqualTo(ProcessingStatus.QUEUED);
+
+        failClaims.set(false);
+        assertThat(failingLedger.nextQueuedBatch(10))
+                .extracting(CrawlerEntry::getReference)
+                .containsExactly("ref-1");
     }
 
     @Test

@@ -14,7 +14,10 @@
  */
 package com.norconex.crawler.core.cluster;
 
+import java.util.Collection;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -77,6 +80,69 @@ public interface CacheMap<T> {
     T putIfAbsent(String key, T value);
 
     boolean replace(String key, T oldValue, T newValue);
+
+    /**
+     * Atomically changes an entry as the given update decides from its
+     * current value. Unlike {@link #replace(String, Object, Object)}, nothing
+     * is compared with an expected value, so the outcome does not depend on
+     * how the cache stores or serializes values. See
+     * {@link CacheEntryUpdate} for what an update may do.
+     * <p>
+     * This default implementation retries a compare-and-set until it
+     * succeeds; implementations should override it with an atomic operation
+     * of their own.
+     * </p>
+     * @param key the entry key
+     * @param update decides the entry's new value
+     * @return the new value, or empty if the update left the entry unchanged
+     */
+    default Optional<T> update(String key, CacheEntryUpdate<T> update) {
+        Objects.requireNonNull(update, "update");
+        for (var attempt = 1;; attempt++) {
+            var current = get(key).orElse(null);
+            var next = update.apply(current);
+            if (next == null) {
+                return Optional.empty();
+            }
+            var stored = current == null
+                    ? putIfAbsent(key, next) == null
+                    : replace(key, current, next);
+            if (stored) {
+                return Optional.of(next);
+            }
+            if (attempt >= DEFAULT_UPDATE_MAX_ATTEMPTS) {
+                throw new IllegalStateException(("Could not update cache "
+                        + "entry '%s' after %s attempts: it kept changing, "
+                        + "or this cache cannot compare its values.")
+                                .formatted(key, attempt));
+            }
+        }
+    }
+
+    /**
+     * Atomically changes each of the given entries as the given update
+     * decides from its current value, the way
+     * {@link #update(String, CacheEntryUpdate)} does for one. Each entry is
+     * changed atomically on its own; the batch as a whole is not a
+     * transaction. Implementations may do it in fewer round trips than one
+     * per key.
+     * @param keys the entry keys (duplicates are updated once)
+     * @param update decides each entry's new value
+     * @return the new values of the entries that were changed, by key, in
+     *     the order of the given keys
+     */
+    default Map<String, T> updateAll(
+            Collection<String> keys, CacheEntryUpdate<T> update) {
+        Objects.requireNonNull(update, "update");
+        var updated = new LinkedHashMap<String, T>();
+        for (var key : new LinkedHashSet<>(keys)) {
+            update(key, update).ifPresent(v -> updated.put(key, v));
+        }
+        return updated;
+    }
+
+    /** Attempts made by the default {@link #update} before giving up. */
+    int DEFAULT_UPDATE_MAX_ATTEMPTS = 100;
 
     /**
      * Queries the cache for entries matching the given query filter.
