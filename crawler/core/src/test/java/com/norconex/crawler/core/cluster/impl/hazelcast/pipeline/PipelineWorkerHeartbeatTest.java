@@ -16,61 +16,185 @@ package com.norconex.crawler.core.cluster.impl.hazelcast.pipeline;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.mockito.Mockito.*;
-import org.junit.jupiter.api.Test;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
+
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+
+import org.junit.jupiter.api.Test;
+
 import com.norconex.crawler.core.cluster.CacheMap;
-import com.norconex.crawler.core.cluster.impl.hazelcast.*;
-import com.norconex.crawler.core.cluster.pipeline.*;
+import com.norconex.crawler.core.cluster.impl.hazelcast.CacheKeys;
+import com.norconex.crawler.core.cluster.impl.hazelcast.HazelcastCluster;
+import com.norconex.crawler.core.cluster.impl.hazelcast.HazelcastUtil;
+import com.norconex.crawler.core.cluster.pipeline.Pipeline;
+import com.norconex.crawler.core.cluster.pipeline.PipelineStatus;
+import com.norconex.crawler.core.cluster.pipeline.StepRecord;
 
 class PipelineWorkerHeartbeatTest {
-    @SuppressWarnings("unchecked")
+
+    private static final String RUN = "diagnostic-run";
+
     @Test
     void completedWorkerSurvivesCoordinatorHeartbeat() throws Exception {
-        var cluster = mock(HazelcastCluster.class, RETURNS_DEEP_STUBS);
-        var pipeline = mock(Pipeline.class);
-        when(pipeline.getId()).thenReturn("diagnostic");
-        when(cluster.getCrawlSession().getCrawlRunId())
-                .thenReturn("diagnostic-run");
-        when(cluster.getConfiguration().getWorkerHeartbeatInterval())
-                .thenReturn(Duration.ofSeconds(1));
-        when(cluster.getConfiguration().getNodeExpiryTimeout())
-                .thenReturn(Duration.ofSeconds(300));
-        CacheMap<StepRecord> pipeCache = mock(CacheMap.class),
-                workerCache = mock(CacheMap.class);
-        when(cluster.getCacheManager().getPipelineStepCache())
-                .thenReturn(pipeCache);
-        when(cluster.getCacheManager().getPipelineWorkerStatusCache())
-                .thenReturn(workerCache);
         long now = System.currentTimeMillis();
-        var coordinator = new StepRecord().setPipelineId("diagnostic")
-                .setRunId("diagnostic-run")
-                .setStepId("crawlDocuments").setStatus(PipelineStatus.RUNNING)
-                .setUpdatedAt(now);
-        when(pipeCache.get("pipeline-key"))
-                .thenReturn(Optional.of(coordinator));
-        var recorded = new AtomicReference<StepRecord>();
-        doAnswer(inv -> {
-            recorded.set(inv.getArgument(1));
-            return null;
-        }).when(workerCache).put(anyString(), any());
-        var scheduler = mock(ScheduledExecutorService.class);
-        var heartbeat = new AtomicReference<Runnable>();
-        when(scheduler.scheduleAtFixedRate(any(Runnable.class), anyLong(),
-                anyLong(), any(TimeUnit.class)))
-                        .thenAnswer(inv -> {
-                            heartbeat.set(inv.getArgument(0));
-                            return mock(ScheduledFuture.class);
-                        });
-        when(scheduler.awaitTermination(anyLong(), any())).thenReturn(true);
-        when(scheduler.isTerminated()).thenReturn(true);
-        var factory = Executors.defaultThreadFactory();
-        try (var utilities = mockStatic(HazelcastUtil.class);
-                var keys = mockStatic(CacheKeys.class);
-                var executors = mockStatic(Executors.class)) {
+        var coordinator = record("crawlDocuments", PipelineStatus.RUNNING, now);
+        try (var h = new Harness(Optional.of(coordinator))) {
+            var state = h.state;
+            state.getCurrentStepRecord().setStepId("crawlDocuments")
+                    .setStatus(PipelineStatus.RUNNING).setUpdatedAt(now);
+            state.pushWorkerStatus(PipelineStatus.COMPLETED);
+            assertEquals(PipelineStatus.COMPLETED,
+                    h.published.get().getStatus(),
+                    "Worker completion was not published");
+            for (int tick = 1; tick <= 30; tick++) {
+                h.tick();
+                assertEquals(PipelineStatus.COMPLETED,
+                        h.published.get().getStatus(),
+                        "Heartbeat " + tick + " lost worker completion");
+            }
+            assertEquals(List.of(), h.started, "Completed step restarted");
+
+            coordinator.setStatus(PipelineStatus.COMPLETED)
+                    .setUpdatedAt(now + 1);
+            h.tick();
+            assertEquals(PipelineStatus.COMPLETED,
+                    h.published.get().getStatus());
+
+            coordinator.setStepId("nextStep")
+                    .setStatus(PipelineStatus.RUNNING)
+                    .setUpdatedAt(now + 2);
+            h.tick();
+            assertEquals("nextStep", h.published.get().getStepId());
+            assertEquals(PipelineStatus.RUNNING,
+                    h.published.get().getStatus());
+            assertEquals(List.of("nextStep"), h.started);
+        }
+    }
+
+    /**
+     * The worker used to reset itself to PENDING (no step) when the step
+     * record could not be found. That bought nothing: the coordinator counts
+     * a worker reporting another step as PENDING anyway, and with no record
+     * there is nothing to sync to. It did cost something: when the record
+     * came back with the step the worker was still running, the worker saw
+     * a "new" step and started it a second time. Now the worker keeps
+     * running and reporting its step until a record says otherwise.
+     */
+    @Test
+    void missingStepRecordNeitherStopsNorRestartsTheStep() throws Exception {
+        long now = System.currentTimeMillis();
+        var coordinator = record("crawlDocuments", PipelineStatus.RUNNING, now);
+        var current = new AtomicReference<Optional<StepRecord>>(
+                Optional.of(coordinator));
+        try (var h = new Harness(current)) {
+            h.tick();
+            assertEquals(List.of("crawlDocuments"), h.started);
+
+            // The record disappears (lost, cleared, another run's).
+            current.set(Optional.empty());
+            for (int tick = 1; tick <= 30; tick++) {
+                h.tick();
+                assertEquals("crawlDocuments", h.published.get().getStepId());
+                assertEquals(PipelineStatus.RUNNING,
+                        h.published.get().getStatus());
+            }
+            current.set(Optional.of(
+                    record("crawlDocuments", PipelineStatus.RUNNING, now)
+                            .setRunId("another-run")));
+            h.tick();
+            assertEquals("crawlDocuments", h.published.get().getStepId());
+
+            // It comes back, same step: still running once, not twice.
+            current.set(Optional.of(record(
+                    "crawlDocuments", PipelineStatus.RUNNING, now + 1)));
+            h.tick();
+            assertEquals(List.of("crawlDocuments"), h.started);
+
+            // A new step is picked up as usual.
+            current.set(Optional.of(
+                    record("nextStep", PipelineStatus.RUNNING, now + 2)));
+            h.tick();
+            assertEquals(List.of("crawlDocuments", "nextStep"), h.started);
+            assertEquals("nextStep", h.published.get().getStepId());
+        }
+    }
+
+    private static StepRecord record(
+            String stepId, PipelineStatus status, long updatedAt) {
+        return new StepRecord().setPipelineId("diagnostic").setRunId(RUN)
+                .setStepId(stepId).setStatus(status).setUpdatedAt(updatedAt);
+    }
+
+    /**
+     * A worker state whose heartbeat is run by hand, reading the step
+     * record from {@code stepRecord} and publishing to {@link #published}.
+     */
+    private static final class Harness implements AutoCloseable {
+        private final AtomicReference<StepRecord> published =
+                new AtomicReference<>();
+        private final List<String> started = new ArrayList<>();
+        private final AtomicReference<Runnable> heartbeat =
+                new AtomicReference<>();
+        private final AutoCloseable[] statics;
+        private final PipelineWorkerState state;
+
+        Harness(Optional<StepRecord> fixed) throws Exception {
+            this(new AtomicReference<>(fixed));
+        }
+
+        @SuppressWarnings("unchecked")
+        Harness(AtomicReference<Optional<StepRecord>> stepRecord)
+                throws Exception {
+            var cluster = mock(HazelcastCluster.class, RETURNS_DEEP_STUBS);
+            var pipeline = mock(Pipeline.class);
+            when(pipeline.getId()).thenReturn("diagnostic");
+            when(cluster.getCrawlSession().getCrawlRunId()).thenReturn(RUN);
+            when(cluster.getConfiguration().getWorkerHeartbeatInterval())
+                    .thenReturn(Duration.ofSeconds(1));
+            when(cluster.getConfiguration().getNodeExpiryTimeout())
+                    .thenReturn(Duration.ofSeconds(300));
+            CacheMap<StepRecord> pipeCache = mock(CacheMap.class);
+            CacheMap<StepRecord> workerCache = mock(CacheMap.class);
+            when(cluster.getCacheManager().getPipelineStepCache())
+                    .thenReturn(pipeCache);
+            when(cluster.getCacheManager().getPipelineWorkerStatusCache())
+                    .thenReturn(workerCache);
+            when(pipeCache.get("pipeline-key"))
+                    .thenAnswer(inv -> stepRecord.get());
+            doAnswer(inv -> {
+                published.set(inv.getArgument(1));
+                return null;
+            }).when(workerCache).put(anyString(), any());
+            var scheduler = mock(ScheduledExecutorService.class);
+            when(scheduler.scheduleAtFixedRate(any(Runnable.class), anyLong(),
+                    anyLong(), any(TimeUnit.class))).thenAnswer(inv -> {
+                        heartbeat.set(inv.getArgument(0));
+                        return mock(ScheduledFuture.class);
+                    });
+            when(scheduler.awaitTermination(anyLong(), any())).thenReturn(true);
+            when(scheduler.isTerminated()).thenReturn(true);
+            var factory = Executors.defaultThreadFactory();
+
+            var utilities = mockStatic(HazelcastUtil.class);
+            var keys = mockStatic(CacheKeys.class);
+            var executors = mockStatic(Executors.class);
+            statics = new AutoCloseable[] { executors, keys, utilities };
             utilities.when(() -> HazelcastUtil.isClusterRunning(cluster))
                     .thenReturn(true);
             keys.when(() -> CacheKeys.pipelineKey(cluster, pipeline))
@@ -81,40 +205,24 @@ class PipelineWorkerHeartbeatTest {
             executors.when(() -> Executors
                     .newSingleThreadScheduledExecutor(any(ThreadFactory.class)))
                     .thenReturn(scheduler);
-            var startedStep = new AtomicReference<StepRecord>();
-            try (var state =
-                    new PipelineWorkerState(cluster, pipeline,
-                            startedStep::set)) {
-                state.getCurrentStepRecord().setStepId("crawlDocuments")
-                        .setStatus(PipelineStatus.RUNNING).setUpdatedAt(now);
-                state.pushWorkerStatus(PipelineStatus.COMPLETED);
-                assertEquals(PipelineStatus.COMPLETED,
-                        recorded.get().getStatus(),
-                        "Worker completion was not published");
-                for (int tick = 1; tick <= 30; tick++) {
-                    heartbeat.get().run();
-                    assertEquals(PipelineStatus.COMPLETED,
-                            recorded.get().getStatus(),
-                            "Heartbeat " + tick + " lost worker completion");
+            state = new PipelineWorkerState(cluster, pipeline,
+                    rec -> started.add(rec.getStepId()));
+            assertNull(published.get());
+        }
+
+        void tick() {
+            heartbeat.get().run();
+        }
+
+        @Override
+        public void close() throws Exception {
+            try {
+                state.close();
+            } finally {
+                for (var s : statics) {
+                    s.close();
                 }
-                assertNull(startedStep.get(), "Completed step restarted");
-
-                coordinator.setStatus(PipelineStatus.COMPLETED)
-                        .setUpdatedAt(now + 1);
-                heartbeat.get().run();
-                assertEquals(PipelineStatus.COMPLETED,
-                        recorded.get().getStatus());
-
-                coordinator.setStepId("nextStep")
-                        .setStatus(PipelineStatus.RUNNING)
-                        .setUpdatedAt(now + 2);
-                heartbeat.get().run();
-                assertEquals("nextStep", recorded.get().getStepId());
-                assertEquals(PipelineStatus.RUNNING,
-                        recorded.get().getStatus());
-                assertEquals("nextStep", startedStep.get().getStepId());
             }
         }
     }
-
 }
