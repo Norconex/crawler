@@ -247,9 +247,13 @@ public class MVStoreCacheMap<T> implements CacheMap<T> {
      * Compare-and-set on the stored JSON text, retried until it holds:
      * atomic even against the unsynchronized {@link #put(String, Object)},
      * and exact whatever the value class's <code>equals</code>.
+     * Synchronized like the other compound operations, which read and then
+     * write unconditionally: an update landing between the two would be
+     * overwritten.
      */
     @Override
-    public Optional<T> update(String key, CacheEntryUpdate<T> update) {
+    public synchronized Optional<T> update(
+            String key, CacheEntryUpdate<T> update) {
         Objects.requireNonNull(update, "update");
         while (true) {
             var json = read(key);
