@@ -21,42 +21,56 @@ import org.apache.tika.utils.XMLReaderUtils;
 
 import lombok.extern.slf4j.Slf4j;
 
-/** Applies the shared XML pool policy once, before default parsing starts. */
+/**
+ * Sizes Tika's JVM-wide pool of reusable SAX parsers and DOM builders.
+ * <p>
+ * Tika 4 offers no configuration setting for it, and when every pooled
+ * parser is in use, it logs a contention warning and builds a throwaway
+ * parser for each XML document parsed beyond the pool size (HTML, XHTML,
+ * Office Open XML, ...). A crawl parsing with more threads than the pool
+ * holds (10 by default) pays that on every such document.
+ * </p>
+ * <p>
+ * The pool being shared by the whole JVM, the largest size asked for wins:
+ * the first explicit request is applied as is, later ones only ever grow
+ * it. Asking for nothing leaves Tika's pool alone. Resizing rebuilds the
+ * pool, so asking again for a size already applied does nothing.
+ * </p>
+ */
 @Slf4j
 final class TikaXmlParserPool {
-    private static Integer initializedSize;
+    private static Integer appliedSize;
 
     private TikaXmlParserPool() {
     }
 
     static synchronized void configure(Integer requested) throws IOException {
-        if (requested != null && requested <= 0) {
+        if (requested == null) {
+            return;
+        }
+        if (requested <= 0) {
             throw new IllegalArgumentException(
                     "xmlParserPoolSize must be positive.");
         }
-        if (initializedSize != null) {
-            if (requested != null && !requested.equals(initializedSize)) {
-                throw new IOException("Conflicting JVM-wide xmlParserPoolSize: "
-                        + requested + "; already initialized as "
-                        + initializedSize);
-            }
-            if (XMLReaderUtils.getPoolSize() != initializedSize) {
-                throw new IOException(
-                        "Tika XML parser pool was changed externally.");
-            }
+        var target = appliedSize == null
+                ? requested
+                : Math.max(appliedSize, requested);
+        if (appliedSize != null && requested < appliedSize) {
+            LOG.info("Tika XML parser pool size {} asked for, keeping the "
+                    + "larger size {} already applied (JVM-wide).",
+                    requested, appliedSize);
+        }
+        if (target == XMLReaderUtils.getPoolSize()) {
+            appliedSize = target;
             return;
         }
         try {
-            if (requested != null
-                    && requested != XMLReaderUtils.getPoolSize()) {
-                XMLReaderUtils.setPoolSize(requested);
-            }
-            initializedSize = XMLReaderUtils.getPoolSize();
-            LOG.info("Tika XML parser pool size: {} (JVM-wide).",
-                    initializedSize);
+            XMLReaderUtils.setPoolSize(target);
         } catch (TikaException e) {
             throw new IOException("Could not configure Tika XML parser pool.",
                     e);
         }
+        appliedSize = target;
+        LOG.info("Tika XML parser pool size: {} (JVM-wide).", target);
     }
 }

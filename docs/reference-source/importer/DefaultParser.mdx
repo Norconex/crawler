@@ -67,30 +67,30 @@ doing. All settings are described under [OcrConfig](./OcrConfig).
 
 ### poolSize
 
-Number of independent Apache Tika parsers created when the handler initializes.
-The default, `0`, uses a shared parser. A positive value limits the number of
-top-level documents parsed concurrently per handler. Negative values are invalid.
+Maximum number of top-level documents the handler parses at once. The default,
+`0`, sets no limit. Negative values are invalid.
 
-When all instances are busy, parsing waits for an instance to become available.
-Embedded documents reuse the parent's instance. Closing the handler wakes
-waiting callers with an error and releases idle parser references.
+When that many documents are already being parsed, the next one waits for one of
+them to finish. Embedded documents count as part of their container, so they never
+wait on it. Closing the handler wakes waiting callers with an error.
 
-For example, `"poolSize": 2` allows two concurrent parses per handler while other
-crawler threads can fetch documents or run other handlers. Each parser has its
-own configuration, so larger pools use more memory and take longer to initialize.
-Set the pool size before starting the importer.
+For example, `"poolSize": 2` allows two parses at once per handler while other
+crawler threads fetch documents or run other handlers, which keeps parsing-heavy
+documents (large PDFs, OCR) from taking every thread. All documents share the same
+Tika parser whatever the size, so a limit costs no memory.
 
 ### xmlParserPoolSize
 
-Optional positive size of Tika's JVM-wide SAX parser and DOM builder pools.
-Omitting the setting uses Tika's current size, typically `10`. This setting is
-independent of `poolSize`, which controls complete document parser instances.
+Optional positive size of Tika's pool of reusable SAX parsers and DOM builders,
+used to parse XML-based formats (HTML, XHTML, Office Open XML, ...). Omitting the
+setting leaves Tika's size as it is, `10` by default. When more documents than that
+are parsed at once, Tika logs "Contention waiting for a SAXParser" and builds a
+throwaway parser for each extra document, so a crawl using more threads than the
+pool size gains from setting it to at least its number of threads.
 
-The first `DefaultParser` initialized in the JVM establishes the XML pool size.
-Later handlers inherit that size when the setting is omitted or reuse it when
-the explicit value matches. A conflicting value fails initialization. Restart
-the JVM to change the size. Keep the shared XML pool size consistent in any
-custom Tika configuration.
+The pool is shared by the whole JVM, and the largest size any handler asks for
+wins: the first explicit size is applied as is, later ones can only make it
+larger. This setting is independent of `poolSize`.
 
 ## Examples
 

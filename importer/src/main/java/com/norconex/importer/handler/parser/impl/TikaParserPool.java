@@ -16,8 +16,6 @@ package com.norconex.importer.handler.parser.impl;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.Set;
 
 import org.apache.tika.exception.TikaException;
@@ -31,8 +29,16 @@ import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
 
 /**
- * Bounds concurrent use of independent Tika parser graphs. Recursive parsing
- * on the same thread reuses the parent's parser, including with a size of one.
+ * Bounds how many top-level documents one Tika parser parses at once.
+ * <p>
+ * The parser itself is shared: Tika parsers are thread-safe, and a parser
+ * graph (with its OCR, PDF and other settings) is costly to build and to
+ * keep in memory, so the bound is a number of parsing slots, not a number of
+ * parser copies. A thread asking for a slot when all are taken waits for one
+ * to free up. Embedded documents parsed while their container is being
+ * parsed, on the same thread, use the container's slot, so even a single
+ * slot cannot deadlock on recursion.
+ * </p>
  */
 final class TikaParserPool extends AbstractParser implements AutoCloseable {
     private static final long serialVersionUID = 1L;
@@ -42,8 +48,9 @@ final class TikaParserPool extends AbstractParser implements AutoCloseable {
         Parser create() throws IOException;
     }
 
-    private final Deque<Parser> available = new ArrayDeque<>();
-    private final ThreadLocal<Parser> current = new ThreadLocal<>();
+    private final transient Parser parser;
+    private final transient ThreadLocal<Boolean> parsing = new ThreadLocal<>();
+    private int freeSlots;
     private boolean closed;
 
     static Parser create(int size, ParserFactory factory) throws IOException {
@@ -54,62 +61,45 @@ final class TikaParserPool extends AbstractParser implements AutoCloseable {
         if (size == 0) {
             return factory.create();
         }
-        return new TikaParserPool(size, factory);
+        return new TikaParserPool(size, factory.create());
     }
 
-    private TikaParserPool(int size, ParserFactory factory) throws IOException {
-        for (int i = 0; i < size; i++) {
-            available.addLast(factory.create());
-        }
+    private TikaParserPool(int size, Parser parser) {
+        this.parser = parser;
+        freeSlots = size;
     }
 
     @Override
     public Set<MediaType> getSupportedTypes(ParseContext context) {
-        var nested = current.get();
-        if (nested != null) {
-            return nested.getSupportedTypes(context);
-        }
-        Parser parser;
-        try {
-            parser = borrow();
-        } catch (IOException e) {
-            throw new IllegalStateException("Could not acquire Tika parser.",
-                    e);
-        }
-        try {
-            return parser.getSupportedTypes(context);
-        } finally {
-            release(parser);
-        }
+        return parser.getSupportedTypes(context);
     }
 
     @Override
     public void parse(TikaInputStream stream, ContentHandler handler,
             Metadata metadata, ParseContext context)
             throws IOException, SAXException, TikaException {
-        var nested = current.get();
-        if (nested != null) {
-            nested.parse(stream, handler, metadata, context);
+        if (Boolean.TRUE.equals(parsing.get())) {
+            parser.parse(stream, handler, metadata, context);
             return;
         }
-        var parser = borrow();
-        current.set(parser);
+        takeSlot();
+        parsing.set(Boolean.TRUE);
         try {
             parser.parse(stream, handler, metadata, context);
         } finally {
-            current.remove();
-            release(parser);
+            parsing.remove();
+            freeSlot();
         }
     }
 
-    private synchronized Parser borrow() throws IOException {
-        while (!closed && available.isEmpty()) {
+    private synchronized void takeSlot() throws IOException {
+        while (!closed && freeSlots == 0) {
             try {
                 wait();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 var failure = new InterruptedIOException(
-                        "Interrupted waiting for a Tika parser.");
+                        "Interrupted waiting for a Tika parsing slot.");
                 failure.initCause(e);
                 throw failure;
             }
@@ -117,20 +107,17 @@ final class TikaParserPool extends AbstractParser implements AutoCloseable {
         if (closed) {
             throw new IOException("Tika parser pool is closed.");
         }
-        return available.removeFirst();
+        freeSlots--;
     }
 
-    private synchronized void release(Parser parser) {
-        if (!closed) {
-            available.addLast(parser);
-        }
+    private synchronized void freeSlot() {
+        freeSlots++;
         notifyAll();
     }
 
     @Override
     public synchronized void close() {
         closed = true;
-        available.clear();
         notifyAll();
     }
 }

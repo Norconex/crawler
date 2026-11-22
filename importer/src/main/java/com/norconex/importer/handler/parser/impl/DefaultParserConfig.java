@@ -34,16 +34,17 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class DefaultParserConfig extends BaseDocHandlerConfig {
     /**
-     * Number of independent Tika parsers. Zero (the default) preserves the
-     * shared parser used in earlier releases. Positive values bound parsing
-     * concurrency and give each active document its own parser.
+     * Maximum number of top-level documents this handler parses at once.
+     * Zero (the default) sets no limit. All documents share the same Tika
+     * parser either way; a limit only makes the extra ones wait.
      */
     private int poolSize;
 
     /**
-     * JVM-wide reusable SAX parser and DOM builder pool size. Null preserves
-     * Tika's current size. Must be positive when specified. The first default
-     * parser initialized fixes the size for the lifetime of this JVM.
+     * JVM-wide reusable SAX parser and DOM builder pool size. Null leaves
+     * Tika's size as it is (10 by default). Must be positive when specified.
+     * The pool being shared by the JVM, the largest size asked for by any
+     * handler wins.
      */
     private Integer xmlParserPoolSize;
 

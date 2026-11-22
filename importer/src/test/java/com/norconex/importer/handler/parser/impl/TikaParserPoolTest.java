@@ -59,7 +59,7 @@ class TikaParserPoolTest {
     }
 
     @Test
-    void testIndependentParsersAndBoundedConcurrency() throws Exception {
+    void testSharedParserAndBoundedConcurrency() throws Exception {
         var created = new AtomicInteger();
         var active = new AtomicInteger();
         var maxActive = new AtomicInteger();
@@ -67,16 +67,13 @@ class TikaParserPoolTest {
         var release = new CountDownLatch(1);
         var parser = TikaParserPool.create(2, () -> {
             created.incrementAndGet();
-            var busy = new AtomicBoolean();
             return new StubParser((m, c) -> {
-                assertThat(busy.compareAndSet(false, true)).isTrue();
                 maxActive.accumulateAndGet(active.incrementAndGet(), Math::max);
                 entered.countDown();
                 try {
                     await(release);
                 } finally {
                     active.decrementAndGet();
-                    busy.set(false);
                 }
             });
         });
@@ -98,7 +95,8 @@ class TikaParserPoolTest {
                 future.get(5, TimeUnit.SECONDS);
             }
         }
-        assertThat(created).hasValue(2);
+        // One parser graph, whatever the number of slots.
+        assertThat(created).hasValue(1);
         assertThat(maxActive).hasValue(2);
     }
 

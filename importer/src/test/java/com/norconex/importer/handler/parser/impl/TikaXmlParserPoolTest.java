@@ -16,7 +16,9 @@ package com.norconex.importer.handler.parser.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 
 import java.io.IOException;
@@ -36,15 +38,15 @@ class TikaXmlParserPoolTest {
     @BeforeEach
     void resetPolicy() throws Exception {
         previous = FieldUtils.readStaticField(TikaXmlParserPool.class,
-                "initializedSize", true);
+                "appliedSize", true);
         FieldUtils.writeStaticField(TikaXmlParserPool.class,
-                "initializedSize", null, true);
+                "appliedSize", null, true);
     }
 
     @AfterEach
     void restorePolicy() throws Exception {
         FieldUtils.writeStaticField(TikaXmlParserPool.class,
-                "initializedSize", previous, true);
+                "appliedSize", previous, true);
     }
 
     @Test
@@ -65,29 +67,42 @@ class TikaXmlParserPoolTest {
     }
 
     @Test
-    void testOmittedDoesNotResize() throws Exception {
+    void testOmittedLeavesTikaAlone() throws Exception {
         try (var xml = mockStatic(XMLReaderUtils.class)) {
-            xml.when(XMLReaderUtils::getPoolSize).thenReturn(10);
+            // Even when Tika's size changes in between (another library, a
+            // test), asking for nothing neither resizes nor fails.
+            xml.when(XMLReaderUtils::getPoolSize).thenReturn(10, 12);
             TikaXmlParserPool.configure(null);
             TikaXmlParserPool.configure(null);
-            xml.verify(() -> XMLReaderUtils.setPoolSize(10), times(0));
-            assertThatThrownBy(() -> TikaXmlParserPool.configure(16))
-                    .isInstanceOf(IOException.class)
-                    .hasMessageContaining("Conflicting");
+            xml.verify(() -> XMLReaderUtils.setPoolSize(anyInt()), never());
+            xml.verify(XMLReaderUtils::getPoolSize, never());
         }
     }
 
     @Test
-    void testExplicitSixteenAppliedOnceAndConflictsFail() throws Exception {
+    void testFirstAppliedThenLargestWins() throws Exception {
         try (var xml = mockStatic(XMLReaderUtils.class)) {
             xml.when(XMLReaderUtils::getPoolSize).thenReturn(10, 16, 16, 16);
+            // The first size asked for applies, even below Tika's default.
             TikaXmlParserPool.configure(16);
+            // Same size again: nothing to rebuild.
             TikaXmlParserPool.configure(16);
-            TikaXmlParserPool.configure(null);
+            // Smaller: kept larger, no failure.
+            TikaXmlParserPool.configure(12);
+            // Larger: grows.
+            TikaXmlParserPool.configure(32);
             xml.verify(() -> XMLReaderUtils.setPoolSize(16), times(1));
-            assertThatThrownBy(() -> TikaXmlParserPool.configure(12))
-                    .isInstanceOf(IOException.class)
-                    .hasMessageContaining("Conflicting");
+            xml.verify(() -> XMLReaderUtils.setPoolSize(12), never());
+            xml.verify(() -> XMLReaderUtils.setPoolSize(32), times(1));
+        }
+    }
+
+    @Test
+    void testFirstRequestBelowDefaultApplies() throws Exception {
+        try (var xml = mockStatic(XMLReaderUtils.class)) {
+            xml.when(XMLReaderUtils::getPoolSize).thenReturn(10);
+            TikaXmlParserPool.configure(4);
+            xml.verify(() -> XMLReaderUtils.setPoolSize(4), times(1));
         }
     }
 
@@ -108,7 +123,7 @@ class TikaXmlParserPoolTest {
                     .isInstanceOf(IOException.class)
                     .hasCauseInstanceOf(TikaException.class);
             assertThat(FieldUtils.readStaticField(TikaXmlParserPool.class,
-                    "initializedSize", true)).isNull();
+                    "appliedSize", true)).isNull();
         }
     }
 }

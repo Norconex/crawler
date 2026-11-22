@@ -23,9 +23,9 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class TikaParserConfig extends BaseDocHandlerConfig {
     /**
-     * Number of independent Tika parsers. Zero (the default) preserves the
-     * shared parser used in earlier releases. Positive values bound parsing
-     * concurrency and give each active document its own parser.
+     * Maximum number of top-level documents this handler parses at once.
+     * Zero (the default) sets no limit. All documents share the same Tika
+     * parser either way; a limit only makes the extra ones wait.
      */
     private int poolSize;
 
