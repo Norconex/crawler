@@ -17,6 +17,7 @@ package com.norconex.crawler.core.ledger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -472,31 +473,25 @@ public final class CrawlerEntryLedger {
         // atomically, decided by the cache itself from the entry's current
         // status (never by comparing whole entries, which depends on how
         // the cache serializes them).
-        var claimed = new HashMap<>(
-                activeLedger.updateAll(references, CLAIM_QUEUED));
+        Map<String, CrawlerEntry> claimed;
+        try {
+            claimed = new HashMap<>(
+                    activeLedger.updateAll(references, CLAIM_QUEUED));
+        } catch (RuntimeException e) {
+            // The references are off the queue already: claim them one at
+            // a time rather than lose them all.
+            LOG.warn("[{}] Could not claim {} polled references at once; "
+                    + "claiming them one at a time: {}",
+                    nodeName, references.size(), e.toString());
+            claimed = claimOneByOne(activeLedger, references, nodeName);
+        }
         for (String reference : references) {
             // remove(): a reference polled twice is claimed only once
             var entry = claimed.remove(reference);
             if (entry != null) {
                 batch.add(entry);
-                continue;
-            }
-            var existing = activeLedger.get(reference);
-            if (existing.isEmpty()) {
-                LOG.warn("[{}] Reference {} polled from queue but not "
-                        + "found in ledger.", nodeName, reference);
-            } else if (ProcessingStatus.QUEUED
-                    .is(existing.get().getProcessingStatus())) {
-                // Taken off the queue but not claimed: putting it back is
-                // the only thing keeping it from being lost.
-                LOG.warn("[{}] Reference {} polled from queue could not be "
-                        + "claimed; putting it back in the queue.",
-                        nodeName, reference);
-                queue.add(reference);
             } else {
-                LOG.trace("[{}] Reference {} polled from queue skipped: it "
-                        + "is already {}.", nodeName, reference,
-                        existing.get().getProcessingStatus());
+                requeueIfStillQueued(activeLedger, reference, nodeName);
             }
         }
 
@@ -505,6 +500,62 @@ public final class CrawlerEntryLedger {
                     + "{} entries.", nodeName, batch.size());
         }
         return batch;
+    }
+
+    // Claims each reference on its own. One that cannot be claimed is
+    // left out (the caller puts it back in the queue if still QUEUED). An
+    // entry the failed batch call did claim before failing reads as
+    // PROCESSING here and is left as is, like the entries of a worker that
+    // stopped mid-batch: resuming the crawl queues them again.
+    private Map<String, CrawlerEntry> claimOneByOne(
+            CacheMap<CrawlerEntry> activeLedger,
+            List<String> references,
+            String nodeName) {
+        var claimed = new HashMap<String, CrawlerEntry>();
+        for (String reference : new LinkedHashSet<>(references)) {
+            try {
+                activeLedger.update(reference, CLAIM_QUEUED)
+                        .ifPresent(entry -> claimed.put(reference, entry));
+            } catch (RuntimeException e) {
+                LOG.warn("[{}] Could not claim reference {}: {}",
+                        nodeName, reference, e.toString());
+            }
+        }
+        return claimed;
+    }
+
+    private void requeueIfStillQueued(
+            CacheMap<CrawlerEntry> activeLedger,
+            String reference,
+            String nodeName) {
+        Optional<CrawlerEntry> existing;
+        try {
+            existing = activeLedger.get(reference);
+        } catch (RuntimeException e) {
+            // Status unknown: putting it back costs at most a skip on the
+            // next poll, not putting it back may lose it.
+            LOG.warn("[{}] Could not read reference {} after a failed "
+                    + "claim; putting it back in the queue: {}",
+                    nodeName, reference, e.toString());
+            queue.add(reference);
+            return;
+        }
+        if (existing.isEmpty()) {
+            LOG.warn("[{}] Reference {} polled from queue but not "
+                    + "found in ledger.", nodeName, reference);
+        } else if (ProcessingStatus.QUEUED
+                .is(existing.get().getProcessingStatus())) {
+            // Taken off the queue but not claimed: putting it back is
+            // the only thing keeping it from being lost.
+            LOG.warn("[{}] Reference {} polled from queue could not be "
+                    + "claimed; putting it back in the queue.",
+                    nodeName, reference);
+            queue.add(reference);
+        } else {
+            LOG.trace("[{}] Reference {} polled from queue skipped: it "
+                    + "is already {}.", nodeName, reference,
+                    existing.get().getProcessingStatus());
+        }
     }
 
     /**
