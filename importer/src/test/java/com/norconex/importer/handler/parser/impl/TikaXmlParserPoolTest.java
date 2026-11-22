@@ -98,6 +98,18 @@ class TikaXmlParserPoolTest {
     }
 
     @Test
+    void testLaterRequestNeverShrinksAnExternalResize() throws Exception {
+        try (var xml = mockStatic(XMLReaderUtils.class)) {
+            // Applied 16, then something else grew Tika's pool to 32.
+            xml.when(XMLReaderUtils::getPoolSize).thenReturn(10, 32);
+            TikaXmlParserPool.configure(16);
+            TikaXmlParserPool.configure(16);
+            xml.verify(() -> XMLReaderUtils.setPoolSize(16), times(1));
+            xml.verify(() -> XMLReaderUtils.setPoolSize(anyInt()), times(1));
+        }
+    }
+
+    @Test
     void testFirstRequestBelowDefaultApplies() throws Exception {
         try (var xml = mockStatic(XMLReaderUtils.class)) {
             xml.when(XMLReaderUtils::getPoolSize).thenReturn(10);

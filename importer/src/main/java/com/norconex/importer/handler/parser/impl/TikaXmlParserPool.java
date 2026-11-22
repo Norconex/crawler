@@ -33,7 +33,7 @@ import lombok.extern.slf4j.Slf4j;
  * <p>
  * The pool being shared by the whole JVM, the largest size asked for wins:
  * the first explicit request is applied as is, later ones only ever grow
- * it. Asking for nothing leaves Tika's pool alone. Resizing rebuilds the
+ * it (never below the size Tika has, whoever set it). Asking for nothing leaves Tika's pool alone. Resizing rebuilds the
  * pool, so asking again for a size already applied does nothing.
  * </p>
  */
@@ -52,15 +52,17 @@ final class TikaXmlParserPool {
             throw new IllegalArgumentException(
                     "xmlParserPoolSize must be positive.");
         }
+        var current = XMLReaderUtils.getPoolSize();
+        // After the first request, the size Tika has now counts too: it may
+        // have been grown by something else, and must not shrink.
         var target = appliedSize == null
                 ? requested
-                : Math.max(appliedSize, requested);
-        if (appliedSize != null && requested < appliedSize) {
+                : Math.max(Math.max(appliedSize, current), requested);
+        if (target > requested) {
             LOG.info("Tika XML parser pool size {} asked for, keeping the "
-                    + "larger size {} already applied (JVM-wide).",
-                    requested, appliedSize);
+                    + "larger size {} (JVM-wide).", requested, target);
         }
-        if (target == XMLReaderUtils.getPoolSize()) {
+        if (target == current) {
             appliedSize = target;
             return;
         }
