@@ -35,6 +35,10 @@ A list of host/port pairs in the form `host1:port1,host2:port2,...` to use for e
 
 Create the "Topic Name" in Kafka if it does not exist already.
 
+### credentials
+
+The user name and password to sign in with when `securityProtocol` is `SASL_PLAINTEXT` or `SASL_SSL`. The password can be encrypted, so it stays out of the configuration.
+
 ### fieldMappings
 
 Mapping of source fields to target ones (Kafka fields).
@@ -54,6 +58,14 @@ Replication factor set at topic creation.
 ### restrictions
 
 Defines filter conditions that restrict which documents this committer processes. Documents not matching the restrictions are ignored by this committer.
+
+### saslMechanism
+
+How the client signs in when `securityProtocol` is `SASL_PLAINTEXT` or `SASL_SSL`: `PLAIN` (default), `SCRAM_SHA_256` or `SCRAM_SHA_512`.
+
+### securityProtocol
+
+How the client connects to the brokers: `PLAINTEXT` (the Kafka default, no encryption and no sign-in), `SSL` (encrypted with TLS), `SASL_PLAINTEXT` (sign-in, not encrypted) or `SASL_SSL` (sign-in, encrypted). The sign-in uses `credentials`.
 
 ### topicName
 
@@ -75,4 +87,24 @@ The following example uses the minimum required settings to configure Apache Kaf
       <bootstrapServers>http://some_host:1234</bootstrapServers>
       <topicName>my-topic</topicName>
     </committer>`}
+/>
+
+The following example signs in to a secured cluster with SASL over TLS, with the password kept encrypted.
+
+<ConfigBlock
+  json={{
+    "class": "ApacheKafkaCommitter",
+    "bootstrapServers": "broker1:9093,broker2:9093",
+    "topicName": "my-topic",
+    "securityProtocol": "SASL_SSL",
+    "saslMechanism": "SCRAM_SHA_512",
+    "credentials": {
+      "username": "crawler",
+      "password": "${kafkaPassword}",
+      "passwordKey": {
+        "source": "ENVIRONMENT",
+        "value": "MY_KEY_VAR"
+      }
+    }
+  }}
 />

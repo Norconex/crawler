@@ -21,6 +21,10 @@ Commits crawled documents to an Amazon CloudSearch index. Supports field mapping
 
 Amazon CloudSearch access key. Leave blank to take it from the environment.
 
+### credentials
+
+Credentials holding the access key as their user name and the secret key as their password, used when `accessKey` or `secretKey` is empty. Unlike `secretKey`, the password can be encrypted. Leave everything empty to take the keys from the environment.
+
 ### fieldMappings
 
 Mapping of source fields to target ones (index field name).
