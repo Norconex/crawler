@@ -14,10 +14,18 @@
  */
 package com.norconex.crawler.core.metrics;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
+import org.apache.commons.lang3.concurrent.BasicThreadFactory;
+
+import com.norconex.crawler.core.cluster.CacheEntryUpdate;
 import com.norconex.crawler.core.cluster.CacheManager;
 import com.norconex.crawler.core.cluster.CacheMap;
 import com.norconex.crawler.core.ledger.CrawlerEntryLedger;
@@ -39,6 +47,19 @@ public class CrawlerMetricsImpl implements CrawlerMetrics {
     private boolean closed;
 
     private final MetricsMemCache memCache = new MetricsMemCache();
+
+    /**
+     * How often event counts recorded on this node are added to the shared
+     * store. Counting an event only touches memory; the store (a network
+     * call when clustered) is written once per event name per interval, and
+     * whenever counts are read, flushed or the metrics closed.
+     */
+    static final Duration EVENT_COUNTS_FLUSH_INTERVAL = Duration.ofSeconds(1);
+
+    /** Counts recorded on this node not yet added to the shared store. */
+    private final ConcurrentHashMap<String, LongAdder> pendingEventCounts =
+            new ConcurrentHashMap<>();
+    private ScheduledExecutorService eventCountsFlusher;
 
     public CrawlerMetricsImpl() {
         LOG.info("[CrawlerMetricsImpl] Created instance: {}",
@@ -73,6 +94,7 @@ public class CrawlerMetricsImpl implements CrawlerMetrics {
     @Override
     public void init(CrawlerSession crawlSession) {
         memCache.clear();
+        pendingEventCounts.clear();
         var ctx = crawlSession.getCrawlContext();
         ledger = ctx.getCrawlEntryLedger();
         var cacheManager = crawlSession.getCluster().getCacheManager();
@@ -101,6 +123,26 @@ public class CrawlerMetricsImpl implements CrawlerMetrics {
             //                incrementProcessedTotal(1L);
             //            }
         });
+        startEventCountsFlusher();
+    }
+
+    private synchronized void startEventCountsFlusher() {
+        stopEventCountsFlusher();
+        eventCountsFlusher = Executors.newSingleThreadScheduledExecutor(
+                BasicThreadFactory.builder()
+                        .namingPattern("crawler-metrics-flush")
+                        .daemon(true)
+                        .build());
+        var millis = EVENT_COUNTS_FLUSH_INTERVAL.toMillis();
+        eventCountsFlusher.scheduleWithFixedDelay(this::flushEventCounts,
+                millis, millis, TimeUnit.MILLISECONDS);
+    }
+
+    private synchronized void stopEventCountsFlusher() {
+        if (eventCountsFlusher != null) {
+            eventCountsFlusher.shutdownNow();
+            eventCountsFlusher = null;
+        }
     }
 
     //--- Event counts ------------------------------------------------------
@@ -113,14 +155,36 @@ public class CrawlerMetricsImpl implements CrawlerMetrics {
             LOG.warn("Event counts store is not initialized yet. "
                     + "Increment will only be reflected in memory.");
         } else {
-            try {
-                atomicIncrement(eventCountsStore, eventName, incrementBy);
-            } catch (Exception e) {
-                LOG.error("Error updating event count cache for event: "
-                        + eventName, e);
-            }
+            pendingEventCounts
+                    .computeIfAbsent(eventName, k -> new LongAdder())
+                    .add(incrementBy);
         }
         memCache.eventCounts.merge(eventName, incrementBy, Long::sum);
+    }
+
+    /**
+     * Adds the counts recorded on this node since the last flush to the
+     * shared store, one atomic update per event name. A count that could not
+     * be added is kept for the next flush.
+     */
+    synchronized void flushEventCounts() {
+        var store = eventCountsStore;
+        if (store == null) {
+            return;
+        }
+        for (var en : pendingEventCounts.entrySet()) {
+            var delta = en.getValue().sumThenReset();
+            if (delta == 0) {
+                continue;
+            }
+            try {
+                store.update(en.getKey(), new AddToCount(delta));
+            } catch (RuntimeException e) {
+                en.getValue().add(delta);
+                LOG.warn("Could not update event count '{}' in the crawl "
+                        + "store; will retry: {}", en.getKey(), e.toString());
+            }
+        }
     }
 
     //    private void incrementProcessedTotal(long incrementBy) {
@@ -147,6 +211,7 @@ public class CrawlerMetricsImpl implements CrawlerMetrics {
     public Map<String, Long> getEventCounts() {
         if (!isClosed()) {
             try {
+                flushEventCounts();
                 eventCountsStore.forEach(memCache.eventCounts::put);
             } catch (Exception e) {
                 LOG.warn("CrawlerMetrics: Could not sync event counts from "
@@ -213,54 +278,31 @@ public class CrawlerMetricsImpl implements CrawlerMetrics {
         return closed;
     }
 
-    private static final int ATOMIC_INCREMENT_MAX_ATTEMPTS = 10;
+    /**
+     * Adds to a count. Deterministic, as the store may run it again on a
+     * backup copy. When a cluster member fails during the update, Hazelcast
+     * may retry it, so in that rare case a count can be added twice: a small
+     * over-count, where comparing and retrying (the previous approach)
+     * dropped counts outright under contention.
+     */
+    static final class AddToCount implements CacheEntryUpdate<Long> {
+        private static final long serialVersionUID = 1L;
+        private final long delta;
 
-    private static void atomicIncrement(
-            CacheMap<Long> store, String key, long increment) {
-        if (Boolean.getBoolean("norconex.cluster.atomicCounters")
-                && store instanceof com.norconex.crawler.core.cluster.impl.hazelcast.HazelcastMapAdapter<
-                        ?> hz) {
-            ClusterCounterIncrement.increment(hz.vendor(), key, increment);
-            return;
+        AddToCount(long delta) {
+            this.delta = delta;
         }
-        for (var attempt = 0; attempt < ATOMIC_INCREMENT_MAX_ATTEMPTS;
-                attempt++) {
-            var currentValue = store.get(key);
-            Long currentLongValue = 0L;
-            if (!currentValue.isEmpty()) {
-                Object val = currentValue.get();
-                if (val instanceof Long longVal) {
-                    currentLongValue = longVal;
-                } else if (val instanceof Integer intVal) {
-                    currentLongValue = intVal.longValue();
-                } else {
-                    throw new ClassCastException(
-                            "Unsupported type in eventCountsStore: "
-                                    + val.getClass());
-                }
-            }
-            Long newValue = currentLongValue + increment;
 
-            boolean updated;
-            if (currentValue.isEmpty()) {
-                updated = (store.putIfAbsent(key, newValue) == null);
-            } else {
-                updated = store.replace(key, currentLongValue, newValue);
-            }
-            if (updated) {
-                return;
-            }
+        @Override
+        public Long apply(Long current) {
+            return (current == null ? 0L : current) + delta;
         }
-        LOG.warn("Failed to atomically increment metric '{}' after {} "
-                + "attempts; increment of {} was dropped.",
-                key, ATOMIC_INCREMENT_MAX_ATTEMPTS, increment);
     }
 
     @Override
     public void flush() {
-        // No-op for now: metrics are written directly to the cache
-        // on each increment and ledger counts are queried on demand.
-        // This method is kept for API compatibility and future hooks.
+        // Ledger counts are queried on demand; event counts are buffered.
+        flushEventCounts();
     }
 
     @Override
@@ -269,6 +311,14 @@ public class CrawlerMetricsImpl implements CrawlerMetrics {
         if (closed) {
             LOG.info("CrawlerMetrics already closed.");
             return;
+        }
+
+        stopEventCountsFlusher();
+        try {
+            flushEventCounts();
+        } catch (Exception e) {
+            LOG.warn("Could not flush event counts on close: {}",
+                    e.getMessage());
         }
 
         // Best-effort final sync from cluster caches into memory so
