@@ -1,4 +1,4 @@
-/* Copyright 2023-2024 Norconex Inc.
+/* Copyright 2023-2026 Norconex Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package com.norconex.committer.apachekafka;
 
 import com.norconex.committer.core.batch.BaseBatchCommitterConfig;
+import com.norconex.commons.lang.security.Credentials;
 
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -57,4 +58,70 @@ public class ApacheKafkaCommitterConfig extends BaseBatchCommitterConfig {
      * Required if {@link #isCreateTopic()} is <code>true</code>
      */
     private short replicationFactor;
+
+    /**
+     * How the Kafka client connects to the brokers: whether the connection
+     * is encrypted (TLS) and whether the client signs in (SASL). When not
+     * set, the Kafka default ({@link SecurityProtocol#PLAINTEXT}) applies.
+     */
+    private SecurityProtocol securityProtocol;
+
+    /**
+     * How the client signs in when {@link #getSecurityProtocol()} is
+     * {@link SecurityProtocol#SASL_PLAINTEXT} or
+     * {@link SecurityProtocol#SASL_SSL}. Defaults to
+     * {@link SaslMechanism#PLAIN} when those are used and nothing is set.
+     */
+    private SaslMechanism saslMechanism;
+
+    /**
+     * The user name and password to sign in with when using SASL. The
+     * password can be encrypted, so it stays out of the configuration.
+     */
+    private final Credentials credentials = new Credentials();
+
+    public ApacheKafkaCommitterConfig setCredentials(Credentials credentials) {
+        this.credentials.copyFrom(credentials);
+        return this;
+    }
+
+    /**
+     * Kafka client security protocols.
+     */
+    public enum SecurityProtocol {
+        /** No encryption, no sign-in. */
+        PLAINTEXT,
+        /** Encrypted with TLS, no sign-in. */
+        SSL,
+        /** Sign-in with SASL, not encrypted. */
+        SASL_PLAINTEXT,
+        /** Sign-in with SASL, encrypted with TLS. */
+        SASL_SSL;
+
+        boolean isSasl() {
+            return this == SASL_PLAINTEXT || this == SASL_SSL;
+        }
+    }
+
+    /**
+     * Kafka SASL sign-in mechanisms using a user name and password.
+     */
+    public enum SaslMechanism {
+        /** The user name and password are sent as they are. */
+        PLAIN("PLAIN"),
+        /** Salted challenge-response with SHA-256. */
+        SCRAM_SHA_256("SCRAM-SHA-256"),
+        /** Salted challenge-response with SHA-512. */
+        SCRAM_SHA_512("SCRAM-SHA-512");
+
+        private final String kafkaName;
+
+        SaslMechanism(String kafkaName) {
+            this.kafkaName = kafkaName;
+        }
+
+        String kafkaName() {
+            return kafkaName;
+        }
+    }
 }

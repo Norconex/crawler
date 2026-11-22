@@ -66,6 +66,19 @@ public class GoogleDriveFetcherConfig extends BaseFetcherConfig {
      * Service account client email. Used instead of the username of the
      * {@link #getCredentials() credentials} when set.
      */
+    /**
+     * The address Google's OAuth service answers token requests on. Change
+     * it only to go through a proxy or a compatible server; it is also
+     * the audience the signed request names.
+     */
+    private String tokenUrl = "https://oauth2.googleapis.com/token";
+
+    /**
+     * The address the Google Drive API is under, without a trailing slash.
+     * Change it only to go through a proxy or a compatible server.
+     */
+    private String apiBaseUrl = "https://www.googleapis.com";
+
     private String clientEmail;
 
     /**

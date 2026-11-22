@@ -1,4 +1,4 @@
-/* Copyright 2016-2025 Norconex Inc.
+/* Copyright 2016-2026 Norconex Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package com.norconex.committer.amazoncloudsearch;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.norconex.committer.core.batch.BaseBatchCommitterConfig;
 import com.norconex.commons.lang.net.ProxySettings;
+import com.norconex.commons.lang.security.Credentials;
 
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -82,6 +83,17 @@ public class AmazonCloudSearchCommitterConfig
     private String secretKey;
 
     /**
+     * Credentials holding the access key (user name) and the secret key
+     * (password), used when {@link #getAccessKey()} or
+     * {@link #getSecretKey()} is empty. Unlike {@code secretKey}, the
+     * password can be encrypted, so the secret key stays out of the
+     * configuration. When neither these credentials nor the keys above are
+     * set, they are obtained from the environment, as detailed in
+     * {@link DefaultAWSCredentialsProviderChain}.
+     */
+    private final Credentials credentials = new Credentials();
+
+    /**
      * Whether to fix IDs that are too long for CloudSearch
      * ID limitation (128 characters max). If <code>true</code>,
      * long IDs will be truncated and a hash code representing the
@@ -106,6 +118,12 @@ public class AmazonCloudSearchCommitterConfig
      * Specifying a {@code null} value will disable storing the content.
      */
     private String targetContentField = DEFAULT_COULDSEARCH_CONTENT_FIELD;
+
+    public AmazonCloudSearchCommitterConfig setCredentials(
+            Credentials credentials) {
+        this.credentials.copyFrom(credentials);
+        return this;
+    }
 
     public ProxySettings getProxySettings() {
         return proxySettings;

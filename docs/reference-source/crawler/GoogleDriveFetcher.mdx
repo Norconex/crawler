@@ -59,6 +59,12 @@ Incremental source-delta mode:
 
 ## Properties
 
+### apiBaseUrl
+
+Google APIs base address. Change it to go through a proxy or a compatible server.
+
+Default: `https://www.googleapis.com`
+
 ### applicationName
 
 Optional Google API application name.
@@ -104,6 +110,13 @@ leave it empty and give it as the password of `credentials`.
 
 Credentials holding the service account: the client email as the username and the PEM private key as the
 password, used when `clientEmail` or `privateKey` are empty. The password can be encrypted.
+
+### tokenUrl
+
+Google OAuth token address the service account's signed request is sent to. Change it to go through a proxy or a
+compatible server.
+
+Default: `https://oauth2.googleapis.com/token`
 
 ### referenceFilters
 
