@@ -19,6 +19,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.norconex.crawler.core.ledger.CrawlerEntry;
+import com.norconex.crawler.core.ledger.CrawlerEntryLedger;
 import com.norconex.crawler.core.session.CrawlerSession;
 
 import lombok.Builder;
@@ -90,34 +91,39 @@ public class BatchDispatcher {
                 return entry;
             }
             // Only one thread should try to refill when empty
+            boolean hasEntries;
             refillLock.lock();
             try {
-                if (!localQueue.isEmpty()) {
-                    continue;
-                }
-                var batchSize = computeBatchSize();
-                var queueCount = ledger.getQueuedEntryCount();
-                LOG.trace("[{}] BatchDispatcher.take() refilling from "
-                        + "global queue (batchSize={}, queueCount={}).",
-                        nodeName, batchSize, queueCount);
-                var batch = ledger.nextQueuedBatch(batchSize);
-                LOG.trace("[{}] BatchDispatcher.take() got batch of {} "
-                        + "entries from global queue.",
-                        nodeName, batch.size());
-                if (!batch.isEmpty()) {
-                    localQueue.addAll(batch);
-                    continue;
-                }
+                // Another thread may have refilled while we waited.
+                hasEntries = !localQueue.isEmpty()
+                        || refillWhenEmpty(ledger, nodeName);
             } finally {
                 refillLock.unlock();
             }
-            LOG.trace("[{}] BatchDispatcher.take() found no entries in local "
-                    + "or global queue.",
-                    nodeName);
-            // Return null immediately if queue is empty
-            // Let CrawlerActivityChecker handle idle timeout logic
-            return null;
+            if (!hasEntries) {
+                LOG.trace("[{}] BatchDispatcher.take() found no entries in "
+                        + "local or global queue.", nodeName);
+                // Return null immediately if queue is empty
+                // Let CrawlerActivityChecker handle idle timeout logic
+                return null;
+            }
         }
+    }
+
+    // Called with the refill lock held. True if entries were added.
+    private boolean refillWhenEmpty(
+            CrawlerEntryLedger ledger, String nodeName) {
+        var batchSize = computeBatchSize();
+        var queueCount = ledger.getQueuedEntryCount();
+        LOG.trace("[{}] BatchDispatcher.take() refilling from "
+                + "global queue (batchSize={}, queueCount={}).",
+                nodeName, batchSize, queueCount);
+        var batch = ledger.nextQueuedBatch(batchSize);
+        LOG.trace("[{}] BatchDispatcher.take() got batch of {} "
+                + "entries from global queue.",
+                nodeName, batch.size());
+        localQueue.addAll(batch);
+        return !batch.isEmpty();
     }
 
     private void maybeRefill() {

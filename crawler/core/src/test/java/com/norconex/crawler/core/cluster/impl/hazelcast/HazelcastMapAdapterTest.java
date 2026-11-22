@@ -570,7 +570,7 @@ class HazelcastMapAdapterTest {
     }
 
     @Test
-    void testUpdate_concurrentCounterLosesNothing() throws Exception {
+    void testUpdate_concurrentCounterLosesNothing() {
         var map = cacheManager.<Long>getCacheMap(
                 mapPrefix + "counts", Long.class);
         try (var pool = Executors.newFixedThreadPool(8)) {

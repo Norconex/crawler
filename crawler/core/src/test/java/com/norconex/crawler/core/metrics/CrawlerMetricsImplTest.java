@@ -240,7 +240,7 @@ class CrawlerMetricsImplTest {
     }
 
     @Test
-    void flush_manyThreads_noCountLost() throws Exception {
+    void flush_manyThreads_noCountLost() {
         var store = new InMemoryCacheMap<Long>("counts");
         var metrics = buildInitialized(mock(CrawlerEntryLedger.class), store);
         try (var pool = Executors.newFixedThreadPool(8)) {

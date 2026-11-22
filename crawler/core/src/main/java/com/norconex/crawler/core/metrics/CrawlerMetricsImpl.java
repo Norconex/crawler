@@ -209,10 +209,15 @@ public class CrawlerMetricsImpl implements CrawlerMetrics {
 
     @Override
     public Map<String, Long> getEventCounts() {
+        var store = eventCountsStore;
+        if (store == null) {
+            // Not initialized: the counts are only in memory.
+            return memCache.eventCounts;
+        }
         if (!isClosed()) {
             try {
                 flushEventCounts();
-                eventCountsStore.forEach(memCache.eventCounts::put);
+                store.forEach(memCache.eventCounts::put);
             } catch (Exception e) {
                 LOG.warn("CrawlerMetrics: Could not sync event counts from "
                         + "cluster (cluster may be shutting down): {}",
