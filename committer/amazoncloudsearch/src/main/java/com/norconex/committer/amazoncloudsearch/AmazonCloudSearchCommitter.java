@@ -133,16 +133,21 @@ public class AmazonCloudSearchCommitter
             }
         }
         b.setClientConfiguration(clientConfig);
-        if (StringUtils.isAnyBlank(
-                configuration.getAccessKey(),
-                configuration.getSecretKey())) {
+        var creds = configuration.getCredentials();
+        var accessKey = StringUtils.defaultIfBlank(
+                configuration.getAccessKey(), creds.getUsername());
+        var secretKey = configuration.getSecretKey();
+        if (StringUtils.isBlank(secretKey)
+                && StringUtils.isNotBlank(creds.getPassword())) {
+            secretKey = EncryptionUtil.decrypt(
+                    creds.getPassword(), creds.getPasswordKey());
+        }
+        if (StringUtils.isAnyBlank(accessKey, secretKey)) {
             b.withCredentials(new DefaultAWSCredentialsProviderChain());
         } else {
             b.withCredentials(
                     new AWSStaticCredentialsProvider(
-                            new BasicAWSCredentials(
-                                    configuration.getAccessKey(),
-                                    configuration.getSecretKey())));
+                            new BasicAWSCredentials(accessKey, secretKey)));
         }
         b.withEndpointConfiguration(
                 new EndpointConfiguration(

@@ -1,4 +1,4 @@
-/* Copyright 2024 Norconex Inc.
+/* Copyright 2024-2026 Norconex Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,9 +32,12 @@ class KafkaAdmin {
 
     private Admin admin;
 
-    public KafkaAdmin(String bootstrapServers) {
+    public KafkaAdmin(ApacheKafkaCommitterConfig config) {
         var props = new Properties();
-        props.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(
+                AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG,
+                config.getBootstrapServers());
+        KafkaSecurity.apply(props, config);
         admin = Admin.create(props);
     }
 
