@@ -22,6 +22,7 @@ import java.util.Optional;
 
 import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.exception.TikaException;
+import org.apache.tika.metadata.HttpHeaders;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.parser.ParseContext;
@@ -35,6 +36,7 @@ import com.norconex.commons.lang.file.ContentType;
 import com.norconex.commons.lang.text.TextMatcher;
 import com.norconex.importer.doc.ContentTypeDetector;
 import com.norconex.importer.handler.DocHandlerContext;
+import com.norconex.importer.handler.parser.impl.nativemeta.NativeMetadata;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -116,10 +118,15 @@ class RecursiveEmbeddedMerger extends ParserDecorator {
 
         // All good, parse.
         typesHierarchy.add(currentType);
+        var nativeFields = NativeMetadata.read(
+                stream, currentType,
+                tikaMeta.get(HttpHeaders.CONTENT_ENCODING));
         super.parse(
                 stream,
                 new BodyContentHandler(writer), tikaMeta, context);
+        nativeFields.supersede(tikaMeta);
         TikaUtil.metadataToProperties(tikaMeta, docCtx.metadata());
+        nativeFields.addTo(docCtx.metadata());
         typesHierarchy.pollLast();
     }
 }

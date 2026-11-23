@@ -40,6 +40,7 @@ import com.norconex.commons.lang.text.TextMatcher;
 import com.norconex.importer.doc.ContentTypeDetector;
 import com.norconex.importer.doc.Doc;
 import com.norconex.importer.handler.DocHandlerContext;
+import com.norconex.importer.handler.parser.impl.nativemeta.NativeMetadata;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -77,8 +78,13 @@ class RecursiveEmbeddedSplitter extends ParserDecorator {
         // Container doc:
         if (isMasterDoc) {
             isMasterDoc = false;
+            var nativeFields = NativeMetadata.read(
+                    input, docCtx.contentType(),
+                    tikaMeta.get(HttpHeaders.CONTENT_ENCODING));
             super.parse(input, handler, tikaMeta, context);
+            nativeFields.supersede(tikaMeta);
             TikaUtil.metadataToProperties(tikaMeta, docCtx.metadata());
+            nativeFields.addTo(docCtx.metadata());
             return;
         }
 
