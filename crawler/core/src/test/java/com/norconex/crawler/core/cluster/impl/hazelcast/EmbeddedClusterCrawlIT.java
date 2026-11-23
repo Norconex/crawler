@@ -60,6 +60,10 @@ class EmbeddedClusterCrawlIT {
 
     private static final long CRAWL_TIMEOUT_SECONDS = 90;
     private static final long EXECUTOR_SHUTDOWN_SECONDS = 15;
+    private static final String H2_SQL_MERGE = """
+            MERGE INTO "{tableName}" (k, v)
+            KEY(k)
+            VALUES (?, ?)""";
 
     @TempDir
     java.nio.file.Path tempDir;
@@ -80,8 +84,7 @@ class EmbeddedClusterCrawlIT {
         // Shared H2 in-memory database so both nodes see the same tables.
         var sharedJdbcUrl = "jdbc:h2:mem:" + clusterName
                 + ";DB_CLOSE_DELAY=-1";
-        var h2SqlMerge = "MERGE INTO \"{tableName}\" (k, v)\n"
-                + "KEY(k)\nVALUES (?, ?)";
+        var h2SqlMerge = H2_SQL_MERGE;
 
         var startRefs = java.util.stream.IntStream.range(0, numRefs)
                 .mapToObj(i -> "ref-" + i)
@@ -169,8 +172,7 @@ class EmbeddedClusterCrawlIT {
                 .substring(0, 8);
         var sharedJdbcUrl = "jdbc:h2:mem:" + clusterName
                 + ";DB_CLOSE_DELAY=-1";
-        var h2SqlMerge = "MERGE INTO \"{tableName}\" (k, v)\n"
-                + "KEY(k)\nVALUES (?, ?)";
+        var h2SqlMerge = H2_SQL_MERGE;
         var startRefs = java.util.stream.IntStream.range(0, numRefs)
                 .mapToObj(i -> "ref-" + i)
                 .toList();

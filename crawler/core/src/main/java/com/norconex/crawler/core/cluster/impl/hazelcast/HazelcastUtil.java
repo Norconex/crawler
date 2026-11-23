@@ -249,8 +249,8 @@ public final class HazelcastUtil {
         var configured = Optional.ofNullable(config)
                 .map(HazelcastClusterConnectorConfig::getNodeExpiryTimeout)
                 .map(Duration::toMillis)
-                .orElse(HazelcastClusterConnectorConfig
-                        .DEFAULT_NODE_EXPIRY_TIMEOUT.toMillis());
+                .orElse(HazelcastClusterConnectorConfig.DEFAULT_NODE_EXPIRY_TIMEOUT
+                        .toMillis());
         return Math.max(configured, MIN_NODE_EXPIRY_TIMEOUT_MS);
     }
 

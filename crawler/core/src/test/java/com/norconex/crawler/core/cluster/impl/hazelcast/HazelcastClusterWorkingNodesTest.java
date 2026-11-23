@@ -42,8 +42,9 @@ class HazelcastClusterWorkingNodesTest {
     void setUp() {
         workerCache = new InMemoryCacheMap<>("workers");
         stepCache = new InMemoryCacheMap<>("steps");
-        stepCache.put(PIPELINE_KEY, record("process", PipelineStatus.RUNNING,
-                RUN, now()));
+        stepCache.put(PIPELINE_KEY,
+                stepRecord("process", PipelineStatus.RUNNING,
+                        RUN, now()));
     }
 
     @Test
@@ -107,10 +108,10 @@ class HazelcastClusterWorkingNodesTest {
     private void heartbeat(String node, String stepId,
             PipelineStatus status, String runId, long updatedAt) {
         workerCache.put(PIPELINE_KEY + ":" + runId + ":" + node,
-                record(stepId, status, runId, updatedAt));
+                stepRecord(stepId, status, runId, updatedAt));
     }
 
-    private static StepRecord record(String stepId, PipelineStatus status,
+    private static StepRecord stepRecord(String stepId, PipelineStatus status,
             String runId, long updatedAt) {
         return new StepRecord()
                 .setPipelineId("crawl")

@@ -14,6 +14,7 @@
  */
 package com.norconex.crawler.core.ledger;
 
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -947,7 +948,7 @@ public final class CrawlerEntryLedger {
             var claimed = BeanUtil.clone(current);
             claimed.setProcessingStatus(ProcessingStatus.PROCESSING);
             claimed.setProcessingNode(nodeName);
-            claimed.setProcessingAt(ZonedDateTime.now());
+            claimed.setProcessingAt(ZonedDateTime.now(ZoneOffset.UTC));
             return claimed;
         }
     }
