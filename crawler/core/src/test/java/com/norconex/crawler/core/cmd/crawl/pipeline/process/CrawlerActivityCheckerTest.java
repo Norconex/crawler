@@ -313,4 +313,33 @@ class CrawlerActivityCheckerTest {
         assertThat(checker.isActive()).isTrue();
         verify(ledger, never()).requeueQueuedEntries();
     }
+
+    @Test
+    void isActive_whenTakenWhileIdle_waitsForThoseToo() {
+        var ledger = mock(CrawlerEntryLedger.class);
+        // None at first; one taken while idle; then done.
+        when(ledger.getProcessingCount()).thenReturn(0L, 1L, 1L, 0L);
+        var session = buildSessionWithProcessing(ledger);
+        var config = session.getCrawlContext().getCrawlConfig();
+        when(config.getIdleTimeout()).thenReturn(Duration.ofMillis(50));
+
+        var checker = new CrawlerActivityChecker(session, false);
+
+        assertThat(checker.isActive()).isFalse();
+        verify(ledger, atLeastOnce()).requeueStrandedEntries(any());
+    }
+
+    @Test
+    void isActive_whenQueuedWhileIdle_returnsTrue() {
+        var ledger = mock(CrawlerEntryLedger.class);
+        var session = buildSessionWithProcessing(ledger);
+        // Empty until polled while idle.
+        when(ledger.getQueuedEntryCount()).thenReturn(0L, 0L, 0L, 1L);
+        var config = session.getCrawlContext().getCrawlConfig();
+        when(config.getIdleTimeout()).thenReturn(Duration.ofSeconds(5));
+
+        var checker = new CrawlerActivityChecker(session, false);
+
+        assertThat(checker.isActive()).isTrue();
+    }
 }

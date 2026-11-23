@@ -15,6 +15,7 @@
 package com.norconex.crawler.core.ledger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
@@ -24,6 +25,7 @@ import static org.mockito.Mockito.spy;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
@@ -39,6 +41,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.norconex.crawler.core.CrawlerConfig;
 import com.norconex.crawler.core.cluster.CacheMap;
 import com.norconex.crawler.core.cluster.CacheNames;
+import com.norconex.crawler.core.cluster.CacheQueue;
+import com.norconex.crawler.core.cluster.ClusterException;
 import com.norconex.crawler.core.cluster.Cluster;
 import com.norconex.crawler.core.cluster.ClusterNode;
 import com.norconex.crawler.core.cluster.support.InMemoryCacheManager;
@@ -573,10 +577,67 @@ class CrawlerEntryLedgerTest {
                 .isEqualTo(ProcessingStatus.PROCESSING);
     }
 
+    @Test
+    void testRequeueStrandedEntries_skipsEntryChangedMeanwhile() {
+        // Finished (or put back) by someone else between the scan and the
+        // release: left alone, not queued.
+        var stubbed = ledgerWithStubbedMaps(spied -> doAnswer(
+                inv -> inv.getArgument(
+                        1) instanceof CrawlerEntryLedger.ReleaseClaim
+                                ? Optional.empty()
+                                : inv.callRealMethod())
+                                        .when(spied).update(any(), any()));
+        stubbed.queue(entry("ref-a"));
+        claimAs(stubbed, "node-a", 1);
+
+        assertThat(stubbed.requeueStrandedEntries(Set.of("node-b")))
+                .isZero();
+        assertThat(stubbed.getProcessingStatus("ref-a"))
+                .isEqualTo(ProcessingStatus.PROCESSING);
+    }
+
+    @Test
+    void testRequeueStrandedEntries_queueFailureLeavesEntryWithItsNode() {
+        var failAdds = new AtomicBoolean();
+        var manager = new InMemoryCacheManager() {
+            @Override
+            @SuppressWarnings("unchecked")
+            public <T> CacheQueue<T> getCacheQueue(String name, Class<T> type) {
+                var queue = spy(super.getCacheQueue(name, type));
+                doAnswer(inv -> {
+                    if (failAdds.get()) {
+                        throw new IllegalStateException("queue down");
+                    }
+                    return inv.callRealMethod();
+                }).when(queue).add(any());
+                return queue;
+            }
+        };
+        lenient().when(cluster.getCacheManager()).thenReturn(manager);
+        var failing = new CrawlerEntryLedger();
+        failing.init(session);
+        failing.ensureCurrentLedgerAliasExists();
+        failing.queue(entry("ref-a"));
+        claimAs(failing, "node-a", 1);
+        failAdds.set(true);
+
+        assertThatThrownBy(() -> failing.requeueStrandedEntries(
+                Set.of("node-b"))).isInstanceOf(ClusterException.class);
+        var kept = failing.getEntry("ref-a").orElseThrow();
+        assertThat(kept.getProcessingStatus())
+                .isEqualTo(ProcessingStatus.PROCESSING);
+        assertThat(kept.getProcessingNode()).isEqualTo("node-a");
+    }
+
     private List<CrawlerEntry> claimAs(String nodeName, int size) {
+        return claimAs(ledger, nodeName, size);
+    }
+
+    private List<CrawlerEntry> claimAs(
+            CrawlerEntryLedger target, String nodeName, int size) {
         lenient().when(localNode.getNodeName()).thenReturn(nodeName);
         try {
-            return ledger.nextQueuedBatch(size);
+            return target.nextQueuedBatch(size);
         } finally {
             lenient().when(localNode.getNodeName())
                     .thenReturn("unit-test-node");
