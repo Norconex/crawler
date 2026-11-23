@@ -18,6 +18,7 @@ import java.io.Closeable;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.norconex.crawler.core.cluster.pipeline.PipelineManager;
 import com.norconex.crawler.core.event.CrawlerEvent;
@@ -36,6 +37,19 @@ public interface Cluster extends Closeable {
      * @return node names
      */
     List<String> getNodeNames();
+
+    /**
+     * Returns the names of the nodes still working on the crawl: those that
+     * may still finish the documents they took for processing. A node that
+     * left the cluster is not one of them. Implementations that track more
+     * than membership also leave out a node that stopped sending news of
+     * itself, or that is done with the step the crawl is running.
+     * Documents taken by a node not listed may be given to another one.
+     * @return the working node names, empty if they cannot be told
+     */
+    default Set<String> getWorkingNodeNames() {
+        return Set.copyOf(getNodeNames());
+    }
 
     ClusterNode getLocalNode();
 

@@ -22,7 +22,9 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.spy;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
@@ -455,6 +457,131 @@ class CrawlerEntryLedgerTest {
     // -----------------------------------------------------------------
     // Helpers
     // -----------------------------------------------------------------
+
+    // -----------------------------------------------------------------
+    // Entries stranded with a node no longer working on the crawl
+    // -----------------------------------------------------------------
+
+    @Test
+    void testNextQueuedBatch_recordsClaimingNode() {
+        ledger.queue(entry("ref-1"));
+
+        var claimed = ledger.nextQueuedBatch(10).get(0);
+
+        assertThat(claimed.getProcessingNode()).isEqualTo("unit-test-node");
+        assertThat(claimed.getProcessingAt()).isNotNull();
+        assertThat(ledger.getEntry("ref-1").orElseThrow()
+                .getProcessingNode()).isEqualTo("unit-test-node");
+    }
+
+    @Test
+    void testRequeueStrandedEntries_putsBackOnlyThoseOfGoneNodes() {
+        ledger.queue(entry("ref-a"));
+        ledger.queue(entry("ref-b"));
+        claimAs("node-a", 1);
+        claimAs("node-b", 1);
+
+        var requeued = ledger.requeueStrandedEntries(Set.of("node-b"));
+
+        assertThat(requeued).isEqualTo(1);
+        var back = ledger.getEntry("ref-a").orElseThrow();
+        assertThat(back.getProcessingStatus())
+                .isEqualTo(ProcessingStatus.QUEUED);
+        assertThat(back.getProcessingNode()).isNull();
+        assertThat(ledger.getProcessingStatus("ref-b"))
+                .isEqualTo(ProcessingStatus.PROCESSING);
+        assertThat(ledger.getQueueCount()).isEqualTo(1);
+
+        // A working node takes it again.
+        var retaken = claimAs("node-b", 10);
+        assertThat(retaken).extracting(CrawlerEntry::getReference)
+                .containsExactly("ref-a");
+    }
+
+    @Test
+    void testRequeueStrandedEntries_putsBackOnce() {
+        ledger.queue(entry("ref-a"));
+        claimAs("node-a", 1);
+
+        assertThat(ledger.requeueStrandedEntries(Set.of("node-b")))
+                .isEqualTo(1);
+        assertThat(ledger.requeueStrandedEntries(Set.of("node-b")))
+                .isZero();
+        assertThat(ledger.getQueueCount()).isEqualTo(1);
+    }
+
+    @Test
+    void testRequeueStrandedEntries_leavesEntryWithoutHolder() {
+        var processing = entry("ref-a");
+        processing.setProcessingStatus(ProcessingStatus.PROCESSING);
+        ledger.updateEntry(processing);
+
+        assertThat(ledger.requeueStrandedEntries(Set.of("node-b")))
+                .isZero();
+        assertThat(ledger.getProcessingStatus("ref-a"))
+                .isEqualTo(ProcessingStatus.PROCESSING);
+    }
+
+    @Test
+    void testRequeueStrandedEntries_noWorkingNodeKnownPutsNothingBack() {
+        ledger.queue(entry("ref-a"));
+        claimAs("node-a", 1);
+
+        assertThat(ledger.requeueStrandedEntries(Set.of())).isZero();
+        assertThat(ledger.getProcessingStatus("ref-a"))
+                .isEqualTo(ProcessingStatus.PROCESSING);
+    }
+
+    @Test
+    void testRequeueStrandedEntries_leavesFinishedEntry() {
+        ledger.queue(entry("ref-a"));
+        var claimed = claimAs("node-a", 1).get(0);
+        claimed.setProcessingStatus(ProcessingStatus.PROCESSED);
+        ledger.updateEntry(claimed);
+
+        assertThat(ledger.requeueStrandedEntries(Set.of("node-b")))
+                .isZero();
+        assertThat(ledger.getProcessingStatus("ref-a"))
+                .isEqualTo(ProcessingStatus.PROCESSED);
+    }
+
+    @Test
+    void testReleaseClaim_onlyReleasesEntryStillHeldBySameNode() {
+        var release = new CrawlerEntryLedger.ReleaseClaim("node-a");
+
+        var heldByOther = entry("ref-a");
+        heldByOther.setProcessingStatus(ProcessingStatus.PROCESSING);
+        heldByOther.setProcessingNode("node-b");
+        assertThat(release.apply(heldByOther)).isNull();
+
+        var finished = entry("ref-a");
+        finished.setProcessingStatus(ProcessingStatus.PROCESSED);
+        finished.setProcessingNode("node-a");
+        assertThat(release.apply(finished)).isNull();
+
+        assertThat(release.apply(null)).isNull();
+
+        var held = entry("ref-a");
+        held.setProcessingStatus(ProcessingStatus.PROCESSING);
+        held.setProcessingNode("node-a");
+        var released = release.apply(held);
+        assertThat(released.getProcessingStatus())
+                .isEqualTo(ProcessingStatus.QUEUED);
+        assertThat(released.getProcessingNode()).isNull();
+        // The original is left untouched.
+        assertThat(held.getProcessingStatus())
+                .isEqualTo(ProcessingStatus.PROCESSING);
+    }
+
+    private List<CrawlerEntry> claimAs(String nodeName, int size) {
+        lenient().when(localNode.getNodeName()).thenReturn(nodeName);
+        try {
+            return ledger.nextQueuedBatch(size);
+        } finally {
+            lenient().when(localNode.getNodeName())
+                    .thenReturn("unit-test-node");
+        }
+    }
 
     private static CrawlerEntry entry(String ref) {
         return new CrawlerEntry(ref);

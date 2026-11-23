@@ -16,8 +16,13 @@ package com.norconex.crawler.core.cluster.impl.hazelcast;
 
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -30,6 +35,7 @@ import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.norconex.commons.lang.Sleeper;
 import com.norconex.crawler.core.cluster.CacheManager;
+import com.norconex.crawler.core.cluster.CacheMap;
 import com.norconex.crawler.core.cluster.CacheNames;
 import com.norconex.crawler.core.cluster.Cluster;
 import com.norconex.crawler.core.cluster.ClusterException;
@@ -37,6 +43,7 @@ import com.norconex.crawler.core.cluster.ClusterNode;
 import com.norconex.crawler.core.cluster.impl.hazelcast.event.CoordinatorChangeListener;
 import com.norconex.crawler.core.cluster.impl.hazelcast.pipeline.HazelcastPipelineManager;
 import com.norconex.crawler.core.cluster.pipeline.PipelineManager;
+import com.norconex.crawler.core.cluster.pipeline.StepRecord;
 import com.norconex.crawler.core.session.CrawlerSession;
 import com.norconex.crawler.core.util.ExceptionSwallower;
 import com.norconex.crawler.core.util.ThreadTracker;
@@ -449,6 +456,88 @@ public class HazelcastCluster implements Cluster {
         return hazelcastInstance.getCluster().getMembers().stream()
                 .map(m -> m.getUuid().toString())
                 .toList();
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * A member of the cluster is working unless its latest worker heartbeat
+     * for this crawl run is older than the node expiry timeout (the rule the
+     * pipeline coordinator uses to mark a node expired), or reports it done
+     * (in a terminal status) with the step its pipeline is running. A member
+     * with no heartbeat yet for this run is working: it has just joined.
+     * </p>
+     */
+    @Override
+    public Set<String> getWorkingNodeNames() {
+        var members = getNodeNames();
+        if (!clustered || members.isEmpty() || session == null
+                || cacheManager == null) {
+            return Set.copyOf(members);
+        }
+        return workingNodeNames(members,
+                cacheManager.getPipelineWorkerStatusCache(),
+                cacheManager.getPipelineStepCache(),
+                session.getCrawlRunId(),
+                HazelcastUtil.nodeExpiryTimeoutMs(configuration));
+    }
+
+    static Set<String> workingNodeNames(
+            Collection<String> members,
+            CacheMap<StepRecord> workerStatusCache,
+            CacheMap<StepRecord> stepCache,
+            String runId,
+            long expiryMs) {
+        var memberSet = Set.copyOf(members);
+        // node name -> [worker key, record] of its latest heartbeat
+        var latest = new HashMap<String, Map.Entry<String, StepRecord>>();
+        workerStatusCache.forEach((key, rec) -> {
+            if (rec == null || !Objects.equals(runId, rec.getRunId())) {
+                return;
+            }
+            var nodeName = StringUtils.substringAfterLast(key, ":");
+            if (!memberSet.contains(nodeName)) {
+                return;
+            }
+            var prev = latest.get(nodeName);
+            if (prev == null
+                    || prev.getValue().getUpdatedAt() < rec.getUpdatedAt()) {
+                latest.put(nodeName, Map.entry(key, rec));
+            }
+        });
+
+        var working = new HashSet<String>(memberSet);
+        latest.forEach((nodeName, keyAndRec) -> {
+            var rec = keyAndRec.getValue();
+            if (rec.hasTimedOut(expiryMs)) {
+                LOG.debug("Node {} is not working on the crawl: no "
+                        + "heartbeat for over {} ms.", nodeName, expiryMs);
+                working.remove(nodeName);
+            } else if (rec.getStatus() != null && rec.getStatus().isTerminal()
+                    && isPipelineAtStep(stepCache, keyAndRec.getKey(),
+                            runId, rec.getStepId())) {
+                LOG.debug("Node {} is not working on the crawl: {} with "
+                        + "step {}.", nodeName, rec.getStatus(),
+                        rec.getStepId());
+                working.remove(nodeName);
+            }
+        });
+        return Set.copyOf(working);
+    }
+
+    // Worker keys are the pipeline key followed by ":<runId>:<nodeName>".
+    private static boolean isPipelineAtStep(
+            CacheMap<StepRecord> stepCache,
+            String workerKey, String runId, String stepId) {
+        var pipelineKey =
+                StringUtils.substringBeforeLast(workerKey, ":" + runId + ":");
+        if (pipelineKey.equals(workerKey)) {
+            return false;
+        }
+        return stepCache.get(pipelineKey)
+                .map(pipeRec -> Objects.equals(pipeRec.getRunId(), runId)
+                        && Objects.equals(pipeRec.getStepId(), stepId))
+                .orElse(false);
     }
 
     public boolean isStandalone() {
