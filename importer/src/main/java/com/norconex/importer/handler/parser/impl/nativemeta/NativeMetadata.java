@@ -34,7 +34,8 @@ public final class NativeMetadata {
     private static final List<NativeMetadataReader> READERS =
             List.of(
                     new HtmlNativeMetadataReader(),
-                    new EmailNativeMetadataReader());
+                    new EmailNativeMetadataReader(),
+                    new PdfNativeMetadataReader());
 
     private NativeMetadata() {
     }
