@@ -56,7 +56,9 @@ final class OoxmlNativeMetadataReader implements NativeMetadataReader {
     @Override
     public boolean supports(ContentType contentType) {
         var type = contentType.toBaseTypeString();
-        return type.startsWith(PREFIX) || type.endsWith(".macroenabled.12");
+        return type.startsWith(PREFIX)
+                || type.startsWith("application/vnd.ms-visio.")
+                || type.endsWith(".macroenabled.12");
     }
 
     @Override

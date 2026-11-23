@@ -43,6 +43,7 @@ final class Ole2NativeMetadataReader implements NativeMetadataReader {
             "application/vnd.ms-excel",
             "application/vnd.ms-powerpoint",
             "application/vnd.visio",
+            "application/x-mspublisher",
             "application/x-tika-msoffice");
 
     /** [MS-OLEPS] SummaryInformation property identifiers. */
