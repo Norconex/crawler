@@ -21,22 +21,26 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 
+import com.norconex.committer.core.acl.AclAccess;
+import com.norconex.committer.core.acl.AclEntry;
+import com.norconex.committer.core.acl.AclKind;
+import com.norconex.committer.core.acl.AclLevel;
 import com.norconex.commons.lang.encrypt.EncryptionUtil;
 import com.norconex.commons.lang.map.Properties;
 import com.norconex.commons.lang.xml.Xml;
 import com.norconex.crawler.core.doc.CrawlerDocMetaConstants;
 import com.norconex.crawler.core.fetch.FetchRequest;
 import com.norconex.crawler.core.session.CrawlerSession;
+import com.norconex.crawler.fs.fetch.acl.FsAcls;
 import com.norconex.crawler.fs.fetch.impl.AbstractNioFetcher;
 import com.norconex.importer.doc.Doc;
 
@@ -119,8 +123,9 @@ public class CmisFetcher extends AbstractNioFetcher<CmisFetcherConfig> {
             var ctx = new Context(cmisAttrs.getDocument(), doc.getMetadata());
             fetchCoreMeta(ctx);
             fetchProperties(ctx);
-            if (!configuration.isAclDisabled()) {
-                fetchAcl(ctx);
+            if (configuration.getAcl().isEnabled()) {
+                fetchAcl(cmisAttrs.getDocument(), repositoryId(path),
+                        doc.getMetadata());
             }
         }
     }
@@ -148,12 +153,88 @@ public class CmisFetcher extends AbstractNioFetcher<CmisFetcherConfig> {
         });
     }
 
-    private void fetchAcl(Context ctx) {
-        extractAclEntries(ctx.document).forEach((permission, principals) -> {
-            for (String principal : principals) {
-                ctx.addMeta(permission, principal);
+    private String repositoryId(Path path) {
+        if (path.getFileSystem() instanceof CmisFileSystem fs
+                && StringUtils.isNotBlank(fs.session().getRepoId())) {
+            return fs.session().getRepoId();
+        }
+        return StringUtils.defaultIfBlank(
+                configuration.getRepositoryId(), "default");
+    }
+
+    private void fetchAcl(Xml document, String repositoryId, Properties meta) {
+        var mode = configuration.getAcl();
+        var read = readAcl(document, repositoryId);
+        if (read == null) {
+            FsAcls.writeNone(meta, mode,
+                    "the repository gave no ACL for the object");
+            return;
+        }
+        FsAcls.write(meta, mode, List.of(read.level()), null,
+                read.nativeData(), read.exact()
+                        ? null
+                        : List.of("the repository says the ACL is not "
+                                + "exact"));
+    }
+
+    /** What is read of an object's ACL. */
+    record ReadAcl(
+            AclLevel level, Map<String, Object> nativeData, boolean exact) {
+    }
+
+    /**
+     * Reads an object's ACL: an entry granting {@code cmis:read},
+     * {@code cmis:write} or {@code cmis:all} allows reading. The principal
+     * is an id without a stated kind ({@link AclKind#UNDEFINED}) of the
+     * directory {@code cmis:<repository id>}, except {@code cmis:anyone},
+     * which is everyone. CMIS has no deny.
+     * @param document     the object's Atom entry
+     * @param repositoryId the repository's id
+     * @return what was read, or {@code null} if the entry holds no ACL
+     */
+    static ReadAcl readAcl(Xml document, String repositoryId) {
+        var aclXml = document.getXML("/entry/object/acl");
+        if (aclXml == null) {
+            return null;
+        }
+        List<AclEntry> entries = new ArrayList<>();
+        List<String> nativeEntries = new ArrayList<>();
+        for (Xml permXml : aclXml.getXMLList("permission")) {
+            var principalId = firstNonBlank(
+                    permXml.getString("principal/principalId"),
+                    permXml.getString("principal/id"),
+                    permXml.getString("principal/text()"));
+            if (principalId == null) {
+                continue;
             }
-        });
+            var permissionValues = permXml.getStringList("permission/text()");
+            if (permissionValues.isEmpty()) {
+                permissionValues = permXml.getStringList("permission");
+            }
+            var perms = permissionValues.stream()
+                    .map(StringUtils::trimToNull)
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .sorted()
+                    .toList();
+            var direct = StringUtils.trimToNull(permXml.getString("direct"));
+            nativeEntries.add(principalId + ":" + String.join(",", perms)
+                    + (direct == null ? "" : ":direct=" + direct));
+            if (perms.stream().noneMatch(p -> "cmis:read".equals(p)
+                    || "cmis:write".equals(p) || "cmis:all".equals(p))) {
+                continue;
+            }
+            entries.add("cmis:anyone".equals(principalId)
+                    ? AclEntry.allowSpecial(AclEntry.SPECIAL_EVERYONE)
+                    : new AclEntry(AclKind.UNDEFINED, "cmis:" + repositoryId,
+                            principalId, null, AclAccess.ALLOW));
+        }
+        var exact = !"false".equalsIgnoreCase(StringUtils.trimToEmpty(
+                document.getString("/entry/object/exactACL")));
+        Map<String, Object> nativeData = new LinkedHashMap<>();
+        nativeData.put("entries", nativeEntries);
+        nativeData.put("exact", exact);
+        return new ReadAcl(new AclLevel("object", entries), nativeData, exact);
     }
 
     static Map<String, List<String>> extractPropertyValues(Xml document) {
@@ -186,36 +267,6 @@ public class CmisFetcher extends AbstractNioFetcher<CmisFetcherConfig> {
             }
         }
         return valuesByProperty;
-    }
-
-    static Map<String, Set<String>> extractAclEntries(Xml document) {
-        var aclByPermission = new LinkedHashMap<String, Set<String>>();
-        var permXmlList = document.getXMLList("/entry/object/acl/permission");
-        for (Xml permXml : permXmlList) {
-            var principalId = firstNonBlank(
-                    permXml.getString("principal/principalId"),
-                    permXml.getString("principal/id"),
-                    permXml.getString("principal/text()"));
-            if (principalId == null) {
-                continue;
-            }
-
-            var permissionValues = permXml.getStringList("permission/text()");
-            if (permissionValues.isEmpty()) {
-                permissionValues = permXml.getStringList("permission");
-            }
-            for (String permissionValue : permissionValues) {
-                var permission = StringUtils.trimToNull(permissionValue);
-                if (permission == null) {
-                    continue;
-                }
-                aclByPermission
-                        .computeIfAbsent("acl." + permission,
-                                k -> new LinkedHashSet<>())
-                        .add(principalId);
-            }
-        }
-        return aclByPermission;
     }
 
     private static class Context {

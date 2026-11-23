@@ -345,7 +345,8 @@ class SmbModelTest {
             assertThat(provider.readAttributes(fs.getPath("/share/dir/a.txt"),
                     BasicFileAttributes.class).size()).isEqualTo(3L);
 
-            assertThat(provider.getAcl((SmbPath) aclPath)).containsExactly(ace);
+            assertThat(provider.getAcl((SmbPath) aclPath, true))
+                    .containsExactly(ace);
         }
     }
 
@@ -408,7 +409,7 @@ class SmbModelTest {
                     }
                     if (context.getCount() == 3) {
                         when(mocked.isDirectory()).thenReturn(false);
-                        when(mocked.getSecurity())
+                        when(mocked.getSecurity(true))
                                 .thenReturn(new ACE[] {
                                         mock(ACE.class)
                                 });
@@ -425,8 +426,9 @@ class SmbModelTest {
                                     java.nio.file.NoSuchFileException.class);
 
             assertThat(
-                    provider.getAcl((SmbPath) fs.getPath("/share/a/aclfile")))
-                            .hasSize(1);
+                    provider.getAcl((SmbPath) fs.getPath("/share/a/aclfile"),
+                            true))
+                                    .hasSize(1);
         }
     }
 
@@ -459,7 +461,7 @@ class SmbModelTest {
             return;
         }
         if (idx == 2) {
-            when(mocked.getSecurity()).thenReturn(new ACE[] {
+            when(mocked.getSecurity(true)).thenReturn(new ACE[] {
                     ace
             });
             return;

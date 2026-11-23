@@ -24,13 +24,50 @@ import com.norconex.crawler.fs.fetch.impl.ReadOnlyFileAttributes;
  */
 final class HdfsFileAttributes extends ReadOnlyFileAttributes {
 
+    private final String owner;
+    private final String group;
+    private final String permission;
+    private final boolean aclBit;
+
     HdfsFileAttributes(
             boolean directory, long size, long modificationTimeMillis,
             long accessTimeMillis) {
+        this(directory, size, modificationTimeMillis, accessTimeMillis,
+                null, null, null, false);
+    }
+
+    HdfsFileAttributes(
+            boolean directory, long size, long modificationTimeMillis,
+            long accessTimeMillis, String owner, String group,
+            String permission, boolean aclBit) {
         super(
                 directory,
                 size,
                 FileTime.fromMillis(modificationTimeMillis),
                 FileTime.fromMillis(accessTimeMillis));
+        this.owner = owner;
+        this.group = group;
+        this.permission = permission;
+        this.aclBit = aclBit;
+    }
+
+    /** The owning user, or {@code null} if not given. */
+    String owner() {
+        return owner;
+    }
+
+    /** The owning group, or {@code null} if not given. */
+    String group() {
+        return group;
+    }
+
+    /** The mode, in octal ({@code 755}), or {@code null} if not given. */
+    String permission() {
+        return permission;
+    }
+
+    /** Whether the resource has an ACL beside its mode bits. */
+    boolean aclBit() {
+        return aclBit;
     }
 }

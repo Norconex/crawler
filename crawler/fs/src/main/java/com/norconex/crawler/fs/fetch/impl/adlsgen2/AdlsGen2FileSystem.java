@@ -19,7 +19,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.azure.storage.file.datalake.DataLakeFileSystemClient;
-import com.norconex.commons.lang.map.Properties;
 import com.norconex.crawler.fs.fetch.impl.ReadOnlyFileSystem;
 
 /**
@@ -37,7 +36,6 @@ final class AdlsGen2FileSystem extends ReadOnlyFileSystem {
     private final DataLakeFileSystemClient client;
     private final Map<String, AdlsGen2FileAttributes> attrsCache =
             new ConcurrentHashMap<>();
-    private final Map<String, Properties> aclCache = new ConcurrentHashMap<>();
 
     AdlsGen2FileSystem(
             AdlsGen2FileSystemProvider provider, AdlsGen2Location location,
@@ -74,10 +72,6 @@ final class AdlsGen2FileSystem extends ReadOnlyFileSystem {
 
     Map<String, AdlsGen2FileAttributes> attrsCache() {
         return attrsCache;
-    }
-
-    Map<String, Properties> aclCache() {
-        return aclCache;
     }
 
     @Override

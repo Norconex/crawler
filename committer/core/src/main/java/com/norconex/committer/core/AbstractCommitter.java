@@ -198,6 +198,12 @@ public abstract class AbstractCommitter<T extends BaseCommitterConfig>
         return null;
     }
 
+    private static String unreadText(Acl acl) {
+        return acl.unread().isEmpty()
+                ? ""
+                : " (" + String.join("; ", acl.unread()) + ")";
+    }
+
     /**
      * Prepares a document's ACL to be sent in the format configured.
      * @param req the document
@@ -226,14 +232,16 @@ public abstract class AbstractCommitter<T extends BaseCommitterConfig>
                     + Acl.VERSION;
         }
         if (acl.status() == AclStatus.NONE) {
-            return "its permissions were asked for but could not be read";
+            return "its permissions were asked for but could not be read"
+                    + unreadText(acl);
         }
         if (acl.status() == AclStatus.PARTIAL
                 && getConfiguration().getAcl()
                         .getPartial() != AclPartialPolicy.SEND) {
-            return "its permissions could only be read in part (the "
-                    + "committer's ACL \"partial\" setting can be SEND, to "
-                    + "send what was read)";
+            return "its permissions could only be read in part"
+                    + unreadText(acl)
+                    + " (the committer's ACL \"partial\" setting can be "
+                    + "SEND, to send what was read)";
         }
         if (format == AclFormat.FLAT) {
             meta.remove(Acl.FIELD);

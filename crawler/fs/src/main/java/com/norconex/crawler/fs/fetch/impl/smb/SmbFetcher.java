@@ -20,7 +20,11 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.Objects;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -28,10 +32,15 @@ import com.norconex.commons.lang.encrypt.EncryptionUtil;
 import com.norconex.commons.lang.map.Properties;
 import com.norconex.crawler.core.fetch.FetchRequest;
 import com.norconex.crawler.core.session.CrawlerSession;
-import com.norconex.crawler.fs.doc.FsDocMetadata;
+import com.norconex.committer.core.acl.AclLevel;
+import com.norconex.crawler.fs.fetch.acl.AclFetchMode;
+import com.norconex.crawler.fs.fetch.acl.FsAcls;
+import com.norconex.crawler.fs.fetch.acl.FsAcls.OnceWarnings;
+import com.norconex.crawler.fs.fetch.acl.TraverseLevels;
 import com.norconex.crawler.fs.fetch.impl.AbstractNioFetcher;
 import com.norconex.importer.doc.Doc;
 
+import jcifs.ACE;
 import jcifs.CIFSContext;
 import jcifs.context.SingletonContext;
 import jcifs.smb.NtlmPasswordAuthenticator;
@@ -52,9 +61,15 @@ import lombok.extern.slf4j.Slf4j;
  *
  * <h2>Access Control List (ACL)</h2>
  * <p>
- * This fetcher will try to extract access control information for each
- * SMB file. If you have no need for them, you can disable
- * acquiring them with {@link SmbFetcherConfig#setAclDisabled(boolean)}.
+ * When asked to (see {@link SmbFetcherConfig#setAcl(AclFetchMode)}), this
+ * fetcher writes who may read each file in the standard
+ * {@code crawler.acl} field: the share's permissions
+ * ({@link AclFetchMode#EXTENDED} only) and the file's, each a level a person
+ * must pass. An entry allowing or denying the read-data right is an allow
+ * or a deny. Principals are SIDs, with their account names when the server
+ * resolves them. On a Linux server shared through Samba (see
+ * {@link SmbFetcherConfig#setLinuxServer(boolean)}), a {@code path} level
+ * says who may go through the folders above the file.
  * </p>
  */
 @Slf4j
@@ -62,22 +77,30 @@ import lombok.extern.slf4j.Slf4j;
 @EqualsAndHashCode
 public class SmbFetcher extends AbstractNioFetcher<SmbFetcherConfig> {
 
-    private static final String ACL_PREFIX = FsDocMetadata.ACL + ".smb";
-    private static final String ACE = ".ace";
-    private static final String SID = ".sid";
-    private static final String SID_TEXT = ".sidAsText";
-    private static final String TYPE = ".type";
-    private static final String TYPE_TEXT = ".typeAsText";
-    private static final String DOMAIN_SID = ".domainSid";
-    private static final String DOMAIN_NAME = ".domainName";
-    private static final String ACCOUNT_NAME = ".accountName";
-
     @Getter
     private final SmbFetcherConfig configuration = new SmbFetcherConfig();
 
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     private final SmbFileSystemProvider provider = new SmbFileSystemProvider();
+
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private final TraverseLevels<String> traverseLevels =
+            new TraverseLevels<>();
+
+    // a share's level, or why it could not be read
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private final Map<String, Object> shareLevels = new ConcurrentHashMap<>();
+
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private final OnceWarnings warnings = new OnceWarnings();
+
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private volatile boolean resolveSids = true;
 
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
@@ -98,6 +121,9 @@ public class SmbFetcher extends AbstractNioFetcher<SmbFetcherConfig> {
     @Override
     protected void fetcherShutdown(CrawlerSession crawler) {
         provider.openFileSystems().forEach(SmbFileSystem::close);
+        traverseLevels.clear();
+        shareLevels.clear();
+        warnings.clear();
         super.fetcherShutdown(crawler);
     }
 
@@ -119,40 +145,114 @@ public class SmbFetcher extends AbstractNioFetcher<SmbFetcherConfig> {
             throws IOException {
         super.fetchMetadata(doc, path, attrs);
 
-        if (!configuration.isAclDisabled()) {
+        if (configuration.getAcl().isEnabled()) {
+            fetchAcl((SmbPath) path, doc.getMetadata());
+        }
+    }
+
+    void fetchAcl(SmbPath path, Properties meta) {
+        var mode = configuration.getAcl();
+        List<String> unread = new ArrayList<>();
+        List<AclLevel> levels = new ArrayList<>();
+        Map<String, Object> nativeData = new LinkedHashMap<>();
+        try {
+            if (mode == AclFetchMode.EXTENDED) {
+                var share = shareLevel(path);
+                if (share instanceof AclLevel level) {
+                    levels.add(level);
+                } else {
+                    unread.add("share permissions: " + share);
+                }
+            }
+            if (configuration.isLinuxServer()) {
+                try {
+                    levels.addAll(traverseLevels.levels(
+                            folders(path), this::folderLevel));
+                } catch (IOException e) {
+                    unread.add("folders above: " + e.getMessage());
+                }
+            }
+            var aces = aces(path);
+            levels.add(SmbAcls.level("file", aces, SmbAcls.READ_RIGHTS));
+            nativeData.put("file", SmbAcls.nativeEntries(aces));
+            FsAcls.write(meta, mode, levels, null, nativeData, unread);
+        } catch (IOException | RuntimeException e) {
+            LOG.warn("Could not read the permissions of {}: {}",
+                    path.toUri(), e.toString());
+            LOG.debug("Could not read the permissions of {}.",
+                    path.toUri(), e);
+            FsAcls.writeNone(meta, mode, "file permissions: " + e);
+        }
+    }
+
+    // the folders within the share above a file, from the share down
+    private List<String> folders(SmbPath path) {
+        List<String> folders = new ArrayList<>();
+        var p = path.path();
+        var share = SmbFileSystemProvider.shareRoot(path);
+        for (var idx = p.lastIndexOf('/'); idx >= share.length();
+                idx = p.lastIndexOf('/', idx - 1)) {
+            folders.add(0, key(path, p.substring(0, idx)));
+        }
+        return folders;
+    }
+
+    private static String key(SmbPath path, String folder) {
+        var fs = path.getFileSystem();
+        return fs.host() + ":" + fs.port() + folder;
+    }
+
+    private AclLevel folderLevel(String key) throws IOException {
+        var folder = key.substring(key.indexOf('/'));
+        var hostPort = key.substring(0, key.indexOf('/'));
+        var fs = provider.openFileSystems().stream()
+                .filter(f -> hostPort.equals(f.host() + ":" + f.port()))
+                .findFirst()
+                .orElseThrow(() -> new IOException(
+                        "No open SMB connection to " + hostPort));
+        return SmbAcls.level(TraverseLevels.LEVEL_NAME,
+                aces(fs.getPath(folder)), SmbAcls.TRAVERSE_RIGHTS);
+    }
+
+    private Object shareLevel(SmbPath path) {
+        var key = key(path, SmbFileSystemProvider.shareRoot(path));
+        return shareLevels.computeIfAbsent(key, k -> {
             try {
-                var acl = provider.getAcl((SmbPath) path);
-                storeSID(acl, doc.getMetadata());
+                return SmbAcls.level("share",
+                        provider.getShareAcl(path, resolveSids),
+                        SmbAcls.READ_RIGHTS);
+            } catch (IOException | RuntimeException e) {
+                warnings.warn(LOG, "share:" + k, """
+                    Could not read the permissions of share {}, so the \
+                    permissions of its files are partial (a committer \
+                    will not send them unless its ACL "partial" setting is \
+                    SEND). Reading a share's permissions usually needs an \
+                    account with administrative rights on the server; set \
+                    the fetcher's "acl" to BASIC to read only the files' \
+                    own. Cause: {}""", k, e.toString());
+                return "could not be read (" + e.getMessage() + ")";
+            }
+        });
+    }
+
+    // Asks for the SIDs' names, unless the server would not give them once.
+    private ACE[] aces(SmbPath path) throws IOException {
+        if (resolveSids) {
+            try {
+                return provider.getAcl(path, true);
             } catch (IOException e) {
-                LOG.error("Could not retrieve SMB ACL data.", e);
+                // fails below too if resolving names was not the problem
+                var aces = provider.getAcl(path, false);
+                resolveSids = false;
+                warnings.warn(LOG, "resolveSids",
+                        "The SMB server would not resolve the names of the "
+                                + "accounts in its permissions, so they are "
+                                + "known by their SIDs only, of an undefined "
+                                + "kind. Cause: {}",
+                        e.toString());
+                return aces;
             }
         }
-    }
-
-    private void storeSID(jcifs.ACE[] acls, Properties metadata) {
-        for (var i = 0; i < acls.length; i++) {
-            var acl = acls[i];
-            var sid = acl.getSID();
-            metaSet(metadata, i, ACE, acl);
-            metaSet(metadata, i, SID, sid);
-            metaSet(metadata, i, SID_TEXT, sid.toDisplayString());
-            metaSet(metadata, i, TYPE, sid.getType());
-            metaSet(metadata, i, TYPE_TEXT, sid.getTypeText());
-            metaSet(metadata, i, DOMAIN_SID, sid.getDomainSid());
-            metaSet(metadata, i, DOMAIN_NAME, sid.getDomainName());
-            metaSet(metadata, i, ACCOUNT_NAME, sid.getAccountName());
-        }
-    }
-
-    private void metaSet(
-            Properties metadata, int index, String suffix, Object value) {
-        var v = StringUtils.trimToNull(Objects.toString(value, null));
-        if (v != null) {
-            metadata.set(key(index, suffix), v);
-        }
-    }
-
-    private String key(int index, String suffix) {
-        return ACL_PREFIX + "[" + index + "]" + suffix;
+        return provider.getAcl(path, false);
     }
 }

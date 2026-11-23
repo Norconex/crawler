@@ -142,10 +142,12 @@ class AclCommitterTest {
             throws CommitterException {
         // Even with SEND: "none" is not "partial", it is nothing at all.
         var c = committer(AclFormat.FLAT, AclPartialPolicy.SEND);
-        var req = doc(Acl.none(AclScope.FULL));
+        var req = doc(Acl.none(AclScope.FULL, "file permissions: denied"));
         c.upsert(req);
         assertThat(c.getUpsertRequests()).isEmpty();
-        assertThat(req.getWithheldReason()).contains("could not be read");
+        assertThat(req.getWithheldReason())
+                .contains("could not be read")
+                .contains("file permissions: denied");
     }
 
     @Test
@@ -160,7 +162,7 @@ class AclCommitterTest {
 
         var newer = doc(null);
         newer.getMetadata().set(Acl.FIELD, AclCodec.toJson(new Acl(2,
-                AclStatus.COMPLETE, AclScope.FULL, List.of(), List.of(),
+                AclStatus.COMPLETE, AclScope.FULL, null, List.of(), List.of(),
                 null)));
         c.upsert(newer);
         assertThat(newer.getWithheldReason()).contains("version 2");

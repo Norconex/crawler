@@ -69,7 +69,7 @@ class AclTest {
 
     @Test
     void anAclWithoutLevelsOrOwnersReadsBack() {
-        var none = Acl.none(AclScope.BASIC);
+        var none = Acl.none(AclScope.BASIC, null);
         var json = AclCodec.toJson(none);
         assertThat(json).isEqualTo(
                 "{\"v\":1,\"status\":\"none\",\"scope\":\"basic\"}");

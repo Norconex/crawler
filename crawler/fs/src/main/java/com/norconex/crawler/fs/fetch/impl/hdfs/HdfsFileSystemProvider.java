@@ -315,12 +315,49 @@ final class HdfsFileSystemProvider extends ReadOnlyFileSystemProvider {
         return (A) attrs;
     }
 
-    private static HdfsFileAttributes toAttributes(JsonNode node) {
+    static HdfsFileAttributes toAttributes(JsonNode node) {
         var directory = "DIRECTORY".equals(node.path("type").asString(""));
         var length = node.path("length").asLong(0);
         var modTime = node.path("modificationTime").asLong(0);
         var accessTime = node.path("accessTime").asLong(0);
-        return new HdfsFileAttributes(directory, length, modTime, accessTime);
+        return new HdfsFileAttributes(directory, length, modTime, accessTime,
+                StringUtils.trimToNull(node.path("owner").asString(null)),
+                StringUtils.trimToNull(node.path("group").asString(null)),
+                StringUtils.trimToNull(
+                        node.path("permission").asString(null)),
+                node.path("aclBit").asBoolean(false));
+    }
+
+    /**
+     * Reads the ACL entries of a file or folder ({@code GETACLSTATUS}), as
+     * HDFS writes them: {@code user:bob:r--}, {@code group::r-x},
+     * {@code default:user:bob:rwx}...
+     * @param path the file or folder
+     * @return the entries
+     * @throws IOException if they could not be read
+     */
+    List<String> aclEntries(HdfsPath path) throws IOException {
+        var fs = path.getFileSystem();
+        return doAs(fs, () -> {
+            var get = new HttpGet(url(fs, path.path(), "GETACLSTATUS"));
+            try (var resp = execute(fs, get)) {
+                var status = resp.getCode();
+                if (status == HttpStatus.SC_NOT_FOUND) {
+                    throw new NoSuchFileException(path.path());
+                }
+                if (status != HttpStatus.SC_OK) {
+                    throw new IOException(
+                            "Unexpected WebHDFS response " + status
+                                    + " for GETACLSTATUS " + path.path());
+                }
+                var root = MAPPER.readTree(resp.getEntity().getContent());
+                List<String> entries = new ArrayList<>();
+                for (JsonNode e : root.path("AclStatus").path("entries")) {
+                    entries.add(e.asString(""));
+                }
+                return entries;
+            }
+        });
     }
 
 }

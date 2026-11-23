@@ -33,7 +33,12 @@ public final class FsDocMetadata {
      */
     public static final String CREATION_TIME = PREFIX + "creationTime";
 
-    public static final String ACL = PREFIX + "acl";
+    /**
+     * Who may read the document, as the standard
+     * {@link com.norconex.committer.core.acl.Acl} JSON, written by the
+     * fetchers that are asked to read permissions.
+     */
+    public static final String ACL = com.norconex.committer.core.acl.Acl.FIELD;
 
     private FsDocMetadata() {
     }

@@ -14,6 +14,7 @@
  */
 package com.norconex.committer.core.acl;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -41,6 +42,10 @@ import lombok.NonNull;
  *                   a committer rejects a version it does not know
  * @param status     how much of the permissions this holds
  * @param scope      which of the source's permissions were asked for
+ * @param unread     what could not be read, in a few words each, when the
+ *                   status is {@link AclStatus#PARTIAL} or
+ *                   {@link AclStatus#NONE} (for example
+ *                   {@code "share permissions: access denied"})
  * @param levels     the checks to pass, in order; empty when the status is
  *                   {@link AclStatus#NONE}
  * @param owners     who owns the document (entries without access), for the
@@ -51,12 +56,13 @@ import lombok.NonNull;
  */
 @JsonInclude(Include.NON_EMPTY)
 @JsonPropertyOrder(
-    { "v", "status", "scope", "levels", "owners", "native" }
+    { "v", "status", "unread", "scope", "levels", "owners", "native" }
 )
 public record Acl(
         @JsonProperty("v") int version,
         @NonNull AclStatus status,
         @NonNull AclScope scope,
+        List<String> unread,
         List<AclLevel> levels,
         List<AclEntry> owners,
         @JsonProperty("native") Map<String, Object> nativeData) {
@@ -67,17 +73,22 @@ public record Acl(
     public static final int VERSION = 1;
 
     /**
-     * Copies the levels and the owners (none when {@code null}: an empty
-     * list is not written), the owners without duplicates and in their
-     * canonical order.
+     * Copies the levels, the owners and what was not read (none when
+     * {@code null}: an empty list is not written), the owners without
+     * duplicates and in their canonical order, what was not read without
+     * duplicates and sorted.
      * @param version    the version of this shape
      * @param status     how much of the permissions this holds
      * @param scope      which permissions were asked for
+     * @param unread     what could not be read
      * @param levels     the checks to pass, in order
      * @param owners     who owns the document
      * @param nativeData the source's own entries
      */
     public Acl {
+        unread = unread == null
+                ? List.of()
+                : unread.stream().distinct().sorted().toList();
         levels = levels == null ? List.of() : List.copyOf(levels);
         owners = owners == null
                 ? List.of()
@@ -95,18 +106,20 @@ public record Acl(
             List<AclLevel> levels,
             List<AclEntry> owners,
             Map<String, Object> nativeData) {
-        return new Acl(VERSION, AclStatus.COMPLETE, AclScope.FULL, levels,
-                owners, nativeData);
+        return new Acl(VERSION, AclStatus.COMPLETE, AclScope.FULL, null,
+                levels, owners, nativeData);
     }
 
     /**
      * An ACL for a document whose permissions were asked for and could not be
      * read at all.
      * @param scope which permissions were asked for
+     * @param why   why they could not be read, in a few words
      * @return the ACL
      */
-    public static Acl none(AclScope scope) {
-        return new Acl(VERSION, AclStatus.NONE, scope, List.of(), List.of(),
+    public static Acl none(AclScope scope, String why) {
+        return new Acl(VERSION, AclStatus.NONE, scope,
+                why == null ? null : List.of(why), List.of(), List.of(),
                 null);
     }
 
@@ -115,7 +128,25 @@ public record Acl(
      * @return a copy of this ACL with another status
      */
     public Acl withStatus(AclStatus status) {
-        return new Acl(version, status, scope, levels, owners, nativeData);
+        return new Acl(version, status, scope, unread, levels, owners,
+                nativeData);
+    }
+
+    /**
+     * A copy of this ACL marked {@link AclStatus#PARTIAL}, saying what
+     * could not be read. Does nothing when {@code what} is empty.
+     * @param what what could not be read, in a few words each
+     * @return the partial ACL, or this one when nothing is given
+     */
+    public Acl withUnread(List<String> what) {
+        if (what == null || what.isEmpty()) {
+            return this;
+        }
+        var all = new ArrayList<>(unread);
+        all.addAll(what);
+        return new Acl(version,
+                status == AclStatus.NONE ? AclStatus.NONE : AclStatus.PARTIAL,
+                scope, all, levels, owners, nativeData);
     }
 
     /**
@@ -123,6 +154,7 @@ public record Acl(
      * @return a copy of this ACL with another scope
      */
     public Acl withScope(AclScope scope) {
-        return new Acl(version, status, scope, levels, owners, nativeData);
+        return new Acl(version, status, scope, unread, levels, owners,
+                nativeData);
     }
 }

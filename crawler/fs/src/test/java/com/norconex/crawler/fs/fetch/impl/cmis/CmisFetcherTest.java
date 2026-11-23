@@ -19,6 +19,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import com.norconex.committer.core.acl.AclEntry;
+import com.norconex.committer.core.acl.AclKind;
 import com.norconex.commons.lang.xml.Xml;
 
 @Timeout(30)
@@ -64,7 +66,7 @@ class CmisFetcherTest {
     }
 
     @Test
-    void testExtractAclEntriesHandlesPrincipalFallbackAndDedupes()
+    void testReadAclHandlesPrincipalFallbackAndReadRights()
             throws Exception {
         var xml = new Xml("""
                 <entry>
@@ -75,6 +77,7 @@ class CmisFetcherTest {
                         <permission>cmis:read</permission>
                         <permission>cmis:read</permission>
                         <permission>cmis:write</permission>
+                        <direct>true</direct>
                       </permission>
                       <permission>
                         <principal><id>group-x</id></principal>
@@ -85,21 +88,52 @@ class CmisFetcherTest {
                         <permission>cmis:all</permission>
                       </permission>
                       <permission>
+                        <principal><principalId>cmis:anyone</principalId></principal>
+                        <permission>cmis:read</permission>
+                      </permission>
+                      <permission>
+                        <principal><principalId>custom-only</principalId></principal>
+                        <permission>{http://acme}review</permission>
+                      </permission>
+                      <permission>
                         <permission>cmis:ignored</permission>
                       </permission>
                     </acl>
+                    <exactACL>true</exactACL>
                   </object>
                 </entry>
                 """);
 
-        var acl = CmisFetcher.extractAclEntries(xml);
+        var read = CmisFetcher.readAcl(xml, "repo1");
 
-        assertThat(acl.get("acl.cmis:read"))
-                .containsExactlyInAnyOrder("user-a", "group-x");
-        assertThat(acl.get("acl.cmis:write"))
-                .containsExactly("user-a");
-        assertThat(acl.get("acl.cmis:all"))
-                .containsExactly("legacy-principal");
-        assertThat(acl).doesNotContainKey("acl.cmis:ignored");
+        assertThat(read.exact()).isTrue();
+        assertThat(read.level().name()).isEqualTo("object");
+        assertThat(read.level().entries()).containsExactlyInAnyOrder(
+                AclEntry.allow(AclKind.UNDEFINED, "cmis:repo1", "user-a"),
+                AclEntry.allow(AclKind.UNDEFINED, "cmis:repo1", "group-x"),
+                AclEntry.allow(AclKind.UNDEFINED, "cmis:repo1",
+                        "legacy-principal"),
+                AclEntry.allowSpecial(AclEntry.SPECIAL_EVERYONE));
+        assertThat(read.nativeData().get("entries").toString())
+                .contains("user-a:cmis:read,cmis:write:direct=true")
+                .contains("custom-only:{http://acme}review");
+    }
+
+    @Test
+    void testReadAclNotExactAndMissing() throws Exception {
+        var notExact = new Xml("""
+                <entry>
+                  <object>
+                    <acl/>
+                    <exactACL>false</exactACL>
+                  </object>
+                </entry>
+                """);
+        var read = CmisFetcher.readAcl(notExact, "repo1");
+        assertThat(read.exact()).isFalse();
+        assertThat(read.level().entries()).isEmpty();
+
+        assertThat(CmisFetcher.readAcl(
+                new Xml("<entry><object/></entry>"), "repo1")).isNull();
     }
 }
