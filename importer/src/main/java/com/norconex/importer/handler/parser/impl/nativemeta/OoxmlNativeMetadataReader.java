@@ -90,7 +90,7 @@ final class OoxmlNativeMetadataReader implements NativeMetadataReader {
         }
     }
 
-    private static void supersede(Metadata tika) {
+    static void supersede(Metadata tika) {
         for (var name : tika.names()) {
             if (TIKA_PREFIXES.stream().anyMatch(name::startsWith)) {
                 tika.remove(name);

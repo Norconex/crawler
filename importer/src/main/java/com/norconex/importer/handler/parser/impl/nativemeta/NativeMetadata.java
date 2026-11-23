@@ -37,7 +37,11 @@ public final class NativeMetadata {
                     new EmailNativeMetadataReader(),
                     new PdfNativeMetadataReader(),
                     new OoxmlNativeMetadataReader(),
-                    new OdfNativeMetadataReader());
+                    new OdfNativeMetadataReader(),
+                    new Ole2NativeMetadataReader(),
+                    new RtfNativeMetadataReader(),
+                    new EpubNativeMetadataReader(),
+                    new Mp3NativeMetadataReader());
 
     private NativeMetadata() {
     }
