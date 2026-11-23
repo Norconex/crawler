@@ -15,6 +15,7 @@
 package com.norconex.crawler.fs.fetch.acl;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -71,13 +72,20 @@ public final class TraverseLevels<K> {
             throws IOException {
         List<AclLevel> levels = new ArrayList<>();
         for (K folder : folders) {
-            var level = cache.get(folder);
-            if (level == null) {
-                var read = reader.read(folder);
-                level = PosixAcl.admitsEverybody(read)
-                        ? Optional.empty()
-                        : Optional.of(read);
-                cache.put(folder, level);
+            Optional<AclLevel> level;
+            try {
+                level = cache.computeIfAbsent(folder, f -> {
+                    try {
+                        var read = reader.read(f);
+                        return PosixAcl.admitsEverybody(read)
+                                ? Optional.<AclLevel>empty()
+                                : Optional.of(read);
+                    } catch (IOException e) {
+                        throw new UncheckedIOException(e);
+                    }
+                });
+            } catch (UncheckedIOException e) {
+                throw e.getCause();
             }
             level.filter(l -> !levels.contains(l)).ifPresent(levels::add);
         }
