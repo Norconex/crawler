@@ -35,7 +35,9 @@ public final class NativeMetadata {
             List.of(
                     new HtmlNativeMetadataReader(),
                     new EmailNativeMetadataReader(),
-                    new PdfNativeMetadataReader());
+                    new PdfNativeMetadataReader(),
+                    new OoxmlNativeMetadataReader(),
+                    new OdfNativeMetadataReader());
 
     private NativeMetadata() {
     }
