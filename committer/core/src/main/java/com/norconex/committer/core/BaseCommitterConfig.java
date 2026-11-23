@@ -20,6 +20,7 @@ import java.util.Map;
 
 import org.apache.commons.collections4.map.ListOrderedMap;
 
+import com.norconex.committer.core.acl.AclCommitterConfig;
 import com.norconex.commons.lang.bean.jackson.JsonXmlMap;
 import com.norconex.commons.lang.map.PropertyMatcher;
 import com.norconex.commons.lang.map.PropertyMatchers;
@@ -58,6 +59,27 @@ public class BaseCommitterConfig {
     private final PropertyMatchers restrictions = new PropertyMatchers();
     @JsonXmlMap(entryName = "mapping", keyName = "source", valueName = "target")
     private final Map<String, String> fieldMappings = new ListOrderedMap<>();
+
+    /**
+     * How the access control lists (ACLs) documents carry are sent, and
+     * when a document is withheld because of its ACL. See
+     * {@link AclCommitterConfig}.
+     */
+    private final AclCommitterConfig acl = new AclCommitterConfig();
+
+    /**
+     * Sets how documents' ACLs are sent (copying the given settings).
+     * @param acl the ACL settings
+     * @return this
+     */
+    public BaseCommitterConfig setAcl(AclCommitterConfig acl) {
+        if (acl != null) {
+            this.acl.setFormat(acl.getFormat())
+                    .setPartial(acl.getPartial())
+                    .setFlatPrefix(acl.getFlatPrefix());
+        }
+        return this;
+    }
 
     /**
      * Adds one restriction this committer should be restricted to.

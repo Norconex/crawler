@@ -31,6 +31,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -114,6 +115,26 @@ public class CommitterService<T> implements Closeable {
      *     captured)
      */
     public List<Committer> upsert(T object) throws CommitterServiceException {
+        return upsert(object, (committer, reason) -> {});
+    }
+
+    /**
+     * Updates or inserts an object using all accepting committers, telling
+     * the caller about each committer that withheld it (see
+     * the request's {@code withheldReason}), so the caller can try it
+     * again later.
+     * @param object the object to upsert
+     * @param onWithheld called with the committer and its reason, for each
+     *     committer that accepted the object but withheld it
+     * @return committers having accepted the object, whether they upserted
+     *     it or withheld it
+     * @throws CommitterServiceException wrapper around operation failure
+     *     one or more of the registered committers (wraps last exception
+     *     captured)
+     */
+    public List<Committer> upsert(
+            T object, @NonNull BiConsumer<Committer, String> onWithheld)
+            throws CommitterServiceException {
         fire(COMMITTER_SERVICE_UPSERT_BEGIN, committers, object);
 
         List<Committer> actuals = new ArrayList<>();
@@ -123,6 +144,9 @@ public class CommitterService<T> implements Closeable {
                 if (c.accept(req)) {
                     actuals.add(c);
                     c.upsert(req);
+                    if (req.getWithheldReason() != null) {
+                        onWithheld.accept(c, req.getWithheldReason());
+                    }
                 }
             });
         }

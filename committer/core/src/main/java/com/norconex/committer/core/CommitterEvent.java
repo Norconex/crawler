@@ -55,6 +55,13 @@ public class CommitterEvent extends Event {
             "COMMITTER_UPSERT_BEGIN";
     /** The Committer has received a document to be updated or inserted.*/
     public static final String COMMITTER_UPSERT_END = "COMMITTER_UPSERT_END";
+    /**
+     * The Committer withheld a document rather than send it, and removed
+     * any version sent before; the event message says why (for example its
+     * access control list could not be read).
+     */
+    public static final String COMMITTER_UPSERT_WITHHELD =
+            "COMMITTER_UPSERT_WITHHELD";
     /** The Committer entity update/upsert produced an error. */
     public static final String COMMITTER_UPSERT_ERROR =
             "COMMITTER_UPSERT_ERROR";

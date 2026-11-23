@@ -48,6 +48,35 @@ HTTP proxies are those of the JVM (`http.proxyHost`, `https.proxyHost`, ...). Ke
 
 ## Properties
 
+### acl
+
+How this committer sends the access control list (ACL) a document carries in its `crawler.acl` field, written by the
+fetchers that read a source's permissions:
+
+- `format`: `JSON` sends the field as it is; `FLAT` replaces it with plain fields (below); `NATIVE` writes it as the
+  destination's own access control, for committers whose destination has one; `NONE` does not send it. When not set,
+  the committer's default applies (`NATIVE` where available, otherwise `JSON`).
+- `partial`: what to do with a document whose permissions could only be read in part: `REJECT` (the default) or `SEND`.
+- `flatPrefix`: the prefix of the `FLAT` fields. Default is `acl`.
+
+A document whose permissions cannot be vouched for is **withheld**: it is not sent, a version sent before is removed
+from the destination, and the crawler tries it again on its next run. That is the case when its ACL is partial and
+`partial` is `REJECT`, when its permissions could not be read at all, when the ACL is unreadable or of an unknown
+version, or when `NATIVE` cannot express it. A withheld document is never sent as readable by everyone.
+
+With `FLAT`, `acl.levels` names the checks a person must pass, in order, and each level has an allow field and a deny
+field holding principals as `kind:dir:id` (or `special:id`):
+
+```
+acl.levels      = share, file
+acl.share.allow = group:ad:CORP:Sales
+acl.file.allow  = group:ad:CORP:Sales
+acl.file.deny   = group:ad:CORP:Interns
+acl.owners      = user:ad:CORP:pascal
+```
+
+A person may see the document if they match an allow value of every level and no deny value of any.
+
 ### bearerToken
 
 Bearer token (e.g., JWT) sent as an `Authorization` header with every request. Ignored when `credentials` are set.

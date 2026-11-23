@@ -33,6 +33,13 @@ public class UpsertRequest implements CommitterRequest {
     private final Properties metadata = new Properties();
     @ToString.Exclude
     private final InputStream content;
+    /**
+     * Why the committer withheld this document rather than send it (for
+     * example its access control list could not be read), or {@code null}
+     * when it did not. Set by the committer; read by whoever called it, to
+     * try the document again later.
+     */
+    private String withheldReason;
 
     public UpsertRequest(
             @NonNull String reference,
