@@ -40,6 +40,7 @@
     <mina.version>2.2.8</mina.version>
     <google-cloud-nio.version>0.133.0</google-cloud-nio.version>
     <jcifs-ng.version>2.1.10</jcifs-ng.version>
+    <jna.version>5.19.1</jna.version>
     <log4j-over-slf4j.version>2.0.18</log4j-over-slf4j.version>
     <sftp-fs.version>3.3.2</sftp-fs.version>
 
@@ -158,6 +159,16 @@
     <dependency>
       <groupId>org.apache.httpcomponents.client5</groupId>
       <artifactId>httpclient5</artifactId>
+    </dependency>
+
+    <!-- Reads the extended ACLs of local files on Linux and macOS, which
+         Java cannot: the C library is linked at run time, so nothing is
+         compiled per operating system and nothing is installed on the
+         host. -->
+    <dependency>
+      <groupId>net.java.dev.jna</groupId>
+      <artifactId>jna</artifactId>
+      <version>${jna.version}</version>
     </dependency>
 
     <!-- CIFS (Samba) support. jcifs-ng is an actively-maintained fork of

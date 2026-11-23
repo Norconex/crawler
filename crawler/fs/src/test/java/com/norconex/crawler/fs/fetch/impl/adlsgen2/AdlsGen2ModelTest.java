@@ -50,10 +50,9 @@ import com.azure.storage.file.datalake.DataLakeFileSystemClient;
 import com.azure.storage.file.datalake.models.DataLakeFileOpenInputStreamResult;
 import com.azure.storage.file.datalake.models.DataLakeStorageException;
 import com.azure.storage.file.datalake.models.ListPathsOptions;
-import com.azure.storage.file.datalake.models.PathAccessControlEntry;
+import com.azure.storage.file.datalake.models.PathAccessControl;
 import com.azure.storage.file.datalake.models.PathItem;
 import com.azure.storage.file.datalake.models.PathProperties;
-import com.norconex.crawler.fs.doc.FsDocMetadata;
 
 @SuppressWarnings("null")
 class AdlsGen2ModelTest {
@@ -245,7 +244,6 @@ class AdlsGen2ModelTest {
     @Test
     void testDirectoryListingCachesChildAttributes() throws Exception {
         var provider = new AdlsGen2FileSystemProvider();
-        provider.setAclDisabled(true);
         var location = AdlsGen2Location.from(URI.create(
                 "abfss://myfs@acct.dfs.core.windows.net/root"));
         var client = mock(DataLakeFileSystemClient.class);
@@ -278,7 +276,7 @@ class AdlsGen2ModelTest {
     }
 
     @Test
-    void testInputStreamByteChannelAndAclCaching() throws Exception {
+    void testInputStreamByteChannelAndAccessControl() throws Exception {
         var provider = new AdlsGen2FileSystemProvider();
         var location = AdlsGen2Location.from(URI.create(
                 "abfss://myfs@acct.dfs.core.windows.net/root"));
@@ -286,7 +284,6 @@ class AdlsGen2ModelTest {
         var fileClient = mock(DataLakeFileClient.class);
         var streamResult = mock(DataLakeFileOpenInputStreamResult.class);
         var props = mock(PathProperties.class);
-        var ace = mock(PathAccessControlEntry.class);
         var fs = provider.getOrCreateFileSystem(location, loc -> client);
         var path = fs.getPath("/folder/file.txt");
         var now = OffsetDateTime.now();
@@ -300,16 +297,6 @@ class AdlsGen2ModelTest {
         when(fileClient.getProperties()).thenReturn(props);
         when(props.getFileSize()).thenReturn(3L);
         when(props.getLastModified()).thenReturn(now);
-        when(props.getOwner()).thenReturn("owner");
-        when(props.getGroup()).thenReturn("group");
-        when(props.getPermissions()).thenReturn("rwx------");
-        when(props.getAccessControlList()).thenReturn(
-                java.util.Arrays.asList(null, ace));
-        when(ace.isInDefaultScope()).thenReturn(true);
-        when(ace.getAccessControlType()).thenReturn(null);
-        when(ace.getEntityId()).thenReturn("user1");
-        when(ace.getPermissions()).thenReturn(null);
-
         try (var is = provider.newInputStream(path)) {
             assertThat(is.readAllBytes())
                     .containsExactly("abc".getBytes(UTF_8));
@@ -338,15 +325,19 @@ class AdlsGen2ModelTest {
         assertThat(attrs.isRegularFile()).isTrue();
         assertThat(attrs.size()).isEqualTo(3L);
 
-        var aclProps = provider.consumeAcl(((AdlsGen2Path) path).path());
-        assertThat(aclProps).isNotNull();
-        assertThat(aclProps.getString(FsDocMetadata.ACL + ".owner"))
-                .isEqualTo("owner");
-        assertThat(aclProps.getString(FsDocMetadata.ACL + ".group"))
-                .isEqualTo("group");
-        assertThat(aclProps.getString(FsDocMetadata.ACL + ".permissions"))
-                .isEqualTo("rwx------");
-        assertThat(provider.consumeAcl(((AdlsGen2Path) path).path())).isNull();
+        var dirClient = mock(DataLakeDirectoryClient.class);
+        var ac = new PathAccessControl(List.of(), null, "owner", "group");
+        when(client.getDirectoryClient("folder/file.txt"))
+                .thenReturn(dirClient);
+        when(dirClient.getAccessControl()).thenReturn(ac);
+        assertThat(provider.accessControl(fs, "folder/file.txt"))
+                .isSameAs(ac);
+
+        when(dirClient.getAccessControl()).thenThrow(
+                mock(DataLakeStorageException.class));
+        assertThatThrownBy(() -> provider.accessControl(fs, "folder/file.txt"))
+                .isInstanceOf(java.io.IOException.class)
+                .hasMessageContaining("/folder/file.txt");
     }
 
     @Test

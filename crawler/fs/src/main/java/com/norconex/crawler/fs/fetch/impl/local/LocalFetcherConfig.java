@@ -15,8 +15,10 @@
 package com.norconex.crawler.fs.fetch.impl.local;
 
 import com.norconex.crawler.core.fetch.BaseFetcherConfig;
+import com.norconex.crawler.fs.fetch.acl.AclFetchMode;
 
 import lombok.Data;
+import lombok.NonNull;
 import lombok.experimental.Accessors;
 
 /**
@@ -28,6 +30,14 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class LocalFetcherConfig extends BaseFetcherConfig {
 
-    private boolean aclDisabled;
+    /**
+     * Which permissions to read and write on each document as its access
+     * control list (ACL). On Windows, the file's ACL; on Linux and macOS,
+     * the owner, group and mode bits ({@link AclFetchMode#BASIC}), plus the
+     * file's extended ACL ({@link AclFetchMode#EXTENDED}). Default is
+     * {@link AclFetchMode#NONE}.
+     */
+    @NonNull
+    private AclFetchMode acl = AclFetchMode.NONE;
 
 }

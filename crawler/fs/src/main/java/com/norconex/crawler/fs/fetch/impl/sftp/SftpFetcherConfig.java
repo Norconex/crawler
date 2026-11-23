@@ -18,8 +18,10 @@ import java.io.File;
 import java.time.Duration;
 
 import com.norconex.crawler.fs.fetch.impl.BaseAuthNioFetcherConfig;
+import com.norconex.crawler.fs.fetch.acl.AclFetchMode;
 
 import lombok.Data;
+import lombok.NonNull;
 import lombok.experimental.Accessors;
 
 /**
@@ -38,5 +40,15 @@ public class SftpFetcherConfig extends BaseAuthNioFetcherConfig {
     private String preferredAuthentications;
     private String strictHostKeyChecking = "no";
     private Duration connectTimeout;
+
+    /**
+     * Which permissions to read and write on each document as its access
+     * control list (ACL). SFTP gives only the owner, group and mode bits
+     * ({@link AclFetchMode#BASIC}): with {@link AclFetchMode#EXTENDED}, the
+     * server's extended ACLs, if any, cannot be read, so the documents'
+     * ACLs are partial. Default is {@link AclFetchMode#NONE}.
+     */
+    @NonNull
+    private AclFetchMode acl = AclFetchMode.NONE;
     private boolean userDirIsRoot;
 }

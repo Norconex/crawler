@@ -13,13 +13,31 @@ Local file system fetcher.
 
 ## Notes
 
-Fetches files from the local file system. Supports optional Access Control List (ACL) metadata extraction.
+Fetches files from the local file system. Can read who may read each file, as an access control list (see `acl`), on Windows, Linux and macOS.
 
 ## Properties
 
-### aclDisabled
+### acl
 
-When enabled, Access Control List (ACL) permissions are not applied or forwarded to the target system.
+Which permissions to read and write on each file as its access control list (ACL), in the `crawler.acl` field:
+
+- `NONE` (the default): none.
+- `BASIC`: on Windows, the file's ACL; on Linux and macOS, the owner, group and mode bits.
+- `EXTENDED`: the same, plus the file's extended ACL on Linux (what `setfacl` writes) and macOS, read from the
+  operating system through JNA. No tool needs to be installed. Where they cannot be read, one warning is logged for the
+  crawl and the files' ACLs are partial.
+
+On Windows, an entry allowing or denying the right to read the file's data is an allow or a deny, inherited entries
+included; principals are `ad:<domain>` or, for the computer's own accounts, `windows:<domain>`. On Linux and macOS, a
+`path` level says who may go through every folder above the file, which reading it also needs, and users and groups are
+numbers (uid, gid) of the directory `unix:<host>`, with their names.
+
+The ACL lists who may read the document, as one or more levels a person must all pass; within a level, a deny wins over
+an allow. Committers send it as their own `acl` option says. When the permissions could only be read in part, the ACL
+is marked partial, and a committer withholds the document unless its `acl.partial` is `SEND`; when they could not be
+read at all, it always withholds it. A permission change alone does not change a file's date or size: to have it
+noticed, use a metadata checksum that includes `crawler.acl`, such as a `GenericMetadataChecksummer` on the fields
+`crawler\.(lastModified|fileSize|acl)`.
 
 ### referenceFilters
 

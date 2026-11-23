@@ -17,6 +17,24 @@ Fetches documents from Apache Hadoop File System (HDFS) using the `webhdfs://` s
 
 ## Properties
 
+### acl
+
+Which permissions to read and write on each file as its access control list (ACL), in the `crawler.acl` field:
+
+- `NONE` (the default): none.
+- `BASIC`: the owner, group and mode bits.
+- `EXTENDED`: the HDFS ACL too, for the files and folders that have one, with its mask.
+
+A `path` level says who may go through every folder above the file. Users and groups are names, of the directory
+`hdfs:<name node host>`. HDFS superusers may read everything and are not listed.
+
+The ACL lists who may read the document, as one or more levels a person must all pass; within a level, a deny wins over
+an allow. Committers send it as their own `acl` option says. When the permissions could only be read in part, the ACL
+is marked partial, and a committer withholds the document unless its `acl.partial` is `SEND`; when they could not be
+read at all, it always withholds it. A permission change alone does not change a file's date or size: to have it
+noticed, use a metadata checksum that includes `crawler.acl`, such as a `GenericMetadataChecksummer` on the fields
+`crawler\.(lastModified|fileSize|acl)`.
+
 ### authMethod
 
 Authentication method. Defaults to `SIMPLE`. Set to `KERBEROS` to use Kerberos/SPNEGO authentication.

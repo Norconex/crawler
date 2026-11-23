@@ -43,11 +43,9 @@ import com.azure.storage.file.datalake.DataLakeFileSystemClient;
 import com.azure.storage.file.datalake.models.DataLakeFileOpenInputStreamResult;
 import com.azure.storage.file.datalake.models.DataLakeStorageException;
 import com.azure.storage.file.datalake.models.ListPathsOptions;
-import com.azure.storage.file.datalake.models.PathAccessControlEntry;
+import com.azure.storage.file.datalake.models.PathAccessControl;
 import com.azure.storage.file.datalake.models.PathItem;
 import com.azure.storage.file.datalake.models.PathProperties;
-import com.norconex.commons.lang.map.Properties;
-import com.norconex.crawler.fs.doc.FsDocMetadata;
 import com.norconex.crawler.fs.fetch.impl.ReadOnlyFileSystemProvider;
 
 import lombok.extern.slf4j.Slf4j;
@@ -62,11 +60,6 @@ final class AdlsGen2FileSystemProvider extends ReadOnlyFileSystemProvider {
 
     private final Map<String, AdlsGen2FileSystem> fileSystems =
             new ConcurrentHashMap<>();
-    private volatile boolean aclDisabled;
-
-    void setAclDisabled(boolean aclDisabled) {
-        this.aclDisabled = aclDisabled;
-    }
 
     @Override
     public String getScheme() {
@@ -212,7 +205,6 @@ final class AdlsGen2FileSystemProvider extends ReadOnlyFileSystemProvider {
 
         var cached = fs.attrsCache().get(adlsPath.path());
         if (cached != null) {
-            cacheAclIfEnabled(fs, adlsPath);
             return (A) cached;
         }
 
@@ -225,7 +217,6 @@ final class AdlsGen2FileSystemProvider extends ReadOnlyFileSystemProvider {
                         props.getFileSize(),
                         toFileTime(props.getLastModified()));
                 fs.attrsCache().put(adlsPath.path(), attrs);
-                cacheAclIfEnabled(fs, adlsPath);
                 return (A) attrs;
             }
 
@@ -237,7 +228,6 @@ final class AdlsGen2FileSystemProvider extends ReadOnlyFileSystemProvider {
                         0,
                         toFileTime(props.getLastModified()));
                 fs.attrsCache().put(adlsPath.path(), attrs);
-                cacheAclIfEnabled(fs, adlsPath);
                 return (A) attrs;
             }
         } catch (DataLakeStorageException e) {
@@ -255,83 +245,23 @@ final class AdlsGen2FileSystemProvider extends ReadOnlyFileSystemProvider {
         return time == null ? null : FileTime.from(time.toInstant());
     }
 
-    Properties consumeAcl(String path) {
-        for (var fs : fileSystems.values()) {
-            var props = fs.aclCache().remove(path);
-            if (props != null) {
-                return props;
-            }
-        }
-        return null;
-    }
-
-    private void cacheAclIfEnabled(AdlsGen2FileSystem fs, AdlsGen2Path path)
+    /**
+     * Reads the access control of a file or folder: its owner, group,
+     * rights and ACL.
+     * @param fs       the file system
+     * @param pathName the path, without a leading slash; empty for the
+     *                 file system's root folder
+     * @return the access control
+     * @throws IOException if it could not be read
+     */
+    PathAccessControl accessControl(AdlsGen2FileSystem fs, String pathName)
             throws IOException {
-        if (aclDisabled || path.pathName().isEmpty()) {
-            return;
-        }
-        var aclProps = new Properties();
         try {
-            PathProperties props;
-            var fileClient = fs.client().getFileClient(path.pathName());
-            if (fileClient.exists()) {
-                props = fileClient.getProperties();
-            } else {
-                var dirClient = fs.client().getDirectoryClient(path.pathName());
-                if (!dirClient.exists()) {
-                    return;
-                }
-                props = dirClient.getProperties();
-            }
-            if (props == null) {
-                return;
-            }
-            if (StringUtils.isNotBlank(props.getOwner())) {
-                aclProps.set(FsDocMetadata.ACL + ".owner", props.getOwner());
-            }
-            if (StringUtils.isNotBlank(props.getGroup())) {
-                aclProps.set(FsDocMetadata.ACL + ".group", props.getGroup());
-            }
-            if (StringUtils.isNotBlank(props.getPermissions())) {
-                aclProps.set(FsDocMetadata.ACL + ".permissions",
-                        props.getPermissions());
-            }
-            if (props.getAccessControlList() != null) {
-                for (PathAccessControlEntry ace : props
-                        .getAccessControlList()) {
-                    if (ace == null) {
-                        continue;
-                    }
-                    var scope = StringUtils.defaultIfBlank(
-                            Boolean.TRUE.equals(ace.isInDefaultScope())
-                                    ? "DEFAULT"
-                                    : null,
-                            "ACCESS");
-                    var type = StringUtils.defaultIfBlank(
-                            ace.getAccessControlType() == null
-                                    ? null
-                                    : ace.getAccessControlType().toString(),
-                            "NOTYPE");
-                    var principal = StringUtils.defaultIfBlank(
-                            ace.getEntityId(), "unknown");
-                    var perms = ace.getPermissions() == null
-                            ? ""
-                            : ace.getPermissions().toString();
-                    aclProps.add(
-                            FsDocMetadata.ACL + "." + scope + "." + type
-                                    + "." + perms,
-                            principal);
-                }
-            }
-            if (!aclProps.isEmpty()) {
-                fs.aclCache().put(path.path(), aclProps);
-            }
+            return fs.client().getDirectoryClient(pathName).getAccessControl();
         } catch (DataLakeStorageException e) {
-            if (e.getStatusCode() != HTTP_NOT_FOUND) {
-                throw new IOException(
-                        "Could not read ADLS Gen2 ACL data: " + path.path(),
-                        e);
-            }
+            throw new IOException(
+                    "Could not read the ACL of ADLS Gen2 path: /" + pathName,
+                    e);
         }
     }
 

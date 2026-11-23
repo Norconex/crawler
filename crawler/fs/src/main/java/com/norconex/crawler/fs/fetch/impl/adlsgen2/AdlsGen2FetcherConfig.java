@@ -16,7 +16,10 @@ package com.norconex.crawler.fs.fetch.impl.adlsgen2;
 
 import com.norconex.crawler.fs.fetch.impl.BaseAuthNioFetcherConfig;
 
+import com.norconex.crawler.fs.fetch.acl.AclFetchMode;
+
 import lombok.Data;
+import lombok.NonNull;
 import lombok.experimental.Accessors;
 
 /**
@@ -55,7 +58,12 @@ public class AdlsGen2FetcherConfig extends BaseAuthNioFetcherConfig {
     private String sasToken;
 
     /**
-     * Whether ACL, owner, and group metadata extraction is disabled.
+     * Which permissions to read and write on each document as its access
+     * control list (ACL): the owner, owning group and their rights
+     * ({@link AclFetchMode#BASIC}), plus the named users and groups of the
+     * path's ACL and its mask ({@link AclFetchMode#EXTENDED}). Default is
+     * {@link AclFetchMode#NONE}.
      */
-    private boolean aclDisabled;
+    @NonNull
+    private AclFetchMode acl = AclFetchMode.NONE;
 }

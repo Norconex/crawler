@@ -13,13 +13,31 @@ Server Message Block (SMB, CIFS, Samba, Windows share) fetcher.
 
 ## Notes
 
-Fetches documents from SMB/CIFS network shares (Windows shares, Samba). Supports domain credentials, optional ACL metadata collection, and reference-level filtering.
+Fetches documents from SMB/CIFS network shares (Windows shares, Samba). Supports domain credentials, access control lists (the share's and the file's), and reference-level filtering.
 
 ## Properties
 
-### aclDisabled
+### acl
 
-When enabled, Access Control List (ACL) permissions are not applied or forwarded to the target system.
+Which permissions to read and write on each file as its access control list (ACL), in the `crawler.acl` field:
+
+- `NONE` (the default): none.
+- `BASIC`: the file's own permissions.
+- `EXTENDED`: the share's permissions too, as a level of their own, since a person must pass both. Reading a share's
+  permissions usually needs an account with administrative rights on the server; without them, one warning is logged
+  for the share and its files' ACLs are partial.
+
+An entry allowing or denying the right to read the file's data is an allow or a deny, inherited entries included.
+Principals are SIDs, with their account names when the server resolves them, of the directory `ad:<domain>` (or
+`windows:<domain>` for the server's own groups). Everyone and Authenticated Users are the standard `special:everyone`
+and `special:authenticated`.
+
+The ACL lists who may read the document, as one or more levels a person must all pass; within a level, a deny wins over
+an allow. Committers send it as their own `acl` option says. When the permissions could only be read in part, the ACL
+is marked partial, and a committer withholds the document unless its `acl.partial` is `SEND`; when they could not be
+read at all, it always withholds it. A permission change alone does not change a file's date or size: to have it
+noticed, use a metadata checksum that includes `crawler.acl`, such as a `GenericMetadataChecksummer` on the fields
+`crawler\.(lastModified|fileSize|acl)`.
 
 ### credentials
 
@@ -28,6 +46,13 @@ Username and password used to authenticate with the SMB/CIFS share.
 ### domain
 
 The domain name for authentication when accessing the remote resource.
+
+### linuxServer
+
+Whether the server is a Linux (or other Unix) server sharing its files through Samba. Such a server also checks the
+right to go through every folder above a file, which Windows lets everyone do, so the ACL then gets a `path` level for
+the folders within the share. Samba translates a Linux file's extended ACL into a Windows ACL, so crawling a Linux
+folder through Samba is also a way to have its extended ACLs read without JNA. Default is `false`.
 
 ### referenceFilters
 

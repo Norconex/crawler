@@ -16,7 +16,10 @@ package com.norconex.crawler.fs.fetch.impl.hdfs;
 
 import com.norconex.crawler.fs.fetch.impl.BaseAuthNioFetcherConfig;
 
+import com.norconex.crawler.fs.fetch.acl.AclFetchMode;
+
 import lombok.Data;
+import lombok.NonNull;
 import lombok.experimental.Accessors;
 
 /**
@@ -43,4 +46,14 @@ public class HdfsFetcherConfig extends BaseAuthNioFetcherConfig {
      * is {@link HdfsAuthMethod#KERBEROS}.
      */
     private KerberosConfig kerberosConfig;
+
+    /**
+     * Which permissions to read and write on each document as its access
+     * control list (ACL): the owner, group and mode bits
+     * ({@link AclFetchMode#BASIC}), plus the HDFS ACL of the files and
+     * folders that have one ({@link AclFetchMode#EXTENDED}). Default is
+     * {@link AclFetchMode#NONE}.
+     */
+    @NonNull
+    private AclFetchMode acl = AclFetchMode.NONE;
 }

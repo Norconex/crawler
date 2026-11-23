@@ -22,7 +22,7 @@ Supports:
 - SAS token authentication via `sasToken`, or as the `password` of `credentials` that
   have no `username` (see [Keeping a SAS token secret](#keeping-a-sas-token-secret))
 - Optional endpoint override via `endpoint`
-- Optional ACL/owner/group extraction control via `aclDisabled`
+- Access control lists, from the paths' POSIX-style ACLs, via `acl`
 
 When `endpoint` is not set, the endpoint is derived from the reference account
 as `https://<account>.dfs.core.windows.net`.
@@ -43,9 +43,26 @@ variable, as for any other password. A `sasToken` in the configuration, if any, 
 
 ## Properties
 
-### aclDisabled
+### acl
 
-Whether ACL, owner, and group metadata extraction is disabled.
+Which permissions to read and write on each file as its access control list (ACL), in the `crawler.acl` field:
+
+- `NONE` (the default): none.
+- `BASIC`: the owner, owning group and their rights.
+- `EXTENDED`: the named users and groups of the path's ACL too, with its mask.
+
+Entries of the `ACCESS` scope granting `r` allow reading; `other` is `special:everyone`. A `path` level says who may go
+through (has `x` on) every folder above the file, the file system's root included. Users and groups are Microsoft Entra
+object ids, of the directory `entra:<storage account>`. `DEFAULT` entries only describe what new children get: they are
+kept in the ACL's native part. Azure role assignments (such as Storage Blob Data Reader) grant access besides ACLs and
+are not read.
+
+The ACL lists who may read the document, as one or more levels a person must all pass; within a level, a deny wins over
+an allow. Committers send it as their own `acl` option says. When the permissions could only be read in part, the ACL
+is marked partial, and a committer withholds the document unless its `acl.partial` is `SEND`; when they could not be
+read at all, it always withholds it. A permission change alone does not change a file's date or size: to have it
+noticed, use a metadata checksum that includes `crawler.acl`, such as a `GenericMetadataChecksummer` on the fields
+`crawler\.(lastModified|fileSize|acl)`.
 
 ### credentials
 
@@ -120,11 +137,11 @@ other password.
   }}
 />
 
-The following example disables ACL extraction.
+The following example reads the access control lists of the paths, named users and groups included.
 
 <ConfigBlock
   json={{
     "class": "AdlsGen2Fetcher",
-    "aclDisabled": true
+    "acl": "EXTENDED"
   }}
 />
