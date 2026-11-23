@@ -167,4 +167,65 @@ class NativeFieldNamesTest {
         assertThat(md.containsKey("description")).isFalse();
         assertThat(md.containsKey("subject")).isFalse();
     }
+
+    private static Properties importEmail(String eml) throws IOException {
+        var file = Files.createTempFile(folder, "mail", ".eml");
+        Files.writeString(file, eml.replace("\n", "\r\n"));
+        try (var importer = new Importer(new ImporterConfig())) {
+            var response = importer.importDocument(new ImporterRequest(file));
+            assertThat(response.getDoc()).isNotNull();
+            return response.getDoc().getMetadata();
+        }
+    }
+
+    @Test
+    void emailHeadersKeepTheNamesTheMessageGaveThem() throws IOException {
+        var md = importEmail("""
+                From: Jane Sender <jane@example.com>
+                To: Bob <bob@example.com>
+                Cc: Carl <carl@example.com>
+                Subject: Mail
+                  subject folded
+                Date: Tue, 01 Jan 2026 10:00:00 +0000
+                Message-ID: <abc@example.com>
+                x-mailer: MyMailer 1.0
+                X-Custom-Header: custom value
+                Content-Type: text/plain; charset=UTF-8
+
+                Hello mail.
+                """);
+        assertThat(md.getStrings("From"))
+                .containsExactly("Jane Sender <jane@example.com>");
+        assertThat(md.getStrings("To"))
+                .containsExactly("Bob <bob@example.com>");
+        assertThat(md.getStrings("Cc"))
+                .containsExactly("Carl <carl@example.com>");
+        assertThat(md.getStrings("Subject"))
+                .containsExactly("Mail subject folded");
+        assertThat(md.getStrings("Date"))
+                .containsExactly("Tue, 01 Jan 2026 10:00:00 +0000");
+        assertThat(md.getStrings("Message-ID"))
+                .containsExactly("<abc@example.com>");
+        assertThat(md.getStrings("x-mailer")).containsExactly("MyMailer 1.0");
+        assertThat(md.getStrings("X-Custom-Header"))
+                .containsExactly("custom value");
+
+        // nothing under names only the parser would have chosen
+        assertThat(md.keySet()).noneMatch(k -> k.startsWith("message:"));
+        assertThat(md.containsKey("dc:creator")).isFalse();
+        assertThat(md.containsKey("dc:subject")).isFalse();
+        assertThat(md.containsKey("dc:title")).isFalse();
+        assertThat(md.containsKey("dcterms:created")).isFalse();
+    }
+
+    @Test
+    void emailEncodedWordsAreDecoded() throws IOException {
+        var md = importEmail("""
+                From: a@example.com
+                Subject: =?UTF-8?Q?Caf=C3=A9?=
+
+                Body
+                """);
+        assertThat(md.getStrings("Subject")).containsExactly("Café");
+    }
 }

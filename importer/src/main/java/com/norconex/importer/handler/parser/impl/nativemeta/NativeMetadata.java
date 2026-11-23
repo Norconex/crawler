@@ -32,7 +32,9 @@ import lombok.extern.slf4j.Slf4j;
 public final class NativeMetadata {
 
     private static final List<NativeMetadataReader> READERS =
-            List.of(new HtmlNativeMetadataReader());
+            List.of(
+                    new HtmlNativeMetadataReader(),
+                    new EmailNativeMetadataReader());
 
     private NativeMetadata() {
     }
