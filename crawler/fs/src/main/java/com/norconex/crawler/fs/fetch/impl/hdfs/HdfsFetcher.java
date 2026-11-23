@@ -18,8 +18,12 @@ import static com.norconex.crawler.fs.fetch.impl.FileFetchUtil.referenceStartsWi
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import javax.security.auth.Subject;
 import javax.security.auth.callback.NameCallback;
@@ -37,11 +41,19 @@ import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
 import org.apache.hc.core5.http.HttpHost;
 
+import com.norconex.committer.core.acl.AclLevel;
 import com.norconex.commons.lang.encrypt.EncryptionUtil;
+import com.norconex.commons.lang.map.Properties;
 import com.norconex.crawler.core.CrawlerException;
 import com.norconex.crawler.core.fetch.FetchRequest;
 import com.norconex.crawler.core.session.CrawlerSession;
+import com.norconex.crawler.fs.fetch.acl.AclFetchMode;
+import com.norconex.crawler.fs.fetch.acl.FsAcls;
+import com.norconex.crawler.fs.fetch.acl.PosixAcl;
+import com.norconex.crawler.fs.fetch.acl.PosixAcl.Principal;
+import com.norconex.crawler.fs.fetch.acl.TraverseLevels;
 import com.norconex.crawler.fs.fetch.impl.AbstractNioFetcher;
+import com.norconex.importer.doc.Doc;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -61,6 +73,17 @@ import lombok.extern.slf4j.Slf4j;
  * (typically {@code 9870} on Hadoop 3.x), not the RPC port ({@code 8020})
  * used by the native Hadoop client.
  * </p>
+ *
+ * <h2>Access Control List (ACL)</h2>
+ * <p>
+ * When asked to (see {@link HdfsFetcherConfig#setAcl(AclFetchMode)}), this
+ * fetcher writes who may read each file in the standard
+ * {@code crawler.acl} field, from its owner, group and mode bits and, with
+ * {@link AclFetchMode#EXTENDED}, its HDFS ACL (the mask applied). A
+ * {@code path} level says who may go through every folder above the file.
+ * Users and groups are names, of the directory {@code hdfs:<name node>}.
+ * HDFS superusers may read everything and are not listed.
+ * </p>
  */
 @Slf4j
 @ToString
@@ -79,6 +102,11 @@ public class HdfsFetcher extends AbstractNioFetcher<HdfsFetcherConfig> {
     @ToString.Exclude
     private Subject kerberosSubject;
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private final TraverseLevels<String> traverseLevels =
+            new TraverseLevels<>();
+
     @Override
     protected void fetcherStartup(CrawlerSession crawler) {
         super.fetcherStartup(crawler);
@@ -96,6 +124,7 @@ public class HdfsFetcher extends AbstractNioFetcher<HdfsFetcherConfig> {
                 LOG.warn("Could not close HDFS file system.", e);
             }
         });
+        traverseLevels.clear();
         super.fetcherShutdown(crawler);
     }
 
@@ -117,6 +146,120 @@ public class HdfsFetcher extends AbstractNioFetcher<HdfsFetcherConfig> {
     // to the given target host. Called once per authority by the provider.
     // Package-private so it can be exercised in tests without a live
     // server.
+    @Override
+    protected void fetchMetadata(
+            Doc doc, @NonNull Path path, @NonNull BasicFileAttributes attrs)
+            throws IOException {
+        super.fetchMetadata(doc, path, attrs);
+        if (configuration.getAcl().isEnabled()) {
+            fetchAcl((HdfsPath) path, attrs, doc.getMetadata());
+        }
+    }
+
+    void fetchAcl(HdfsPath path, BasicFileAttributes attrs, Properties meta) {
+        var mode = configuration.getAcl();
+        try {
+            var fileAcl = posixAcl(path, (HdfsFileAttributes) attrs);
+            List<String> unread = new ArrayList<>();
+            List<AclLevel> levels = new ArrayList<>();
+            var fs = path.getFileSystem();
+            List<String> folders = new ArrayList<>();
+            for (var p = path.getParent(); p != null; p = p.getParent()) {
+                folders.add(0, ((HdfsPath) p).path());
+            }
+            try {
+                levels.addAll(traverseLevels.levels(
+                        folders.stream().map(f -> fs.host() + ":"
+                                + fs.port() + f).toList(),
+                        key -> {
+                            var folder = fs.getPath(
+                                    key.substring(key.indexOf('/')));
+                            return posixAcl(folder, Files.readAttributes(
+                                    folder, HdfsFileAttributes.class))
+                                            .level(TraverseLevels.LEVEL_NAME,
+                                                    PosixAcl.EXECUTE);
+                        }));
+            } catch (IOException e) {
+                unread.add("folders above: " + e.getMessage());
+            }
+            levels.add(fileAcl.level("file", PosixAcl.READ));
+            FsAcls.write(meta, mode, levels, fileAcl.owners(),
+                    fileAcl.nativeData(), unread);
+        } catch (IOException | RuntimeException e) {
+            LOG.warn("Could not read the permissions of {}: {}",
+                    path.toUri(), e.toString());
+            LOG.debug("Could not read the permissions of {}.",
+                    path.toUri(), e);
+            FsAcls.writeNone(meta, mode, "file permissions: " + e);
+        }
+    }
+
+    private PosixAcl posixAcl(HdfsPath path, HdfsFileAttributes attrs)
+            throws IOException {
+        var acl = new PosixAcl(
+                "hdfs:" + path.getFileSystem().host(),
+                attrs.owner() == null ? null : Principal.named(attrs.owner()),
+                attrs.group() == null ? null : Principal.named(attrs.group()),
+                PosixAcl.parseMode(attrs.permission()));
+        if (attrs.aclBit()
+                && configuration.getAcl() == AclFetchMode.EXTENDED) {
+            applyAclEntries(acl, provider.aclEntries(path),
+                    PosixAcl.parseMode(attrs.permission()));
+        }
+        return acl;
+    }
+
+    /**
+     * Adds HDFS ACL entries. When a resource has an ACL, the group bits of
+     * its mode are the mask, and the owning group's own rights are in its
+     * {@code group::} entry.
+     * @param acl     the permissions, from the mode bits
+     * @param entries the entries, as HDFS writes them
+     * @param mode    the mode bits
+     */
+    static void applyAclEntries(PosixAcl acl, List<String> entries, int mode) {
+        var maskGiven = false;
+        for (var entry : entries) {
+            acl.nativeEntry(entry);
+            if (entry.startsWith("default:")) {
+                continue;
+            }
+            var f = entry.split(":", -1);
+            if (f.length < 3) {
+                continue;
+            }
+            var name = StringUtils.trimToNull(f[1]);
+            var perms = PosixAcl.parsePerms(f[2]);
+            switch (f[0]) {
+                case "user" -> {
+                    if (name == null) {
+                        acl.ownerPerms(perms);
+                    } else {
+                        acl.user(Principal.named(name), perms);
+                    }
+                }
+                case "group" -> {
+                    if (name == null) {
+                        acl.groupPerms(perms);
+                    } else {
+                        acl.group(Principal.named(name), perms);
+                    }
+                }
+                case "mask" -> {
+                    acl.mask(perms);
+                    maskGiven = true;
+                }
+                case "other" -> acl.otherPerms(perms);
+                default -> {
+                    // not a kind of entry that affects reading
+                }
+            }
+        }
+        if (!maskGiven) {
+            acl.mask((mode >> 3) & 7);
+        }
+    }
+
     CloseableHttpClient buildHttpClient(HttpHost targetHost) {
         var builder = HttpClientBuilder.create();
         if (configuration.getAuthMethod() == HdfsAuthMethod.KERBEROS) {

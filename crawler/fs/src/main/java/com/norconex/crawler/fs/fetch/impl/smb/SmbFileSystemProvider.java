@@ -246,8 +246,13 @@ final class SmbFileSystemProvider extends ReadOnlyFileSystemProvider {
      * directory-trailing-slash handling the prior VFS-based fetcher relied
      * on, since some SMB servers require it for security-descriptor
      * queries on folders.
+     * @param path the file or folder
+     * @param resolveSids whether to ask the server for the names and kinds
+     *     of the SIDs
+     * @return the entries
+     * @throws IOException if they could not be read
      */
-    ACE[] getAcl(SmbPath path) throws IOException {
+    ACE[] getAcl(SmbPath path, boolean resolveSids) throws IOException {
         var fs = path.getFileSystem();
         var file = openForStat(fs, path.path());
         try {
@@ -255,10 +260,39 @@ final class SmbFileSystemProvider extends ReadOnlyFileSystemProvider {
                 file.close();
                 file = openForListing(fs, path.path());
             }
-            return file.getSecurity();
+            return file.getSecurity(resolveSids);
         } finally {
             file.close();
         }
+    }
+
+    /**
+     * Fetches the permissions of the share a resource is on. Reading them
+     * usually needs an account with administrative rights on the server.
+     * @param path a file or folder on the share
+     * @param resolveSids whether to ask the server for the names and kinds
+     *     of the SIDs
+     * @return the share's entries
+     * @throws IOException if they could not be read
+     */
+    ACE[] getShareAcl(SmbPath path, boolean resolveSids) throws IOException {
+        var fs = path.getFileSystem();
+        var file = openForListing(fs, shareRoot(path));
+        try {
+            return file.getShareSecurity(resolveSids);
+        } finally {
+            file.close();
+        }
+    }
+
+    /**
+     * @param path a file or folder
+     * @return the share it is on, as a path ({@code /share})
+     */
+    static String shareRoot(SmbPath path) {
+        var p = path.path();
+        var idx = p.indexOf('/', 1);
+        return idx < 0 ? p : p.substring(0, idx);
     }
 
 }

@@ -55,7 +55,7 @@ Current limitations:
 - Some CMIS servers emit duplicate grants or shift principal naming locations.
 - Validate with a small repository slice first and confirm expected principal
 	mapping in your target system.
-- Temporarily set `aclDisabled: true` to isolate content crawl behavior from
+- Temporarily set `acl: NONE` to isolate content crawl behavior from
 	ACL-specific issues.
 
 ### Recommended triage sequence
@@ -68,9 +68,21 @@ Current limitations:
 
 ## Properties
 
-### aclDisabled
+### acl
 
-When enabled, Access Control List (ACL) permissions are not applied or forwarded to the target system.
+Whether to read and write on each document who may read it, as its access control list (ACL), in the `crawler.acl`
+field: `NONE` (the default) or `EXTENDED` (`BASIC` reads the same). The object's ACL is read as the repository gives
+it, inherited entries included: an entry granting `cmis:read`, `cmis:write` or `cmis:all` allows reading. CMIS does not
+say whether a principal is a user or a group, so its kind is `undefined`, of the directory `cmis:<repository id>`;
+`cmis:anyone` is `special:everyone`. A repository that says its ACL is not exact gives a partial ACL; one that gives no
+ACL, none.
+
+The ACL lists who may read the document, as one or more levels a person must all pass; within a level, a deny wins over
+an allow. Committers send it as their own `acl` option says. When the permissions could only be read in part, the ACL
+is marked partial, and a committer withholds the document unless its `acl.partial` is `SEND`; when they could not be
+read at all, it always withholds it. A permission change alone does not change a file's date or size: to have it
+noticed, use a metadata checksum that includes `crawler.acl`, such as a `GenericMetadataChecksummer` on the fields
+`crawler\.(lastModified|fileSize|acl)`.
 
 ### credentials
 
@@ -116,7 +128,7 @@ CMIS Atom endpoint with non-root start path:
 	json={{
 		"class": "CmisFetcher",
 		"repositoryId": "my-repo",
-		"aclDisabled": false
+		"acl": "EXTENDED"
 	}}
 />
 

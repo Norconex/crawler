@@ -27,6 +27,7 @@ import static org.mockito.Mockito.when;
 
 import java.net.URI;
 import java.nio.file.attribute.FileTime;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -35,11 +36,23 @@ import com.azure.storage.common.StorageSharedKeyCredential;
 import com.azure.storage.file.datalake.DataLakeFileClient;
 import com.azure.storage.file.datalake.DataLakeFileSystemClient;
 import com.azure.storage.file.datalake.DataLakeFileSystemClientBuilder;
+import com.azure.storage.file.datalake.DataLakeDirectoryClient;
+import com.azure.storage.file.datalake.models.DataLakeStorageException;
+import com.azure.storage.file.datalake.models.PathAccessControl;
+import com.azure.storage.file.datalake.models.PathAccessControlEntry;
+import com.azure.storage.file.datalake.models.PathPermissions;
 import com.azure.storage.file.datalake.models.PathProperties;
+import com.norconex.committer.core.acl.AclCodec;
+import com.norconex.committer.core.acl.AclEntry;
+import com.norconex.committer.core.acl.AclKind;
+import com.norconex.committer.core.acl.AclLevel;
+import com.norconex.committer.core.acl.AclScope;
+import com.norconex.committer.core.acl.AclStatus;
 import com.norconex.commons.lang.bean.BeanMapper;
 import com.norconex.commons.lang.map.Properties;
 import com.norconex.crawler.core.session.CrawlerSession;
 import com.norconex.crawler.fs.FsTestUtil;
+import com.norconex.crawler.fs.fetch.acl.AclFetchMode;
 import com.norconex.crawler.fs.doc.FsDocMetadata;
 import com.norconex.crawler.fs.fetch.FileFetchRequest;
 import com.norconex.importer.doc.Doc;
@@ -206,50 +219,114 @@ class AdlsGen2FetcherTest {
     }
 
     @Test
-    void testFetchMetadataConsumesAclAndSetsEnabledMarker()
-            throws Exception {
+    void testFetchAclWritesTheStandard() throws Exception {
         var fetcher = new AdlsGen2Fetcher();
+        fetcher.getConfiguration().setAcl(AclFetchMode.EXTENDED);
         var provider = provider(fetcher);
         var client = mock(DataLakeFileSystemClient.class);
-        var fileClient = mock(DataLakeFileClient.class);
-        var props = mock(PathProperties.class);
         var location = AdlsGen2Location.from(URI.create(
                 "abfss://filesystem@account.dfs.core.windows.net/root"));
-        var fs = provider.getOrCreateFileSystem(location,
-                loc -> client);
+        var fs = provider.getOrCreateFileSystem(location, loc -> client);
         var path = fs.getPath("/dir/file.txt");
-        var doc = new Doc(
-                "abfss://filesystem@account.dfs.core.windows.net/dir/file.txt");
-        var aclMeta = new Properties();
-        aclMeta.add(FsDocMetadata.ACL + ".ACCESS.NOTYPE.", "user1");
-        fs.aclCache().put(path.toString(), aclMeta);
-        when(client.getFileClient("dir/file.txt"))
-                .thenReturn(fileClient);
-        when(fileClient.exists()).thenReturn(true);
-        when(fileClient.getProperties()).thenReturn(props);
-        when(props.getFileSize()).thenReturn(3L);
-        when(props.getLastModified()).thenReturn(
-                java.time.OffsetDateTime.now());
+        // root lets everybody through: no level for it
+        mockAccessControl(client, "", "rwxr-x--x");
+        // dir lets only its owner and group through
+        mockAccessControl(client, "dir", "rwxr-x---");
+        mockAccessControl(client, "dir/file.txt",
+                "user::rw-,user:oid-jane:r--,group::r--,mask::r--,"
+                        + "other::---,default:user:oid-bob:rwx");
+        var meta = new Properties();
 
-        fetcher.fetchMetadata(doc, path,
-                new AdlsGen2FileAttributes(false, 3L,
-                        FileTime.fromMillis(1)));
+        fetcher.fetchAcl(path, meta);
 
-        assertThat(doc.getMetadata().getStrings(
-                FsDocMetadata.ACL + ".ACCESS.NOTYPE."))
-                        .contains("user1");
-        assertThat(doc.getMetadata()
-                .getString(FsDocMetadata.ACL + ".enabled"))
-                        .isEqualTo("true");
-        assertThat(fs.aclCache()).isEmpty();
+        var acl = AclCodec.read(meta).orElseThrow();
+        assertThat(acl.status()).isEqualTo(AclStatus.COMPLETE);
+        assertThat(acl.levels()).extracting(AclLevel::name)
+                .containsExactly("path", "file");
+        assertThat(acl.levels().get(0).entries()).containsExactlyInAnyOrder(
+                AclEntry.allow(AclKind.USER, "entra:account", "owner-oid"),
+                AclEntry.allow(AclKind.GROUP, "entra:account", "group-oid"));
+        assertThat(acl.levels().get(1).entries()).containsExactlyInAnyOrder(
+                AclEntry.allow(AclKind.USER, "entra:account", "owner-oid"),
+                AclEntry.allow(AclKind.USER, "entra:account", "oid-jane"),
+                AclEntry.allow(AclKind.GROUP, "entra:account", "group-oid"));
+        assertThat(acl.owners()).containsExactly(
+                AclEntry.owner(AclKind.USER, "entra:account", "owner-oid"));
+        assertThat(acl.nativeData().get("extended").toString())
+                .contains("default:user:oid-bob:rwx");
     }
 
     @Test
-    void testAclDisabledConfigToggle() {
+    void testFetchAclBasicLeavesOutNamedEntries() throws Exception {
+        var fetcher = new AdlsGen2Fetcher();
+        fetcher.getConfiguration().setAcl(AclFetchMode.BASIC);
+        var provider = provider(fetcher);
+        var client = mock(DataLakeFileSystemClient.class);
+        var location = AdlsGen2Location.from(URI.create(
+                "abfss://filesystem@account.dfs.core.windows.net/root"));
+        var fs = provider.getOrCreateFileSystem(location, loc -> client);
+        mockAccessControl(client, "", "rwxr-xr-x");
+        mockAccessControl(client, "file.txt",
+                "user::rw-,user:oid-jane:r--,group::---,mask::r--,other::r--");
+        var meta = new Properties();
+
+        fetcher.fetchAcl(fs.getPath("/file.txt"), meta);
+
+        var acl = AclCodec.read(meta).orElseThrow();
+        assertThat(acl.scope()).isEqualTo(AclScope.BASIC);
+        assertThat(acl.levels()).singleElement().satisfies(level -> assertThat(
+                level.entries()).containsExactlyInAnyOrder(
+                        AclEntry.allow(AclKind.USER, "entra:account",
+                                "owner-oid"),
+                        AclEntry.deny(AclKind.GROUP, "entra:account",
+                                "group-oid"),
+                        AclEntry.allowSpecial(AclEntry.SPECIAL_EVERYONE)));
+    }
+
+    @Test
+    void testFetchAclUnreadableIsNone() throws Exception {
+        var fetcher = new AdlsGen2Fetcher();
+        fetcher.getConfiguration().setAcl(AclFetchMode.EXTENDED);
+        var provider = provider(fetcher);
+        var client = mock(DataLakeFileSystemClient.class);
+        var location = AdlsGen2Location.from(URI.create(
+                "abfss://filesystem@account.dfs.core.windows.net/root"));
+        var fs = provider.getOrCreateFileSystem(location, loc -> client);
+        var dirClient = mock(DataLakeDirectoryClient.class);
+        when(client.getDirectoryClient(any())).thenReturn(dirClient);
+        when(dirClient.getAccessControl()).thenThrow(
+                mock(DataLakeStorageException.class));
+        var meta = new Properties();
+
+        fetcher.fetchAcl(fs.getPath("/file.txt"), meta);
+
+        assertThat(AclCodec.read(meta).orElseThrow().status())
+                .isEqualTo(AclStatus.NONE);
+    }
+
+    @Test
+    void testAclConfigDefaultsToNone() {
         var f = new AdlsGen2Fetcher();
-        assertThat(f.getConfiguration().isAclDisabled()).isFalse();
-        f.getConfiguration().setAclDisabled(true);
-        assertThat(f.getConfiguration().isAclDisabled()).isTrue();
+        assertThat(f.getConfiguration().getAcl()).isEqualTo(AclFetchMode.NONE);
+        f.getConfiguration().setAcl(AclFetchMode.BASIC);
+        assertThat(f.getConfiguration().getAcl())
+                .isEqualTo(AclFetchMode.BASIC);
+    }
+
+    private static void mockAccessControl(
+            DataLakeFileSystemClient client, String name, String acl) {
+        var dirClient = mock(DataLakeDirectoryClient.class);
+        List<PathAccessControlEntry> entries;
+        PathPermissions perms = null;
+        if (acl.contains("::")) {
+            entries = PathAccessControlEntry.parseList(acl);
+        } else {
+            entries = List.of();
+            perms = PathPermissions.parseSymbolic(acl);
+        }
+        when(client.getDirectoryClient(name)).thenReturn(dirClient);
+        when(dirClient.getAccessControl()).thenReturn(new PathAccessControl(
+                entries, perms, "group-oid", "owner-oid"));
     }
 
     private static AdlsGen2FileSystemProvider

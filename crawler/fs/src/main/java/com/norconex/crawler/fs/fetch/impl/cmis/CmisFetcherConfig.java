@@ -16,7 +16,10 @@ package com.norconex.crawler.fs.fetch.impl.cmis;
 
 import com.norconex.crawler.fs.fetch.impl.BaseAuthNioFetcherConfig;
 
+import com.norconex.crawler.fs.fetch.acl.AclFetchMode;
+
 import lombok.Data;
+import lombok.NonNull;
 import lombok.experimental.Accessors;
 
 /**
@@ -39,6 +42,14 @@ public class CmisFetcherConfig extends BaseAuthNioFetcherConfig {
      */
     private String xmlTargetField;
 
-    private boolean aclDisabled;
+    /**
+     * Whether to read and write on each document who may read it, as its
+     * access control list (ACL): the object's ACL as the repository gives
+     * it, inherited entries included. {@link AclFetchMode#BASIC} and
+     * {@link AclFetchMode#EXTENDED} read the same. Default is
+     * {@link AclFetchMode#NONE}.
+     */
+    @NonNull
+    private AclFetchMode acl = AclFetchMode.NONE;
 
 }

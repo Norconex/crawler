@@ -16,7 +16,10 @@ package com.norconex.crawler.fs.fetch.impl.smb;
 
 import com.norconex.crawler.fs.fetch.impl.BaseAuthNioFetcherConfig;
 
+import com.norconex.crawler.fs.fetch.acl.AclFetchMode;
+
 import lombok.Data;
+import lombok.NonNull;
 import lombok.experimental.Accessors;
 
 /**
@@ -28,5 +31,24 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class SmbFetcherConfig extends BaseAuthNioFetcherConfig {
 
-    private boolean aclDisabled;
+    /**
+     * Which permissions to read and write on each document as its access
+     * control list (ACL): the file's own ({@link AclFetchMode#BASIC}), or
+     * the share's too ({@link AclFetchMode#EXTENDED}), as a level of its
+     * own, since a person must pass both. Reading a share's permissions
+     * usually needs an account with administrative rights on the server;
+     * without them, the documents' ACLs are partial. Default is
+     * {@link AclFetchMode#NONE}.
+     */
+    @NonNull
+    private AclFetchMode acl = AclFetchMode.NONE;
+
+    /**
+     * Whether the server is a Linux (or other Unix) server sharing its
+     * files through Samba. Such a server also checks the right to go
+     * through every folder above a file, which Windows lets everyone do, so
+     * the ACL then gets a {@code path} level for the folders within the
+     * share. Default is {@code false} (a Windows server).
+     */
+    private boolean linuxServer;
 }

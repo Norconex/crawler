@@ -17,6 +17,21 @@ Fetches documents from SFTP (SSH File Transfer Protocol) servers. Supports crede
 
 ## Properties
 
+### acl
+
+Which permissions to read and write on each file as its access control list (ACL), in the `crawler.acl` field: `NONE`
+(the default) or `BASIC`, the owner, group and mode bits, all that SFTP gives. With `EXTENDED`, the server's extended
+ACLs, if any, cannot be read, so one warning is logged for the crawl and the files' ACLs are partial. A `path` level
+says who may go through every folder above the file. SFTP gives the owner and group as numbers (uid, gid), of the
+directory `unix:<host>`.
+
+The ACL lists who may read the document, as one or more levels a person must all pass; within a level, a deny wins over
+an allow. Committers send it as their own `acl` option says. When the permissions could only be read in part, the ACL
+is marked partial, and a committer withholds the document unless its `acl.partial` is `SEND`; when they could not be
+read at all, it always withholds it. A permission change alone does not change a file's date or size: to have it
+noticed, use a metadata checksum that includes `crawler.acl`, such as a `GenericMetadataChecksummer` on the fields
+`crawler\.(lastModified|fileSize|acl)`.
+
 ### compression
 
 The compression algorithms to use to enable compression (e.g., "zlib,none").
