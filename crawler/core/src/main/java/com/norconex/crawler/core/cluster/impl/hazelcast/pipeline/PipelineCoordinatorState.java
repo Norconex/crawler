@@ -14,9 +14,6 @@
  */
 package com.norconex.crawler.core.cluster.impl.hazelcast.pipeline;
 
-import static java.util.Optional.ofNullable;
-
-import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -72,7 +69,8 @@ public class PipelineCoordinatorState implements AutoCloseable {
     private final Map<String, StepRecord> workerStatusesMap =
             new ConcurrentHashMap<>();
     private CacheEntryChangeListener<StepRecord> workerStatusChangeListener;
-    private long nodeExpiryTimeoutMs = 5_000; // 5 seconds default, min
+    private long nodeExpiryTimeoutMs =
+            HazelcastUtil.MIN_NODE_EXPIRY_TIMEOUT_MS;
 
     public PipelineCoordinatorState(HazelcastCluster cluster,
             Pipeline pipeline) {
@@ -347,12 +345,10 @@ public class PipelineCoordinatorState implements AutoCloseable {
         var connector = session.getCrawlContext().getCrawlConfig()
                 .getClusterConfig().getConnector();
         if (connector instanceof HazelcastClusterConnector conn) {
-            var configured = ofNullable(
-                    conn.getConfiguration().getNodeExpiryTimeout())
-                            .map(Duration::toMillis)
-                            .orElse(nodeExpiryTimeoutMs);
-            // Enforce an absolute minimum of 5 seconds (5000 ms)
-            nodeExpiryTimeoutMs = Math.max(configured, 5_000L);
+            // Same rule as HazelcastCluster#getWorkingNodeNames(), so a node
+            // marked expired here is also one whose documents get re-queued.
+            nodeExpiryTimeoutMs =
+                    HazelcastUtil.nodeExpiryTimeoutMs(conn.getConfiguration());
         }
     }
 }

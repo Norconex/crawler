@@ -14,7 +14,9 @@
  */
 package com.norconex.crawler.core.cluster.impl.hazelcast;
 
+import java.time.Duration;
 import java.util.Objects;
+import java.util.Optional;
 
 import com.hazelcast.collection.IQueue;
 import com.hazelcast.core.HazelcastInstance;
@@ -229,6 +231,27 @@ public final class HazelcastUtil {
             }
         }
         return stepRec;
+    }
+
+    /** Shortest node expiry timeout accepted, whatever is configured. */
+    public static final long MIN_NODE_EXPIRY_TIMEOUT_MS = 5_000L;
+
+    /**
+     * How long a node may go without a heartbeat before it is considered
+     * gone: the configured node expiry timeout, never under
+     * {@value #MIN_NODE_EXPIRY_TIMEOUT_MS} milliseconds, or the
+     * configuration's default when none is set.
+     * @param config the cluster connector configuration
+     * @return the node expiry timeout, in milliseconds
+     */
+    public static long nodeExpiryTimeoutMs(
+            HazelcastClusterConnectorConfig config) {
+        var configured = Optional.ofNullable(config)
+                .map(HazelcastClusterConnectorConfig::getNodeExpiryTimeout)
+                .map(Duration::toMillis)
+                .orElse(HazelcastClusterConnectorConfig.DEFAULT_NODE_EXPIRY_TIMEOUT
+                        .toMillis());
+        return Math.max(configured, MIN_NODE_EXPIRY_TIMEOUT_MS);
     }
 
     public static boolean isClusterRunning(HazelcastCluster cluster) {

@@ -62,6 +62,14 @@ public class CrawlerEntry implements Serializable {
     private ZonedDateTime queuedAt;
     @ToString.Exclude
     private ZonedDateTime processingAt;
+    /**
+     * The name of the node that last took this entry for processing, set
+     * when the entry turned {@link ProcessingStatus#PROCESSING}. If that node
+     * leaves the crawl before finishing it, another node puts the entry back
+     * in the queue.
+     */
+    @ToString.Exclude
+    private String processingNode;
     @ToString.Exclude
     private ZonedDateTime processedAt;
     @ToString.Exclude

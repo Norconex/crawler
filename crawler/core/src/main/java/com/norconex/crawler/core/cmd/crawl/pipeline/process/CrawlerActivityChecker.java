@@ -20,6 +20,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.norconex.commons.lang.Sleeper;
 import com.norconex.commons.lang.time.DurationFormatter;
+import com.norconex.crawler.core.ledger.CrawlerEntryLedger;
 import com.norconex.crawler.core.session.CrawlerSession;
 import com.norconex.crawler.core.session.CrawlerState;
 
@@ -38,6 +39,9 @@ class CrawlerActivityChecker {
     @Getter
     private final boolean deleting;
     private final Instant expireAt;
+
+    private static final long IN_PROCESS_CHECK_INTERVAL_MS = 1_000;
+    private static final long IN_PROCESS_LOG_INTERVAL_MS = 30_000;
 
     private boolean isResolving;
     private boolean isPresumedActive = true;
@@ -97,15 +101,100 @@ class CrawlerActivityChecker {
                     + "considered inactive.");
             return false;
         }
-        if (isQueueInitializedAndEmpty()) {
+        while (isQueueInitializedAndEmpty()) {
+            // Documents still being processed, here or on other nodes, may
+            // queue more, and those taken by a node no longer working on the
+            // crawl get queued again: not done while any is left.
+            var inProcess = awaitDocumentsInProcess();
+            if (inProcess == InProcessOutcome.STOPPING) {
+                return false;
+            }
+            if (inProcess == InProcessOutcome.MORE_TO_PROCESS
+                    || !isQueuedEntryEmpty()) {
+                return true;
+            }
             var stillEmpty = isQueueStillEmptyAfterIdleTimeout();
             LOG.trace("doIsActive(): queue initialized and empty; "
                     + "stillEmptyAfterIdleTimeout={}.", stillEmpty);
-            return !stillEmpty;
+            if (!stillEmpty) {
+                return true;
+            }
+            if (ledger().getProcessingCount() == 0) {
+                return false;
+            }
+            // Queued and taken while idle: wait on those too.
+            LOG.debug("Documents were taken for processing while this "
+                    + "node was idle; waiting for them.");
+        }
+        if (isQueuedEntryMissingFromQueue()) {
+            // Only reached once nothing could be taken from the queue.
+            // A node that died between taking references off the queue and
+            // claiming them leaves them QUEUED in the ledger with nothing in
+            // the queue: put them back. One also still in the queue is
+            // taken once only, a claim succeeding once.
+            Sleeper.sleepMillis(IN_PROCESS_CHECK_INTERVAL_MS);
+            if (isQueuedEntryMissingFromQueue()) {
+                LOG.warn("The ledger has {} queued references but the queue "
+                        + "is empty. Putting them back in the queue.",
+                        queuedEntryCount());
+                ledger().requeueQueuedEntries();
+            }
         }
         LOG.trace("doIsActive(): queue is not both initialized and "
                 + "empty; treating crawler as active.");
         return true;
+    }
+
+    private boolean isQueuedEntryMissingFromQueue() {
+        return ledger().isQueueEmpty() && !isQueuedEntryEmpty();
+    }
+
+    /**
+     * Waits for the documents being processed to be done, putting back in
+     * the queue those taken by a node no longer working on the crawl.
+     * @return how the wait ended
+     */
+    private InProcessOutcome awaitDocumentsInProcess() {
+        var ledger = ledger();
+        var lastLogAt = 0L;
+        while (ledger.getProcessingCount() > 0) {
+            if (isStopping() || !canContinue()) {
+                return InProcessOutcome.STOPPING;
+            }
+            var requeued = ledger.requeueStrandedEntries(
+                    session.getCluster().getWorkingNodeNames());
+            if (requeued > 0 || !isQueuedEntryEmpty()) {
+                return InProcessOutcome.MORE_TO_PROCESS;
+            }
+            var now = System.currentTimeMillis();
+            if (now - lastLogAt >= IN_PROCESS_LOG_INTERVAL_MS) {
+                LOG.info("Queue is empty. Waiting for {} documents being "
+                        + "processed, which may queue more.",
+                        ledger.getProcessingCount());
+                lastLogAt = now;
+            }
+            Sleeper.sleepMillis(IN_PROCESS_CHECK_INTERVAL_MS);
+        }
+        return InProcessOutcome.NONE_LEFT;
+    }
+
+    private enum InProcessOutcome {
+        /** The crawl is stopping or reached a limit. */
+        STOPPING,
+        /** The queue has references again. */
+        MORE_TO_PROCESS,
+        /** Nothing is being processed anymore. */
+        NONE_LEFT
+    }
+
+    private boolean isStopping() {
+        return session.isStopRequested()
+                || session.getCrawlState() == CrawlerState.STOPPED
+                || Thread.currentThread().isInterrupted();
+    }
+
+    private CrawlerEntryLedger ledger() {
+        return session.getCrawlContext().getCrawlEntryLedger();
     }
 
     boolean canContinue() {

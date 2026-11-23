@@ -15,15 +15,21 @@
 package com.norconex.crawler.core.cmd.crawl.pipeline.process;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
+import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import com.norconex.crawler.core.CrawlerConfig;
+import com.norconex.crawler.core.cluster.Cluster;
 import com.norconex.crawler.core.context.CrawlerContext;
 import com.norconex.crawler.core.ledger.CrawlerEntryLedger;
 import com.norconex.crawler.core.session.CrawlerSession;
@@ -216,5 +222,124 @@ class CrawlerActivityCheckerTest {
         // do-while loop fires once (sleeps 1s), then sees initialized=true
         // → queue is empty+initialized → idle check returns true → inactive
         assertThat(checker.isActive()).isFalse();
+    }
+
+    // --- Documents still being processed when the queue is empty ---
+
+    private CrawlerSession buildSessionWithProcessing(
+            CrawlerEntryLedger ledger) {
+        when(ledger.getQueuedEntryCount()).thenReturn(0L);
+        when(ledger.isMaxDocsProcessedReached()).thenReturn(false);
+
+        var config = mock(CrawlerConfig.class);
+        when(config.getMaxCrawlDuration()).thenReturn(null);
+        when(config.getIdleTimeout()).thenReturn(null);
+
+        var crawlContext = mock(CrawlerContext.class);
+        when(crawlContext.getCrawlEntryLedger()).thenReturn(ledger);
+        when(crawlContext.getCrawlConfig()).thenReturn(config);
+
+        var cluster = mock(Cluster.class);
+        when(cluster.getWorkingNodeNames()).thenReturn(Set.of("node-a"));
+
+        var session = mock(CrawlerSession.class);
+        when(session.getCrawlContext()).thenReturn(crawlContext);
+        when(session.getCluster()).thenReturn(cluster);
+        when(session.isStartRefsQueueingComplete()).thenReturn(true);
+        return session;
+    }
+
+    @Test
+    void isActive_waitsForDocumentsInProcessBeforeFinishing() {
+        var ledger = mock(CrawlerEntryLedger.class);
+        // Still one being processed on the first check, done after.
+        when(ledger.getProcessingCount()).thenReturn(1L, 0L);
+        var session = buildSessionWithProcessing(ledger);
+
+        var checker = new CrawlerActivityChecker(session, false);
+
+        assertThat(checker.isActive()).isFalse();
+        verify(ledger, atLeastOnce())
+                .requeueStrandedEntries(Set.of("node-a"));
+    }
+
+    @Test
+    void isActive_whenStrandedEntriesPutBack_returnsTrue() {
+        var ledger = mock(CrawlerEntryLedger.class);
+        when(ledger.getProcessingCount()).thenReturn(3L);
+        when(ledger.requeueStrandedEntries(any())).thenReturn(3);
+        var session = buildSessionWithProcessing(ledger);
+
+        var checker = new CrawlerActivityChecker(session, false);
+
+        assertThat(checker.isActive()).isTrue();
+    }
+
+    @Test
+    void isActive_whenStopRequestedWhileWaiting_returnsFalse() {
+        var ledger = mock(CrawlerEntryLedger.class);
+        when(ledger.getProcessingCount()).thenReturn(1L);
+        var session = buildSessionWithProcessing(ledger);
+        when(session.isStopRequested()).thenReturn(true);
+
+        var checker = new CrawlerActivityChecker(session, false);
+
+        assertThat(checker.isActive()).isFalse();
+        verify(ledger, never()).requeueStrandedEntries(any());
+    }
+
+    @Test
+    void isActive_whenLedgerQueuedButQueueEmpty_putsThemBack() {
+        // A node died after taking references off the queue but before
+        // claiming them: the ledger still has them QUEUED.
+        var session = buildSession(false, false);
+        var ledger = session.getCrawlContext().getCrawlEntryLedger();
+        when(ledger.isQueueEmpty()).thenReturn(true);
+
+        var checker = new CrawlerActivityChecker(session, false);
+
+        assertThat(checker.isActive()).isTrue();
+        verify(ledger).requeueQueuedEntries();
+    }
+
+    @Test
+    void isActive_whenQueueHasReferences_putsNothingBack() {
+        var session = buildSession(false, false);
+        var ledger = session.getCrawlContext().getCrawlEntryLedger();
+        when(ledger.isQueueEmpty()).thenReturn(false);
+
+        var checker = new CrawlerActivityChecker(session, false);
+
+        assertThat(checker.isActive()).isTrue();
+        verify(ledger, never()).requeueQueuedEntries();
+    }
+
+    @Test
+    void isActive_whenTakenWhileIdle_waitsForThoseToo() {
+        var ledger = mock(CrawlerEntryLedger.class);
+        // None at first; one taken while idle; then done.
+        when(ledger.getProcessingCount()).thenReturn(0L, 1L, 1L, 0L);
+        var session = buildSessionWithProcessing(ledger);
+        var config = session.getCrawlContext().getCrawlConfig();
+        when(config.getIdleTimeout()).thenReturn(Duration.ofMillis(50));
+
+        var checker = new CrawlerActivityChecker(session, false);
+
+        assertThat(checker.isActive()).isFalse();
+        verify(ledger, atLeastOnce()).requeueStrandedEntries(any());
+    }
+
+    @Test
+    void isActive_whenQueuedWhileIdle_returnsTrue() {
+        var ledger = mock(CrawlerEntryLedger.class);
+        var session = buildSessionWithProcessing(ledger);
+        // Empty until polled while idle.
+        when(ledger.getQueuedEntryCount()).thenReturn(0L, 0L, 0L, 1L);
+        var config = session.getCrawlContext().getCrawlConfig();
+        when(config.getIdleTimeout()).thenReturn(Duration.ofSeconds(5));
+
+        var checker = new CrawlerActivityChecker(session, false);
+
+        assertThat(checker.isActive()).isTrue();
     }
 }

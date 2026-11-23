@@ -38,6 +38,10 @@ public class HazelcastClusterConnectorConfig {
      */
     private HazelcastConfigurer configurer = new JdbcHazelcastConfigurer();
 
+    /** Default node expiry timeout: 30 seconds. */
+    public static final Duration DEFAULT_NODE_EXPIRY_TIMEOUT =
+            Duration.ofSeconds(30);
+
     /**
      * Cluster name for Hazelcast instance. All nodes with the same cluster
      * name will form a cluster. Defaults to {@code "crawler-cluster"}.
@@ -62,7 +66,7 @@ public class HazelcastClusterConnectorConfig {
      * standalone mode.
      * </p>
      */
-    private Duration nodeExpiryTimeout = Duration.ofSeconds(30);
+    private Duration nodeExpiryTimeout = DEFAULT_NODE_EXPIRY_TIMEOUT;
 
     /**
      * Interval at which worker nodes send heartbeat updates for their

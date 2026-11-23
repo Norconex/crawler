@@ -14,6 +14,8 @@
  */
 package com.norconex.crawler.core.ledger;
 
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -22,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Consumer;
 
 import com.norconex.commons.lang.bean.BeanUtil;
@@ -476,7 +479,8 @@ public final class CrawlerEntryLedger {
         Map<String, CrawlerEntry> claimed;
         try {
             claimed = new HashMap<>(
-                    activeLedger.updateAll(references, CLAIM_QUEUED));
+                    activeLedger.updateAll(references,
+                            new ClaimQueued(nodeName)));
         } catch (RuntimeException e) {
             // The references are off the queue already: claim them one at
             // a time rather than lose them all.
@@ -514,7 +518,7 @@ public final class CrawlerEntryLedger {
         var claimed = new HashMap<String, CrawlerEntry>();
         for (String reference : new LinkedHashSet<>(references)) {
             try {
-                activeLedger.update(reference, CLAIM_QUEUED)
+                activeLedger.update(reference, new ClaimQueued(nodeName))
                         .ifPresent(entry -> claimed.put(reference, entry));
             } catch (RuntimeException e) {
                 LOG.warn("[{}] Could not claim reference {}: {}",
@@ -588,6 +592,64 @@ public final class CrawlerEntryLedger {
                         e);
             }
             requeuedCount++;
+        }
+        return requeuedCount;
+    }
+
+    /**
+     * Puts back in the queue the entries taken for processing by a node no
+     * longer working on the crawl, so the nodes still working on it process
+     * them in this run. An entry whose node is still working, and one that
+     * does not say which node took it, is left alone. Each entry is put back
+     * only if it is still held by the same node, so nodes doing this at the
+     * same time put it back once, and one finished in the meantime stays
+     * finished.
+     *
+     * @param workingNodeNames the nodes still working on the crawl; when
+     *     empty (the cluster could not tell), nothing is put back
+     * @return the number of entries put back in the queue
+     */
+    public int requeueStrandedEntries(@NonNull Set<String> workingNodeNames) {
+        if (workingNodeNames.isEmpty()) {
+            return 0;
+        }
+        var current = getCurrentLedger();
+        var inFlight = current.queryIterator(
+                statusQueryFilter(ProcessingStatus.PROCESSING));
+        var stranded = new ArrayList<CrawlerEntry>();
+        inFlight.forEachRemaining(entry -> {
+            var holder = entry.getProcessingNode();
+            if (holder != null && !workingNodeNames.contains(holder)) {
+                stranded.add(entry);
+            }
+        });
+
+        var requeuedCount = 0;
+        for (CrawlerEntry entry : stranded) {
+            var reference = entry.getReference();
+            var holder = entry.getProcessingNode();
+            var released =
+                    current.update(reference, new ReleaseClaim(holder));
+            if (released.isEmpty()) {
+                continue;
+            }
+            try {
+                queue.add(reference);
+            } catch (RuntimeException e) {
+                // Hold it again, so the next check puts it back.
+                current.update(reference, new ClaimQueued(holder));
+                throw new ClusterException(("Failed to re-queue reference "
+                        + "'%s' taken by node '%s'; it stays with that node.")
+                                .formatted(reference, holder),
+                        e);
+            }
+            LOG.debug("Put back in the queue: {} (taken by node {}).",
+                    reference, holder);
+            requeuedCount++;
+        }
+        if (requeuedCount > 0) {
+            LOG.info("Put back in the queue {} entries taken by nodes no "
+                    + "longer working on the crawl.", requeuedCount);
         }
         return requeuedCount;
     }
@@ -864,16 +926,18 @@ public final class CrawlerEntryLedger {
     //        return Optional.empty();
     //    }
 
-    private static final CacheEntryUpdate<CrawlerEntry> CLAIM_QUEUED =
-            new ClaimQueued();
-
     /**
-     * Turns a QUEUED entry into a PROCESSING copy of it, and leaves any
-     * other entry alone. Runs in the cache (possibly on another node), hence
-     * a serializable class rather than a lambda.
+     * Turns a QUEUED entry into a PROCESSING copy of it held by the given
+     * node, and leaves any other entry alone. Runs in the cache (possibly on
+     * another node), hence a serializable class rather than a lambda.
      */
     static final class ClaimQueued implements CacheEntryUpdate<CrawlerEntry> {
         private static final long serialVersionUID = 1L;
+        private final String nodeName;
+
+        ClaimQueued(String nodeName) {
+            this.nodeName = nodeName;
+        }
 
         @Override
         public CrawlerEntry apply(CrawlerEntry current) {
@@ -883,7 +947,39 @@ public final class CrawlerEntryLedger {
             }
             var claimed = BeanUtil.clone(current);
             claimed.setProcessingStatus(ProcessingStatus.PROCESSING);
+            claimed.setProcessingNode(nodeName);
+            claimed.setProcessingAt(ZonedDateTime.now(ZoneOffset.UTC));
             return claimed;
+        }
+    }
+
+    /**
+     * Turns a PROCESSING entry still held by the given node back into a
+     * QUEUED one, and leaves any other entry alone: one finished, or already
+     * put back and taken again, in the meantime. Serializable for the same
+     * reason as {@link ClaimQueued}.
+     */
+    static final class ReleaseClaim implements CacheEntryUpdate<CrawlerEntry> {
+        private static final long serialVersionUID = 1L;
+        private final String nodeName;
+
+        ReleaseClaim(String nodeName) {
+            this.nodeName = nodeName;
+        }
+
+        @Override
+        public CrawlerEntry apply(CrawlerEntry current) {
+            if (current == null
+                    || !ProcessingStatus.PROCESSING
+                            .is(current.getProcessingStatus())
+                    || !Objects.equals(nodeName, current.getProcessingNode())) {
+                return null;
+            }
+            var released = BeanUtil.clone(current);
+            released.setProcessingStatus(ProcessingStatus.QUEUED);
+            released.setProcessingNode(null);
+            released.setProcessingAt(null);
+            return released;
         }
     }
 
