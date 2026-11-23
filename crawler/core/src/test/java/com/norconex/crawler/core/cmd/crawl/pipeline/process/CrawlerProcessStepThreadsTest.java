@@ -59,8 +59,8 @@ class CrawlerProcessStepThreadsTest {
         var step = new CrawlerProcessStep(
                 "process", ProcessQueueAction.CRAWL_ALL) {
             @Override
-            void processQueue(CrawlerSession s, int threadIndex) {
-                if (threadIndex == 0) {
+            void processQueue(CrawlerSession s, CrawlSlot slot) {
+                if (slot.getIndex() == 0) {
                     throw new IllegalStateException("Simulated failure.");
                 }
             }

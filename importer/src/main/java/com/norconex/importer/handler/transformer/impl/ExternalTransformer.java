@@ -340,6 +340,15 @@ public class ExternalTransformer
                     "External transformer failed. Command: "
                             + configuration.getCommand(),
                     e);
+        } finally {
+            // Still running only when waiting for it was cut short, such as
+            // when the crawler gives up on the document (interrupting its
+            // thread): it must not outlive the document.
+            if (systemCommand.isRunning()) {
+                LOG.warn("Stopping external command left running: {}",
+                        configuration.getCommand());
+                systemCommand.abort();
+            }
         }
     }
 

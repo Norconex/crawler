@@ -42,6 +42,18 @@ final class ProcessFinalize {
             return;
         }
 
+        // Once the crawler gave up on the document being processed, or it
+        // went to another node, nothing more of it is recorded here.
+        var inProcess = DocumentInProcess.current();
+        var isClaimedDoc = inProcess != null
+                && inProcess.isFor(ctx.docContext().getReference());
+        if (inProcess != null && (isClaimedDoc
+                ? !inProcess.startRecordingOutcome()
+                : !inProcess.mayRecord())) {
+            ctx.finalized(true);
+            return;
+        }
+
         ctx.finalized(true);
 
         var crawlCtx = ctx.crawlSession().getCrawlContext();
@@ -110,7 +122,7 @@ final class ProcessFinalize {
         //--- Mark reference as Processed --------------------------------------
         try {
             currentEntry.setProcessingStatus(ProcessingStatus.PROCESSED);
-            crawlCtx.getCrawlEntryLedger().updateEntry(currentEntry);
+            recordOutcome(ctx, inProcess, isClaimedDoc);
             markReferenceVariationsAsProcessed(ctx);
 
         } catch (Exception e) {
@@ -313,4 +325,25 @@ final class ProcessFinalize {
         //        }
     }
 
+    private static void recordOutcome(ProcessContext ctx,
+            DocumentInProcess inProcess, boolean isClaimedDoc) {
+        var ledger = ctx.crawlSession().getCrawlContext().getCrawlEntryLedger();
+        var entry = ctx.docContext().getCurrentCrawlEntry();
+        if (!isClaimedDoc) {
+            ledger.updateEntry(entry);
+            return;
+        }
+        var held = true;
+        if (inProcess.isClustered()) {
+            held = ledger.finishClaimedEntry(entry);
+            if (!held) {
+                LOG.warn("Not recording the outcome of {}: it was given to "
+                        + "another node, this one having been taken for "
+                        + "gone.", entry.getReference());
+            }
+        } else {
+            ledger.updateEntry(entry);
+        }
+        inProcess.outcomeRecorded(held);
+    }
 }

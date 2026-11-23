@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.ClassUtils;
@@ -77,6 +78,13 @@ public class CommitterService<T> implements Closeable {
     private final Function<T, UpsertRequest> upsertRequestBuilder;
     @NonNull
     private final Function<T, DeleteRequest> deleteRequestBuilder;
+    /**
+     * Decides, before each upsert or delete, whether the object may be sent
+     * to committers. When it says no, the object is not sent, no event is
+     * fired, and an empty list is returned. Everything is sent by default.
+     */
+    @Default
+    private Predicate<T> sendCondition = obj -> true;
 
     public boolean isOperative() {
         return !committers.isEmpty();
@@ -135,6 +143,9 @@ public class CommitterService<T> implements Closeable {
     public List<Committer> upsert(
             T object, @NonNull BiConsumer<Committer, String> onWithheld)
             throws CommitterServiceException {
+        if (!sendCondition.test(object)) {
+            return Collections.emptyList();
+        }
         fire(COMMITTER_SERVICE_UPSERT_BEGIN, committers, object);
 
         List<Committer> actuals = new ArrayList<>();
@@ -164,6 +175,9 @@ public class CommitterService<T> implements Closeable {
      *     captured)
      */
     public List<Committer> delete(T object) throws CommitterServiceException {
+        if (!sendCondition.test(object)) {
+            return Collections.emptyList();
+        }
         fire(COMMITTER_SERVICE_DELETE_BEGIN, committers, object);
 
         List<Committer> actuals = new ArrayList<>();

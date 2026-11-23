@@ -51,6 +51,15 @@ public interface Cluster extends Closeable {
         return Set.copyOf(getNodeNames());
     }
 
+    /**
+     * Whether this cluster can have more than one node. When it cannot, no
+     * other node may ever take over what this one is processing.
+     * @return {@code true} if clustered
+     */
+    default boolean isClustered() {
+        return false;
+    }
+
     ClusterNode getLocalNode();
 
     CacheManager getCacheManager();

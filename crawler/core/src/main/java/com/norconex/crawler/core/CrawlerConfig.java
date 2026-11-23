@@ -105,6 +105,8 @@ public class CrawlerConfig {
 
     public static final Duration DEFAULT_IDLE_TIMEOUT =
             Duration.ofSeconds(5);
+    public static final Duration DEFAULT_DOCUMENT_TIMEOUT =
+            Duration.ofHours(1);
     public static final Duration DEFAULT_MIN_PROGRESS_LOGGING_INTERVAL =
             Duration.ofSeconds(30);
     //    /**
@@ -265,6 +267,21 @@ public class CrawlerConfig {
      * The smallest considered unit is seconds (milliseconds are rounded up).
      */
     private Duration idleTimeout = DEFAULT_IDLE_TIMEOUT;
+
+    /**
+     * The longest a crawl thread may spend on one document: fetching it,
+     * importing it, sending it (and documents found in it) to committers.
+     * Past it, the crawler gives up on the document: it is recorded as an
+     * error (firing {@code REJECTED_ERROR}), nothing more of it is sent to
+     * committers, and the thread is interrupted, then replaced by a new one
+     * if it does not let go of the document within a minute (or
+     * the document timeout, if shorter). Should a node
+     * end up with as many such threads it could not free as it has crawl
+     * threads, the crawl is stopped, to be resumed on the next start.
+     * Defaults to {@link #DEFAULT_DOCUMENT_TIMEOUT} (1 hour), long enough
+     * for very large documents. A {@code null} or zero value disables it.
+     */
+    private Duration documentTimeout = DEFAULT_DOCUMENT_TIMEOUT;
 
     /**
      * Minimum amount of time to wait between each logging of crawling
