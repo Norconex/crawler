@@ -38,6 +38,7 @@ import org.mockito.Mock;
 import org.mockito.Mock.Strictness;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.norconex.commons.lang.bean.BeanUtil;
 import com.norconex.crawler.core.CrawlerConfig;
 import com.norconex.crawler.core.cluster.CacheMap;
 import com.norconex.crawler.core.cluster.CacheNames;
@@ -627,6 +628,89 @@ class CrawlerEntryLedgerTest {
         assertThat(kept.getProcessingStatus())
                 .isEqualTo(ProcessingStatus.PROCESSING);
         assertThat(kept.getProcessingNode()).isEqualTo("node-a");
+    }
+
+    @Test
+    void testClaimQueued_isTheSameWhenAppliedAgain() {
+        // A clustered cache applies it again on backup copies.
+        var queued = entry("ref-a");
+        queued.setProcessingStatus(ProcessingStatus.QUEUED);
+        var claim = new CrawlerEntryLedger.ClaimQueued("node-a");
+
+        var primary = claim.apply(queued);
+        var backup = claim.apply(queued);
+
+        assertThat(backup.getProcessingClaim())
+                .isEqualTo(primary.getProcessingClaim());
+        assertThat(backup.getProcessingAt())
+                .isEqualTo(primary.getProcessingAt());
+        assertThat(new CrawlerEntryLedger.ClaimQueued("node-a")
+                .apply(queued).getProcessingClaim())
+                        .isNotEqualTo(primary.getProcessingClaim());
+    }
+
+    @Test
+    void testMarkSending_onlyWhileStillHeld() {
+        ledger.queue(entry("ref-a"));
+        var claimed = claimAs("node-a", 1).get(0);
+        assertThat(claimed.getProcessingClaim()).isNotBlank();
+
+        assertThat(ledger.markSending(claimed)).isTrue();
+        assertThat(ledger.getEntry("ref-a").orElseThrow().isSending())
+                .isTrue();
+        // Marking again is fine.
+        assertThat(ledger.markSending(claimed)).isTrue();
+
+        // Taken over by another node: no longer held.
+        ledger.requeueStrandedEntries(Set.of("node-b"));
+        var retaken = claimAs("node-b", 1).get(0);
+        assertThat(retaken.isSending()).isFalse();
+        assertThat(ledger.markSending(claimed)).isFalse();
+    }
+
+    @Test
+    void testFinishClaimedEntry_onlyWhileStillHeld() {
+        ledger.queue(entry("ref-a"));
+        // Copies: the in-memory test cache hands out what it stores.
+        var claimed = BeanUtil.clone(claimAs("node-a", 1).get(0));
+        ledger.requeueStrandedEntries(Set.of("node-b"));
+        var retaken = BeanUtil.clone(claimAs("node-b", 1).get(0));
+
+        // The first holder's late outcome is not recorded.
+        claimed.setProcessingStatus(ProcessingStatus.PROCESSED);
+        claimed.setProcessingOutcome(ProcessingOutcome.NEW);
+        assertThat(ledger.finishClaimedEntry(claimed)).isFalse();
+        assertThat(ledger.getProcessingStatus("ref-a"))
+                .isEqualTo(ProcessingStatus.PROCESSING);
+
+        retaken.setProcessingStatus(ProcessingStatus.PROCESSED);
+        retaken.setProcessingOutcome(ProcessingOutcome.NEW);
+        assertThat(ledger.finishClaimedEntry(retaken)).isTrue();
+        assertThat(ledger.getProcessingStatus("ref-a"))
+                .isEqualTo(ProcessingStatus.PROCESSED);
+    }
+
+    @Test
+    void testFinishClaimedEntry_entryWithoutClaimIsRecordedAsIs() {
+        var unclaimed = entry("ref-a");
+        unclaimed.setProcessingStatus(ProcessingStatus.PROCESSED);
+        assertThat(ledger.finishClaimedEntry(unclaimed)).isTrue();
+        assertThat(ledger.getProcessingStatus("ref-a"))
+                .isEqualTo(ProcessingStatus.PROCESSED);
+    }
+
+    @Test
+    void testRequeueStrandedEntries_putsBackEntryBeingSent() {
+        // Its node died while sending it: processed again (and it may
+        // reach committers twice, which is logged).
+        ledger.queue(entry("ref-a"));
+        var claimed = claimAs("node-a", 1).get(0);
+        ledger.markSending(claimed);
+
+        assertThat(ledger.requeueStrandedEntries(Set.of("node-b")))
+                .isEqualTo(1);
+        assertThat(ledger.getProcessingStatus("ref-a"))
+                .isEqualTo(ProcessingStatus.QUEUED);
     }
 
     private List<CrawlerEntry> claimAs(String nodeName, int size) {

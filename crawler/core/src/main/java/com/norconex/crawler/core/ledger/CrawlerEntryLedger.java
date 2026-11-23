@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Consumer;
 
 import com.norconex.commons.lang.bean.BeanUtil;
@@ -278,6 +279,45 @@ public final class CrawlerEntryLedger {
             }
         }
         return previous;
+    }
+
+    /**
+     * Marks an entry taken for processing as being sent to committers, if
+     * its claim still holds: the entry was not given to another node in the
+     * meantime.
+     * @param claimedEntry the entry as taken for processing (with its claim)
+     * @return {@code true} if the claim still holds and the entry is marked
+     */
+    public boolean markSending(@NonNull CrawlerEntry claimedEntry) {
+        return getCurrentLedger().update(claimedEntry.getReference(),
+                new MarkSending(claimedEntry.getProcessingClaim()))
+                .isPresent();
+    }
+
+    /**
+     * Records the outcome of processing an entry, like
+     * {@link #updateEntry(CrawlerEntry)}, but only if the claim it carries
+     * still holds: the entry was not given to another node in the meantime.
+     * An entry carrying no claim is recorded as is.
+     * @param entry the processed entry, with the claim it was taken with
+     * @return {@code true} if recorded
+     */
+    public boolean finishClaimedEntry(@NonNull CrawlerEntry entry) {
+        if (entry.getProcessingClaim() == null) {
+            updateEntry(entry);
+            return true;
+        }
+        var reference = entry.getReference();
+        var recorded = getCurrentLedger()
+                .update(reference, new FinishClaim(entry)).isPresent();
+        if (recorded
+                && ProcessingStatus.PROCESSED.is(entry.getProcessingStatus())) {
+            var baseline = getBaselineLedger();
+            if (baseline != null) {
+                baseline.remove(reference);
+            }
+        }
+        return recorded;
     }
 
     /**
@@ -633,6 +673,11 @@ public final class CrawlerEntryLedger {
             if (released.isEmpty()) {
                 continue;
             }
+            if (released.get().isSending()) {
+                LOG.warn("Processing {} again: node {} stopped working on "
+                        + "the crawl while sending it to committers, which "
+                        + "may receive it twice.", reference, holder);
+            }
             try {
                 queue.add(reference);
             } catch (RuntimeException e) {
@@ -934,6 +979,11 @@ public final class CrawlerEntryLedger {
     static final class ClaimQueued implements CacheEntryUpdate<CrawlerEntry> {
         private static final long serialVersionUID = 1L;
         private final String nodeName;
+        // Decided here, not when applied: a clustered cache applies the
+        // update again on backup copies, which must end up the same.
+        private final String claim = UUID.randomUUID().toString();
+        private final ZonedDateTime claimedAt =
+                ZonedDateTime.now(ZoneOffset.UTC);
 
         ClaimQueued(String nodeName) {
             this.nodeName = nodeName;
@@ -948,7 +998,9 @@ public final class CrawlerEntryLedger {
             var claimed = BeanUtil.clone(current);
             claimed.setProcessingStatus(ProcessingStatus.PROCESSING);
             claimed.setProcessingNode(nodeName);
-            claimed.setProcessingAt(ZonedDateTime.now(ZoneOffset.UTC));
+            claimed.setProcessingAt(claimedAt);
+            claimed.setProcessingClaim(claim);
+            claimed.setSending(false);
             return claimed;
         }
     }
@@ -979,7 +1031,67 @@ public final class CrawlerEntryLedger {
             released.setProcessingStatus(ProcessingStatus.QUEUED);
             released.setProcessingNode(null);
             released.setProcessingAt(null);
+            released.setProcessingClaim(null);
+            // "sending" is kept, for the caller to tell; the next claim
+            // clears it.
             return released;
+        }
+    }
+
+    // Whether the entry is PROCESSING and taken by the given claim.
+    private static boolean isHeldBy(CrawlerEntry current, String claim) {
+        return current != null
+                && ProcessingStatus.PROCESSING
+                        .is(current.getProcessingStatus())
+                && claim != null
+                && claim.equals(current.getProcessingClaim());
+    }
+
+    /**
+     * Marks a PROCESSING entry as being sent to committers, if still taken
+     * by the given claim. Serializable for the same reason as
+     * {@link ClaimQueued}.
+     */
+    static final class MarkSending implements CacheEntryUpdate<CrawlerEntry> {
+        private static final long serialVersionUID = 1L;
+        private final String claim;
+
+        MarkSending(String claim) {
+            this.claim = claim;
+        }
+
+        @Override
+        public CrawlerEntry apply(CrawlerEntry current) {
+            if (!isHeldBy(current, claim)) {
+                return null;
+            }
+            if (current.isSending()) {
+                return current;
+            }
+            var marked = BeanUtil.clone(current);
+            marked.setSending(true);
+            return marked;
+        }
+    }
+
+    /**
+     * Replaces a PROCESSING entry with the given one (its processing
+     * outcome), if still taken by the claim the given one carries.
+     * Serializable for the same reason as {@link ClaimQueued}.
+     */
+    static final class FinishClaim implements CacheEntryUpdate<CrawlerEntry> {
+        private static final long serialVersionUID = 1L;
+        private final CrawlerEntry finished;
+
+        FinishClaim(CrawlerEntry finished) {
+            this.finished = finished;
+        }
+
+        @Override
+        public CrawlerEntry apply(CrawlerEntry current) {
+            return isHeldBy(current, finished.getProcessingClaim())
+                    ? finished
+                    : null;
         }
     }
 

@@ -544,6 +544,7 @@ public class HazelcastCluster implements Cluster {
         return !isClustered();
     }
 
+    @Override
     public boolean isClustered() {
         return clustered;
     }

@@ -144,6 +144,13 @@ hazelcast:
       backup-count: 1
       async-backup-count: 0
       read-backup-data: false
+      # Counting and finding entries by processing status is done constantly
+      # (e.g., waiting for documents still in process): without an index
+      # each one scans the whole ledger.
+      indexes:
+        - type: HASH
+          attributes:
+            - processingStatus
       map-store:
         enabled: true
         initial-mode: LAZY

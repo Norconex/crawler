@@ -70,6 +70,22 @@ public class CrawlerEntry implements Serializable {
      */
     @ToString.Exclude
     private String processingNode;
+    /**
+     * Identifies the taking of this entry for processing by
+     * {@link #getProcessingNode()}, new each time it is taken. Lets the node
+     * processing it tell whether it still holds it before sending it to
+     * committers or recording its outcome.
+     */
+    @ToString.Exclude
+    private String processingClaim;
+    /**
+     * Whether the node holding this entry for processing started sending it
+     * (or documents found in it) to committers. If that node stops working
+     * on the crawl after that, the entry is processed again and may reach
+     * committers twice.
+     */
+    @ToString.Exclude
+    private boolean sending;
     @ToString.Exclude
     private ZonedDateTime processedAt;
     @ToString.Exclude

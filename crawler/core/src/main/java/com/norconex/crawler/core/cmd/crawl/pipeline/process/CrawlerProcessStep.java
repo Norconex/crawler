@@ -16,7 +16,7 @@ package com.norconex.crawler.core.cmd.crawl.pipeline.process;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
 
@@ -31,7 +31,6 @@ import com.norconex.crawler.core.ledger.CrawlerEntry;
 import com.norconex.crawler.core.ledger.ProcessingOutcome;
 import com.norconex.crawler.core.session.CrawlerSession;
 import com.norconex.crawler.core.session.CrawlerState;
-import com.norconex.crawler.core.util.ConcurrentUtil;
 import com.norconex.crawler.core.util.LogUtil;
 import com.norconex.importer.doc.Doc;
 
@@ -86,37 +85,49 @@ public class CrawlerProcessStep extends BaseStep {
                 .session(session)
                 .build();
 
-        var executor = Executors.newFixedThreadPool(
-                numThreads, ctx.getThreadFactoryCreator()
-                        .create(session.getCrawlerId()));
-
-        try {
-            var futures = IntStream.range(0, numThreads)
-                    .mapToObj(i -> CompletableFuture
-                            .runAsync(() -> {
-                                try {
-                                    processQueue(session,
-                                            i);
-                                } catch (Exception e) {
-                                    LOG.error(
-                                            "Problem running task {} {} of {}.",
-                                            "crawl-" + session
-                                                    .getCrawlerId(),
-                                            i,
-                                            numThreads,
-                                            e);
-                                    throw new CompletionException(
-                                            e);
-                                }
-                            }, executor))
-                    .toList();
-            CompletableFuture.allOf(
-                    futures.toArray(new CompletableFuture[0]))
+        var threadFactory = ctx.getThreadFactoryCreator()
+                .create(session.getCrawlerId());
+        var slots = IntStream.range(0, numThreads)
+                .mapToObj(CrawlSlot::new)
+                .toList();
+        try (var watcher = new DocumentTimeoutWatcher(session, slots,
+                slot -> startSlotThread(session, slot, threadFactory),
+                cfg.getDocumentTimeout())) {
+            slots.forEach(
+                    slot -> startSlotThread(session, slot, threadFactory));
+            CompletableFuture.allOf(slots.stream()
+                    .map(CrawlSlot::getDone)
+                    .toArray(CompletableFuture[]::new))
                     .join();
+        }
+    }
+
+    // Starts a thread processing the queue for a slot, also to replace one
+    // stuck on a document. Daemon: a thread stuck for good must not keep
+    // the JVM from exiting.
+    private void startSlotThread(CrawlerSession session, CrawlSlot slot,
+            ThreadFactory threadFactory) {
+        var thread = threadFactory.newThread(() -> runSlot(session, slot));
+        thread.setDaemon(true);
+        slot.setOwner(thread);
+        thread.start();
+    }
+
+    private void runSlot(CrawlerSession session, CrawlSlot slot) {
+        try {
+            processQueue(session, slot);
+        } catch (Exception e) {
+            LOG.error("Problem running task {} {}.",
+                    "crawl-" + session.getCrawlerId(), slot.getIndex(), e);
+            if (slot.isOwnedByCurrentThread()) {
+                slot.getDone().completeExceptionally(
+                        new CompletionException(e));
+            }
         } finally {
-            // Also when a task failed: the pool's threads would otherwise
-            // stay parked, and keep the JVM from exiting.
-            ConcurrentUtil.cleanShutdown(executor);
+            // A thread replaced while stuck leaves the slot to its successor.
+            if (slot.isOwnedByCurrentThread()) {
+                slot.getDone().complete(null);
+            }
         }
     }
 
@@ -144,7 +155,8 @@ public class CrawlerProcessStep extends BaseStep {
     // scheduler (or after each X docs?).
 
     // just invoked in its own thread
-    void processQueue(CrawlerSession session, int threadIndex) {
+    void processQueue(CrawlerSession session, CrawlSlot slot) {
+        var threadIndex = slot.getIndex();
         var nodeName = session.getCluster().getLocalNode()
                 .getNodeName();
         LOG.debug("[{}] processQueue(threadIndex={}) starting.",
@@ -168,15 +180,14 @@ public class CrawlerProcessStep extends BaseStep {
             var activityChecker = new CrawlerActivityChecker(
                     session,
                     queueAction == ProcessQueueAction.DELETE_ALL);
-            while (!isStopRequested()) {
+            while (!isStopRequested() && slot.isOwnedByCurrentThread()) {
                 if (!activityChecker.canContinue()) {
                     LOG.trace("[{}] processQueue(threadIndex={}) "
                             + "stopping: canContinue() is false.",
                             nodeName, threadIndex);
                     break;
                 }
-                if (!processNextInQueue(session,
-                        activityChecker)) {
+                if (!processNextInQueue(session, activityChecker, slot)) {
                     LOG.trace("[{}] processQueue(threadIndex={}) "
                             + "stopping: processNextInQueue returned false.",
                             nodeName, threadIndex);
@@ -208,12 +219,14 @@ public class CrawlerProcessStep extends BaseStep {
 
     private boolean processNextInQueue(
             CrawlerSession session,
-            CrawlerActivityChecker activityChecker) {
+            CrawlerActivityChecker activityChecker,
+            CrawlSlot slot) {
 
         var crawlCtx = session.getCrawlContext();
         var docProcessCtx = new ProcessContext().crawlSession(session);
         var nodeName = session.getCluster().getLocalNode()
                 .getNodeName();
+        DocumentInProcess inProcess = null;
         try {
             var currentEntry = batchDispatcher.take();
 
@@ -238,6 +251,11 @@ public class CrawlerProcessStep extends BaseStep {
             LOG.trace("[{}] processNextInQueue processing ref={}.",
                     nodeName,
                     currentEntry.getReference());
+
+            inProcess = DocumentInProcess.begin(
+                    crawlCtx.getCrawlEntryLedger(), currentEntry,
+                    session.getCluster().isClustered());
+            slot.setCurrent(inProcess);
 
             var doc = new Doc(currentEntry.getReference()); //NOSONAR
             CrawlerEntry previousEntry = null;
@@ -286,6 +304,13 @@ public class CrawlerProcessStep extends BaseStep {
             }
             return true;
         } catch (Exception e) {
+            if (inProcess != null && inProcess.isTimedOut()) {
+                // Given up on: recorded as such already. Most likely what
+                // was interrupted to free this thread.
+                LOG.debug("Processing of {} ended after being given up on: "
+                        + "{}", inProcess.getReference(), e.toString());
+                return true;
+            }
             if (e instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
@@ -311,6 +336,15 @@ public class CrawlerProcessStep extends BaseStep {
             }
         } finally {
             ProcessFinalize.execute(docProcessCtx);
+            if (inProcess != null) {
+                slot.clearCurrent(inProcess);
+                inProcess.end();
+                if (inProcess.isTimedOut()) {
+                    // The interrupt meant for this document must not cut
+                    // short the next one.
+                    Thread.interrupted();
+                }
+            }
         }
         return true;
     }

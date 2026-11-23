@@ -14,13 +14,62 @@
  */
 package com.norconex.importer.handler.transformer.impl;
 
-import com.norconex.importer.handler.AbstractExternalTest;
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.concurrent.atomic.AtomicReference;
+
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+
+import com.norconex.commons.lang.Sleeper;
+import com.norconex.commons.lang.map.Properties;
+import com.norconex.importer.TestUtil;
+import com.norconex.importer.handler.AbstractExternalTest;
+import com.norconex.importer.handler.parser.ParseState;
+import com.norconex.importer.util.ExternalApp;
 
 @Timeout(30)
 class ExternalTransformerTest extends AbstractExternalTest {
 
     public ExternalTransformerTest() {
         super(ExternalTransformer::new);
+    }
+
+    @Test
+    void testCommandIsStoppedWhenWaitingForItIsInterrupted()
+            throws InterruptedException {
+        var before = ProcessHandle.current().children().count();
+        var transformer = new ExternalTransformer();
+        transformer.getConfiguration()
+                .setCommand(ExternalApp.newCommandLine(""));
+        var failure = new AtomicReference<Throwable>();
+
+        // Interrupted before it starts: waiting for the command is cut short
+        // right away, as when the crawler gives up on a document.
+        var thread = new Thread(() -> {
+            Thread.currentThread().interrupt();
+            try {
+                transformer.handle(TestUtil.newHandlerContext("doc.txt",
+                        new ByteArrayInputStream(
+                                "content".getBytes(StandardCharsets.UTF_8)),
+                        new Properties(), ParseState.PRE));
+            } catch (Exception e) {
+                failure.set(e);
+            }
+        });
+        thread.start();
+        thread.join(Duration.ofSeconds(20).toMillis());
+
+        assertThat(failure.get()).isNotNull();
+        var deadline = System.currentTimeMillis() + 10_000;
+        while (ProcessHandle.current().children().count() > before
+                && System.currentTimeMillis() < deadline) {
+            Sleeper.sleepMillis(100);
+        }
+        assertThat(ProcessHandle.current().children().count())
+                .isLessThanOrEqualTo(before);
     }
 }

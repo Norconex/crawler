@@ -24,6 +24,8 @@ import org.apache.commons.lang3.StringUtils;
 
 import com.hazelcast.config.Config;
 import com.hazelcast.config.DataConnectionConfig;
+import com.hazelcast.config.IndexConfig;
+import com.hazelcast.config.IndexType;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapStoreConfig;
 import com.hazelcast.config.MapStoreConfig.InitialLoadMode;
@@ -439,8 +441,13 @@ public class JdbcHazelcastConfigurer implements HazelcastConfigurer {
         // Ledger wildcard: value-class-name is the base type here, but it is
         // overridden at startup by HazelcastCluster.applyCacheTypes() with the
         // concrete CrawlerEntry subclass registered by the driver.
-        cfg.addMapConfig(buildMapConfig("ledger_*", backups,
-                CrawlerEntry.class.getName(), effectiveSqlMerge, false));
+        var ledgerConfig = buildMapConfig("ledger_*", backups,
+                CrawlerEntry.class.getName(), effectiveSqlMerge, false);
+        // Entries are constantly counted and found by processing status:
+        // without an index each one scans the whole ledger.
+        ledgerConfig.addIndexConfig(new IndexConfig(IndexType.HASH,
+                CrawlerEntry.Fields.processingStatus));
+        cfg.addMapConfig(ledgerConfig);
 
         // Ephemeral maps — in-memory only, no persistence.
         var ephStore = new MapStoreConfig();

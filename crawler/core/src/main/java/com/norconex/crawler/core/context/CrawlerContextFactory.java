@@ -25,6 +25,7 @@ import com.norconex.committer.core.UpsertRequest;
 import com.norconex.committer.core.service.CommitterService;
 import com.norconex.commons.lang.event.EventManager;
 import com.norconex.commons.lang.io.CachedStreamFactory;
+import com.norconex.crawler.core.cmd.crawl.pipeline.process.DocumentInProcess;
 import com.norconex.crawler.core.CrawlerConfig;
 import com.norconex.crawler.core.CrawlerDriver;
 import com.norconex.crawler.core.CrawlerException;
@@ -92,6 +93,9 @@ public final class CrawlerContextFactory {
                                 doc -> new DeleteRequest(
                                         doc.getReference(),
                                         doc.getMetadata()))
+                        // Never twice the same document, nor one the crawler
+                        // gave up on.
+                        .sendCondition(doc -> DocumentInProcess.maySend())
                         .build())
                 .crawlConfig(config)
                 .dedupService(new DedupService())

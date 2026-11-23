@@ -390,4 +390,28 @@ class CommitterServiceTest {
                 // committer, after the "customOne".
                 "XmlFileCommitter_3");
     }
+
+    @Test
+    void testSendConditionSkipsObjectsItRefuses() {
+        var committer = new MemoryCommitter();
+        var service = CommitterService.<TestDoc>builder()
+                .committers(List.of(committer))
+                .upsertRequestBuilder(doc -> new UpsertRequest(
+                        doc.getRef(), doc.getMeta(), nullInputStream()))
+                .deleteRequestBuilder(doc -> new DeleteRequest(
+                        doc.getRef(), doc.getMeta()))
+                .sendCondition(doc -> !"refused".equals(doc.getRef()))
+                .build();
+        var ctx = new TestContext(service);
+        ctx.initService();
+
+        assertThat(service.upsert(new TestDoc("refused"))).isEmpty();
+        assertThat(service.delete(new TestDoc("refused"))).isEmpty();
+        assertThat(ctx.getEvents()).isEmpty();
+        assertThat(service.upsert(new TestDoc("sent"))).hasSize(1);
+        assertThat(service.delete(new TestDoc("sent"))).hasSize(1);
+
+        assertThat(ctx.upsertCount()).isEqualTo(1);
+        assertThat(ctx.deleteCount()).isEqualTo(1);
+    }
 }
