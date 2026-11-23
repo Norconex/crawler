@@ -44,8 +44,9 @@ import com.norconex.commons.lang.file.ContentType;
  * address. All of that is replaced by what the header says.
  * </p>
  * <p>
- * {@code Content-Type} is left to the parser: it describes the message as a
- * whole, and the header's own value only the body.
+ * {@code Content-Type} is kept too. The document keeps the parser's value
+ * (the message, such as {@code message/rfc822}) first, then the header's
+ * (the body, such as {@code text/plain; charset=UTF-8}), always in that order.
  * </p>
  */
 final class EmailNativeMetadataReader implements NativeMetadataReader {
@@ -84,8 +85,7 @@ final class EmailNativeMetadataReader implements NativeMetadataReader {
             var value = DecoderUtil.decodeEncodedWords(
                     line.substring(colon + 1).trim(), DecodeMonitor.SILENT);
             if (name.isEmpty() || name.indexOf(' ') >= 0
-                    || value.isBlank()
-                    || name.equalsIgnoreCase("Content-Type")) {
+                    || value.isBlank()) {
                 continue;
             }
             NativeFields.add(found, name, value);

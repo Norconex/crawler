@@ -210,6 +210,10 @@ class NativeFieldNamesTest {
         assertThat(md.getStrings("X-Custom-Header"))
                 .containsExactly("custom value");
 
+        // the message type first, then the body type the header declared
+        assertThat(md.getStrings("Content-Type")).containsExactly(
+                "message/rfc822", "text/plain; charset=UTF-8");
+
         // nothing under names only the parser would have chosen
         assertThat(md.keySet()).noneMatch(k -> k.startsWith("message:"));
         assertThat(md.containsKey("dc:creator")).isFalse();
