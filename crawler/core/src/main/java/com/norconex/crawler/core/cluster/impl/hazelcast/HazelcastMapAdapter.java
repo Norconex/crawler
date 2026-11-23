@@ -15,8 +15,11 @@
 package com.norconex.crawler.core.cluster.impl.hazelcast;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -37,6 +40,7 @@ import com.hazelcast.query.PagingPredicate;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
 import com.hazelcast.query.impl.predicates.PagingPredicateImpl;
+import com.norconex.crawler.core.cluster.CacheEntryUpdate;
 import com.norconex.crawler.core.cluster.CacheMap;
 import com.norconex.crawler.core.cluster.QueryFilter;
 import com.norconex.crawler.core.util.SerialUtil;
@@ -211,6 +215,44 @@ public class HazelcastMapAdapter<T> implements CacheMap<T> {
                 false);
     }
 
+    /**
+     * Runs the update where the entry lives, as a Hazelcast entry
+     * processor: one round trip, atomic for the key, and no comparison of
+     * serialized values.
+     */
+    @Override
+    public Optional<T> update(String key, CacheEntryUpdate<T> update) {
+        return Optional.ofNullable(supplyIfCache(
+                () -> fromStored(hzMap.executeOnKey(key,
+                        new CacheEntryUpdateProcessor<>(type, update))),
+                null));
+    }
+
+    /**
+     * Runs the update on all keys in one call, Hazelcast sending it to each
+     * partition owner at once instead of one round trip per key.
+     */
+    @Override
+    public Map<String, T> updateAll(
+            Collection<String> keys, CacheEntryUpdate<T> update) {
+        var keySet = new LinkedHashSet<>(keys);
+        if (keySet.isEmpty()) {
+            return Map.of();
+        }
+        var results = supplyIfCache(
+                () -> hzMap.executeOnKeys(keySet,
+                        new CacheEntryUpdateProcessor<>(type, update)),
+                Map.<String, Object>of());
+        var updated = new LinkedHashMap<String, T>();
+        for (var key : keySet) {
+            var value = results.get(key);
+            if (value != null) {
+                updated.put(key, fromStored(value));
+            }
+        }
+        return updated;
+    }
+
     @Override
     public List<T> query(QueryFilter filter) {
         return this.<List<T>>supplyIfCache(() -> {
@@ -334,6 +376,10 @@ public class HazelcastMapAdapter<T> implements CacheMap<T> {
     }
 
     private T fromStored(Object stored) {
+        return fromStored(stored, type);
+    }
+
+    static <T> T fromStored(Object stored, Class<T> type) {
         if (stored == null) {
             return null;
         }

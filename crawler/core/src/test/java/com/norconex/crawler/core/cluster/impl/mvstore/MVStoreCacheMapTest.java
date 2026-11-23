@@ -20,6 +20,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.h2.mvstore.MVStore;
 import org.junit.jupiter.api.AfterEach;
@@ -27,6 +28,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import com.norconex.crawler.core.cluster.CacheEntryUpdate;
 import com.norconex.crawler.core.cluster.QueryFilter;
 
 import lombok.AllArgsConstructor;
@@ -235,5 +237,45 @@ class MVStoreCacheMapTest {
                         + "5 scan counts=%d ms%n",
                 indexedMs, scanMs);
         assertThat(cache.count(status("QUEUED"))).isEqualTo(10_000);
+    }
+
+    /** Sets status "done" on items still "new"; leaves others alone. */
+    static final class Finish implements CacheEntryUpdate<Item> {
+        private static final long serialVersionUID = 1L;
+
+        @Override
+        public Item apply(Item current) {
+            if (current == null || !"new".equals(current.getStatus())) {
+                return null;
+            }
+            return new Item(current.getRef(), "done");
+        }
+    }
+
+    @Test
+    void testUpdateIsAtomicAndKeepsCountsInStep() throws Exception {
+        for (var i = 0; i < 300; i++) {
+            cache.put("k" + i, new Item("k" + i, "new"));
+        }
+        // Build the count index first, so updates must maintain it.
+        assertThat(cache.count(status("new"))).isEqualTo(300);
+        var keys = new ArrayList<String>();
+        for (var i = 0; i < 300; i++) {
+            keys.add("k" + i);
+        }
+        var changed = new AtomicInteger();
+        try (var pool = Executors.newFixedThreadPool(6)) {
+            for (var t = 0; t < 6; t++) {
+                pool.submit(() -> changed.addAndGet(
+                        cache.updateAll(keys, new Finish()).size()));
+            }
+        }
+        // Each item changed by exactly one thread, counts follow.
+        assertThat(changed).hasValue(300);
+        assertThat(cache.count(status("done"))).isEqualTo(300);
+        assertThat(cache.count(status("new"))).isZero();
+        assertThat(scanCount("done")).isEqualTo(300);
+        assertThat(cache.update("missing", new Finish())).isEmpty();
+        assertThat(cache.containsKey("missing")).isFalse();
     }
 }

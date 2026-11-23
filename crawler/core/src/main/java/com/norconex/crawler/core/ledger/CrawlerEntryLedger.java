@@ -17,6 +17,7 @@ package com.norconex.crawler.core.ledger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -24,6 +25,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 
 import com.norconex.commons.lang.bean.BeanUtil;
+import com.norconex.crawler.core.cluster.CacheEntryUpdate;
 import com.norconex.crawler.core.cluster.CacheManager;
 import com.norconex.crawler.core.cluster.CacheMap;
 import com.norconex.crawler.core.cluster.CacheNames;
@@ -374,18 +376,15 @@ public final class CrawlerEntryLedger {
     public void queue(@NonNull CrawlerEntry crawlEntry) {
         var current = getCurrentLedger();
         var reference = crawlEntry.getReference();
-        if (current.containsKey(reference)) {
-            LOG.debug("Reference already accounted for: {}",
-                    reference);
-            return;
-        }
-
         var queuedEntry = BeanUtil.clone(crawlEntry);
 
         // Store the full entry in the ledger and only the reference
         // in the queue
         queuedEntry.setProcessingStatus(ProcessingStatus.QUEUED);
-        current.put(reference, queuedEntry);
+        if (current.putIfAbsent(reference, queuedEntry) != null) {
+            LOG.debug("Reference already accounted for: {}", reference);
+            return;
+        }
         try {
             queue.add(reference);
         } catch (RuntimeException e) {
@@ -470,18 +469,29 @@ public final class CrawlerEntryLedger {
         var references = queue.pollBatch(batchSize);
         var batch = new java.util.ArrayList<CrawlerEntry>(references.size());
 
-        // For each reference, fetch and update the entry in the ledger
+        // Claim them all at once: each still QUEUED entry becomes PROCESSING
+        // atomically, decided by the cache itself from the entry's current
+        // status (never by comparing whole entries, which depends on how
+        // the cache serializes them).
+        Map<String, CrawlerEntry> claimed;
+        try {
+            claimed = new HashMap<>(
+                    activeLedger.updateAll(references, CLAIM_QUEUED));
+        } catch (RuntimeException e) {
+            // The references are off the queue already: claim them one at
+            // a time rather than lose them all.
+            LOG.warn("[{}] Could not claim {} polled references at once; "
+                    + "claiming them one at a time: {}",
+                    nodeName, references.size(), e.toString());
+            claimed = claimOneByOne(activeLedger, references, nodeName);
+        }
         for (String reference : references) {
-            var entryOpt = activeLedger.get(reference);
-            if (entryOpt.isPresent()) {
-                var entry = entryOpt.get();
-                // Update status to PROCESSING
-                entry.setProcessingStatus(ProcessingStatus.PROCESSING);
-                activeLedger.put(reference, entry);
+            // remove(): a reference polled twice is claimed only once
+            var entry = claimed.remove(reference);
+            if (entry != null) {
                 batch.add(entry);
             } else {
-                LOG.warn("[{}] Reference {} polled from queue but not "
-                        + "found in ledger.", nodeName, reference);
+                requeueIfStillQueued(activeLedger, reference, nodeName);
             }
         }
 
@@ -490,6 +500,62 @@ public final class CrawlerEntryLedger {
                     + "{} entries.", nodeName, batch.size());
         }
         return batch;
+    }
+
+    // Claims each reference on its own. One that cannot be claimed is
+    // left out (the caller puts it back in the queue if still QUEUED). An
+    // entry the failed batch call did claim before failing reads as
+    // PROCESSING here and is left as is, like the entries of a worker that
+    // stopped mid-batch: resuming the crawl queues them again.
+    private Map<String, CrawlerEntry> claimOneByOne(
+            CacheMap<CrawlerEntry> activeLedger,
+            List<String> references,
+            String nodeName) {
+        var claimed = new HashMap<String, CrawlerEntry>();
+        for (String reference : new LinkedHashSet<>(references)) {
+            try {
+                activeLedger.update(reference, CLAIM_QUEUED)
+                        .ifPresent(entry -> claimed.put(reference, entry));
+            } catch (RuntimeException e) {
+                LOG.warn("[{}] Could not claim reference {}: {}",
+                        nodeName, reference, e.toString());
+            }
+        }
+        return claimed;
+    }
+
+    private void requeueIfStillQueued(
+            CacheMap<CrawlerEntry> activeLedger,
+            String reference,
+            String nodeName) {
+        Optional<CrawlerEntry> existing;
+        try {
+            existing = activeLedger.get(reference);
+        } catch (RuntimeException e) {
+            // Status unknown: putting it back costs at most a skip on the
+            // next poll, not putting it back may lose it.
+            LOG.warn("[{}] Could not read reference {} after a failed "
+                    + "claim; putting it back in the queue: {}",
+                    nodeName, reference, e.toString());
+            queue.add(reference);
+            return;
+        }
+        if (existing.isEmpty()) {
+            LOG.warn("[{}] Reference {} polled from queue but not "
+                    + "found in ledger.", nodeName, reference);
+        } else if (ProcessingStatus.QUEUED
+                .is(existing.get().getProcessingStatus())) {
+            // Taken off the queue but not claimed: putting it back is
+            // the only thing keeping it from being lost.
+            LOG.warn("[{}] Reference {} polled from queue could not be "
+                    + "claimed; putting it back in the queue.",
+                    nodeName, reference);
+            queue.add(reference);
+        } else {
+            LOG.trace("[{}] Reference {} polled from queue skipped: it "
+                    + "is already {}.", nodeName, reference,
+                    existing.get().getProcessingStatus());
+        }
     }
 
     /**
@@ -571,7 +637,8 @@ public final class CrawlerEntryLedger {
     }
 
     public void forEachProcessed(Consumer<CrawlerEntry> c) {
-        forEachProcessingStatus(ProcessingStatus.PROCESSED, c);
+        getCurrentLedger().forEachMatching(
+                statusQueryFilter(ProcessingStatus.PROCESSED), c);
     }
 
     //--- Previous baseline crawl entries ---
@@ -796,6 +863,29 @@ public final class CrawlerEntryLedger {
     //                nodeName, reference);
     //        return Optional.empty();
     //    }
+
+    private static final CacheEntryUpdate<CrawlerEntry> CLAIM_QUEUED =
+            new ClaimQueued();
+
+    /**
+     * Turns a QUEUED entry into a PROCESSING copy of it, and leaves any
+     * other entry alone. Runs in the cache (possibly on another node), hence
+     * a serializable class rather than a lambda.
+     */
+    static final class ClaimQueued implements CacheEntryUpdate<CrawlerEntry> {
+        private static final long serialVersionUID = 1L;
+
+        @Override
+        public CrawlerEntry apply(CrawlerEntry current) {
+            if (current == null || !ProcessingStatus.QUEUED
+                    .is(current.getProcessingStatus())) {
+                return null;
+            }
+            var claimed = BeanUtil.clone(current);
+            claimed.setProcessingStatus(ProcessingStatus.PROCESSING);
+            return claimed;
+        }
+    }
 
     private QueryFilter statusQueryFilter(ProcessingStatus status) {
         return QueryFilter.of(

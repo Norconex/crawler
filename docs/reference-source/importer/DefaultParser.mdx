@@ -65,6 +65,33 @@ GIF, BMP, and images embedded in documents). It is slow next to text
 extraction, so restricting it by content type and file size is usually worth
 doing. All settings are described under [OcrConfig](./OcrConfig).
 
+### poolSize
+
+Maximum number of top-level documents the handler parses at once. The default,
+`0`, sets no limit. Negative values are invalid.
+
+When that many documents are already being parsed, the next one waits for one of
+them to finish. Embedded documents count as part of their container, so they never
+wait on it. Closing the handler wakes waiting callers with an error.
+
+For example, `"poolSize": 2` allows two parses at once per handler while other
+crawler threads fetch documents or run other handlers, which keeps parsing-heavy
+documents (large PDFs, OCR) from taking every thread. All documents share the same
+Tika parser whatever the size, so a limit costs no memory.
+
+### xmlParserPoolSize
+
+Optional positive size of Tika's pool of reusable SAX parsers and DOM builders,
+used to parse XML-based formats (HTML, XHTML, Office Open XML, ...). Omitting the
+setting leaves Tika's size as it is, `10` by default. When more documents than that
+are parsed at once, Tika logs "Contention waiting for a SAXParser" and builds a
+throwaway parser for each extra document, so a crawl using more threads than the
+pool size gains from setting it to at least its number of threads.
+
+The pool is shared by the whole JVM, and the largest size any handler asks for
+wins: the first explicit size is applied as is, later ones can only make it
+larger. This setting is independent of `poolSize`.
+
 ## Examples
 
 Saves documents that fail to parse into a directory for inspection.
@@ -73,6 +100,8 @@ Saves documents that fail to parse into a directory for inspection.
   json={{
     "handler": {
       "class": "DefaultParser",
+      "poolSize": 2,
+      "xmlParserPoolSize": 16,
       "errorsSaveDir": "C:\\reports\\errors"
     }
   }}

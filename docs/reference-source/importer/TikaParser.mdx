@@ -31,6 +31,20 @@ An optional, user-supplied label for this step in the importer pipeline. It has 
 
 Path to a [Tika JSON configuration file](https://tika.apache.org/4.x/configuring.html), giving you Tika's own parser selection and settings. Tika 4 dropped the XML configuration format used by earlier versions, so an XML file will not load. Without it, Tika's defaults apply.
 
+### poolSize
+
+Maximum number of top-level documents the handler parses at once. The default,
+`0`, sets no limit. Negative values are invalid.
+
+When that many documents are already being parsed, the next one waits for one of
+them to finish. Embedded documents count as part of their container, so they never
+wait on it. Closing the handler wakes waiting callers with an error.
+
+For example, `"poolSize": 2` allows two parses at once per handler while other
+crawler threads fetch documents or run other handlers, which keeps parsing-heavy
+documents (large PDFs, OCR) from taking every thread. All documents share the same
+Tika parser whatever the size, so a limit costs no memory.
+
 ## Examples
 
 The following example defined a TikaParser with a custom configuration file.
@@ -39,6 +53,7 @@ The following example defined a TikaParser with a custom configuration file.
   json={{
     "handler": {
       "class": "TikaParser",
+      "poolSize": 2,
       "tikaConfigFile": "/path/to/tika-config.json"
     }
   }}

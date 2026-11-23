@@ -55,18 +55,32 @@ public class TikaParser
     @Getter
     private final TikaParserConfig configuration = new TikaParserConfig();
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private Parser parser;
 
     @Override
     public void init() throws IOException {
+        parser = TikaParserPool.create(
+                configuration.getPoolSize(), this::createTikaParser);
+    }
+
+    private Parser createTikaParser() throws IOException {
         try {
             var file = configuration.getTikaConfigFile();
             var loader = StringUtils.isBlank(file)
                     ? TikaLoader.loadDefault()
                     : TikaLoader.load(Path.of(file));
-            parser = loader.loadAutoDetectParser();
+            return loader.loadAutoDetectParser();
         } catch (TikaException | IOException e) {
             throw new IOException("Could not initialize TikaParser.", e);
+        }
+    }
+
+    @Override
+    public void close() {
+        if (parser instanceof TikaParserPool pool) {
+            pool.close();
         }
     }
 

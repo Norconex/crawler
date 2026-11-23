@@ -17,17 +17,25 @@ package com.norconex.crawler.core.metrics;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Optional;
+import java.util.concurrent.Executors;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.mockito.ArgumentCaptor;
 
 import com.norconex.commons.lang.event.EventManager;
+import com.norconex.crawler.core.cluster.CacheEntryUpdate;
 import com.norconex.crawler.core.cluster.CacheManager;
+import com.norconex.crawler.core.cluster.impl.memory.InMemoryCacheMap;
 import com.norconex.crawler.core.cluster.CacheMap;
 import com.norconex.crawler.core.cluster.Cluster;
 import com.norconex.crawler.core.context.CrawlerContext;
@@ -212,17 +220,65 @@ class CrawlerMetricsImplTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    void incrementCounter_withStore_updatesViaAtomicIncrement() {
+    void incrementCounter_withStore_isBufferedThenAddedAtomically() {
         var ledger = mock(CrawlerEntryLedger.class);
         CacheMap<Long> store = mock(CacheMap.class);
-        // Simulate empty store (key absent) → putIfAbsent succeeds (null return)
-        when(store.get(anyString())).thenReturn(Optional.empty());
-        when(store.putIfAbsent(anyString(), any())).thenReturn(null);
 
         var metrics = buildInitialized(ledger, store);
         metrics.incrementCounter("DOC_PROCESSED", 1L);
+        metrics.incrementCounter("DOC_PROCESSED", 2L);
+        // Counting touches memory only.
+        verify(store, never()).update(anyString(), any());
 
-        assertThat(metrics.getEventCounts()).containsEntry("DOC_PROCESSED", 1L);
+        assertThat(metrics.getEventCounts()).containsEntry("DOC_PROCESSED", 3L);
+        // Reading flushes: both increments in one update.
+        var captor = ArgumentCaptor.forClass(CacheEntryUpdate.class);
+        verify(store, times(1)).update(eq("DOC_PROCESSED"), captor.capture());
+        assertThat(((CacheEntryUpdate<Long>) captor.getValue()).apply(10L))
+                .isEqualTo(13L);
+        metrics.close();
+    }
+
+    @Test
+    void flush_manyThreads_noCountLost() {
+        var store = new InMemoryCacheMap<Long>("counts");
+        var metrics = buildInitialized(mock(CrawlerEntryLedger.class), store);
+        try (var pool = Executors.newFixedThreadPool(8)) {
+            for (var t = 0; t < 8; t++) {
+                pool.submit(() -> {
+                    for (var i = 0; i < 10_000; i++) {
+                        metrics.incrementCounter("EVT", 1L);
+                        if (i % 1000 == 0) {
+                            metrics.flush();
+                        }
+                    }
+                });
+            }
+        }
+        metrics.flush();
+        assertThat(store.get("EVT")).contains(80_000L);
+        metrics.close();
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void flush_failedUpdate_isRetriedNextFlush() {
+        CacheMap<Long> store = mock(CacheMap.class);
+        when(store.update(anyString(), any()))
+                .thenThrow(new IllegalStateException("cluster hiccup"))
+                .thenReturn(Optional.of(5L));
+        var metrics = buildInitialized(mock(CrawlerEntryLedger.class), store);
+        metrics.incrementCounter("EVT", 5L);
+
+        metrics.flush();
+        metrics.flush();
+
+        var captor = ArgumentCaptor.forClass(CacheEntryUpdate.class);
+        verify(store, times(2)).update(eq("EVT"), captor.capture());
+        // The failed delta was kept and sent whole the second time.
+        assertThat(((CacheEntryUpdate<Long>) captor.getValue()).apply(null))
+                .isEqualTo(5L);
+        metrics.close();
     }
 
     // ------------------------------------------------------------------

@@ -36,6 +36,7 @@ class TikaParserTest {
     void testWriteRead() {
         var parser = Configurable.configure(
                 new TikaParser(),
+                cfg -> cfg.setPoolSize(2),
                 cfg -> cfg.setTikaConfigFile(null));
         assertThatNoException()
                 .isThrownBy(() -> BeanMapper.DEFAULT.assertWriteRead(parser));

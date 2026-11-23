@@ -30,9 +30,11 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.Timeout;
 
 import com.hazelcast.core.HazelcastInstance;
+import com.norconex.crawler.core.cluster.CacheEntryUpdate;
 import com.norconex.crawler.core.cluster.QueryFilter;
 import com.norconex.crawler.core.ledger.CrawlerEntry;
 import com.norconex.crawler.core.ledger.ProcessingStatus;
+import com.norconex.crawler.core.util.SerialUtil;
 
 /**
  * Component tests for {@link HazelcastMapAdapter}.
@@ -472,5 +474,114 @@ class HazelcastMapAdapterTest {
         assertThat(map.containsKey("k")).isFalse();
         assertThat(map.query(QueryFilter.ofAll())).isEmpty();
         assertThat(map.keys()).isEmpty();
+    }
+
+    // -----------------------------------------------------------------
+    // update / updateAll: entry processors, no value comparison
+    // -----------------------------------------------------------------
+
+    /** Claims a QUEUED entry, like the ledger does. */
+    static final class Claim implements CacheEntryUpdate<CrawlerEntry> {
+        private static final long serialVersionUID = 1L;
+
+        @Override
+        public CrawlerEntry apply(CrawlerEntry current) {
+            if (current == null || !ProcessingStatus.QUEUED
+                    .is(current.getProcessingStatus())) {
+                return null;
+            }
+            var claimed = new CrawlerEntry(current.getReference());
+            claimed.setProcessingStatus(ProcessingStatus.PROCESSING);
+            return claimed;
+        }
+    }
+
+    static final class AddOne implements CacheEntryUpdate<Long> {
+        private static final long serialVersionUID = 1L;
+
+        @Override
+        public Long apply(Long current) {
+            return (current == null ? 0L : current) + 1;
+        }
+    }
+
+    private static CrawlerEntry queued(String ref) {
+        var entry = new CrawlerEntry(ref);
+        entry.setProcessingStatus(ProcessingStatus.QUEUED);
+        return entry;
+    }
+
+    @Test
+    void testUpdate_changesOnlyWhatTheUpdateDecides() {
+        var map = cacheManager.<CrawlerEntry>getCacheMap(
+                mapPrefix + "ledger", CrawlerEntry.class);
+        map.put("a", queued("a"));
+
+        assertThat(map.update("a", new Claim()))
+                .hasValueSatisfying(e -> assertThat(e.getProcessingStatus())
+                        .isEqualTo(ProcessingStatus.PROCESSING));
+        // Already claimed: left alone.
+        assertThat(map.update("a", new Claim())).isEmpty();
+        // Missing: not created.
+        assertThat(map.update("missing", new Claim())).isEmpty();
+        assertThat(map.containsKey("missing")).isFalse();
+    }
+
+    @Test
+    void testUpdate_valueStoredAsJsonText() {
+        // A value held as JSON text (older entries, or ones loaded back
+        // from a store as text) could never match replace(old, new), whose
+        // comparison is on serialized bytes. An update reads it like any.
+        var name = mapPrefix + "ledger";
+        var map = cacheManager.<CrawlerEntry>getCacheMap(
+                name, CrawlerEntry.class);
+        hz.getMap(name).put("a", SerialUtil.toJsonString(queued("a")));
+
+        assertThat(map.update("a", new Claim())).isPresent();
+        assertThat(map.get("a")).hasValueSatisfying(
+                e -> assertThat(e.getProcessingStatus())
+                        .isEqualTo(ProcessingStatus.PROCESSING));
+    }
+
+    @Test
+    void testUpdateAll_concurrentClaimsClaimEachEntryOnce() throws Exception {
+        var map = cacheManager.<CrawlerEntry>getCacheMap(
+                mapPrefix + "ledger", CrawlerEntry.class);
+        var keys = new java.util.ArrayList<String>();
+        for (var i = 0; i < 200; i++) {
+            keys.add("ref-" + i);
+            map.put("ref-" + i, queued("ref-" + i));
+        }
+        var claims = new AtomicInteger();
+        var start = new CountDownLatch(1);
+        try (var pool = Executors.newFixedThreadPool(6)) {
+            for (var t = 0; t < 6; t++) {
+                pool.submit(() -> {
+                    start.await();
+                    claims.addAndGet(map.updateAll(keys, new Claim()).size());
+                    return null;
+                });
+            }
+            start.countDown();
+            pool.shutdown();
+            assertThat(pool.awaitTermination(20, TimeUnit.SECONDS)).isTrue();
+        }
+        assertThat(claims).hasValue(200);
+    }
+
+    @Test
+    void testUpdate_concurrentCounterLosesNothing() {
+        var map = cacheManager.<Long>getCacheMap(
+                mapPrefix + "counts", Long.class);
+        try (var pool = Executors.newFixedThreadPool(8)) {
+            for (var t = 0; t < 8; t++) {
+                pool.submit(() -> {
+                    for (var i = 0; i < 250; i++) {
+                        map.update("count", new AddOne());
+                    }
+                });
+            }
+        }
+        assertThat(map.get("count")).contains(2000L);
     }
 }

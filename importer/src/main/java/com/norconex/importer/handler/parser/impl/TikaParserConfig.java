@@ -22,6 +22,21 @@ import lombok.experimental.Accessors;
 @Data
 @Accessors(chain = true)
 public class TikaParserConfig extends BaseDocHandlerConfig {
+    /**
+     * Maximum number of top-level documents this handler parses at once.
+     * Zero (the default) sets no limit. All documents share the same Tika
+     * parser either way; a limit only makes the extra ones wait.
+     */
+    private int poolSize;
+
+    public TikaParserConfig setPoolSize(int poolSize) {
+        if (poolSize < 0) {
+            throw new IllegalArgumentException(
+                    "poolSize must be zero or greater.");
+        }
+        this.poolSize = poolSize;
+        return this;
+    }
 
     /**
      * The path to a Tika JSON configuration file (Tika 4 no longer supports XML).

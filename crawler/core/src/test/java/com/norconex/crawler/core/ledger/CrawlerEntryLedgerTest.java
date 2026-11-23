@@ -15,7 +15,16 @@
 package com.norconex.crawler.core.ledger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.spy;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,6 +35,8 @@ import org.mockito.Mock.Strictness;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.norconex.crawler.core.CrawlerConfig;
+import com.norconex.crawler.core.cluster.CacheMap;
+import com.norconex.crawler.core.cluster.CacheNames;
 import com.norconex.crawler.core.cluster.Cluster;
 import com.norconex.crawler.core.cluster.ClusterNode;
 import com.norconex.crawler.core.cluster.support.InMemoryCacheManager;
@@ -127,6 +138,97 @@ class CrawlerEntryLedgerTest {
         assertThat(batch.get(0).getReference()).isEqualTo("ref-1");
         assertThat(ledger.getProcessingStatus("ref-1"))
                 .isEqualTo(ProcessingStatus.PROCESSING);
+        assertThat(ledger.getQueueCount()).isZero();
+        assertThat(ledger.getProcessingCount()).isEqualTo(1);
+    }
+
+    @Test
+    void testNextQueuedBatch_unclaimedButStillQueuedGoesBackInQueue() {
+        // A cache that fails to claim an entry still QUEUED (it cannot
+        // happen with the bundled caches, whose updates are atomic): the
+        // reference, already taken off the queue, must not be lost.
+        var failClaims = new AtomicBoolean(true);
+        var failingLedger = ledgerWithStubbedMaps(spied -> doAnswer(
+                inv -> failClaims.get() ? Map.of() : inv.callRealMethod())
+                        .when(spied).updateAll(any(), any()));
+        failingLedger.queue(entry("ref-1"));
+
+        assertThat(failingLedger.nextQueuedBatch(10)).isEmpty();
+        assertThat(failingLedger.getProcessingStatus("ref-1"))
+                .isEqualTo(ProcessingStatus.QUEUED);
+
+        failClaims.set(false);
+        assertThat(failingLedger.nextQueuedBatch(10))
+                .extracting(CrawlerEntry::getReference)
+                .containsExactly("ref-1");
+    }
+
+    @Test
+    void testNextQueuedBatch_failedBatchClaimFallsBackToOneAtATime() {
+        // The batch claim throws (a cache failure): each reference is then
+        // claimed on its own, and one whose claim fails too goes back in
+        // the queue instead of being lost.
+        var failRef2 = new AtomicBoolean(true);
+        var failingLedger = ledgerWithStubbedMaps(spied -> {
+            doThrow(new IllegalStateException("cluster hiccup"))
+                    .when(spied).updateAll(any(), any());
+            doAnswer(inv -> {
+                if (failRef2.get() && "ref-2".equals(inv.getArgument(0))) {
+                    throw new IllegalStateException("still failing");
+                }
+                return inv.callRealMethod();
+            }).when(spied).update(any(), any());
+        });
+        failingLedger.queue(entry("ref-1"));
+        failingLedger.queue(entry("ref-2"));
+
+        assertThat(failingLedger.nextQueuedBatch(10))
+                .extracting(CrawlerEntry::getReference)
+                .containsExactly("ref-1");
+        assertThat(failingLedger.getProcessingStatus("ref-2"))
+                .isEqualTo(ProcessingStatus.QUEUED);
+
+        failRef2.set(false);
+        assertThat(failingLedger.nextQueuedBatch(10))
+                .extracting(CrawlerEntry::getReference)
+                .containsExactly("ref-2");
+    }
+
+    // A ledger whose ledger maps are spies, stubbed by the given stubber.
+    @SuppressWarnings("unchecked")
+    private CrawlerEntryLedger ledgerWithStubbedMaps(
+            Consumer<CacheMap<CrawlerEntry>> stubber) {
+        var spies = new HashMap<String, CacheMap<?>>();
+        var manager = new InMemoryCacheManager() {
+            @Override
+            public <T> CacheMap<T> getCacheMap(String name, Class<T> type) {
+                var map = super.getCacheMap(name, type);
+                if (!name.startsWith("ledger_")) {
+                    return map;
+                }
+                return (CacheMap<T>) spies.computeIfAbsent(name, n -> {
+                    var spied = spy(map);
+                    stubber.accept((CacheMap<CrawlerEntry>) spied);
+                    return spied;
+                });
+            }
+        };
+        lenient().when(cluster.getCacheManager()).thenReturn(manager);
+        var stubbedLedger = new CrawlerEntryLedger();
+        stubbedLedger.init(session);
+        stubbedLedger.ensureCurrentLedgerAliasExists();
+        return stubbedLedger;
+    }
+
+    @Test
+    void testNextQueuedBatch_skipsDuplicateReferenceAlreadyClaimed() {
+        ledger.queue(entry("ref-1"));
+        cacheManager.getCacheQueue(CacheNames.REFERENCE_QUEUE, String.class)
+                .add("ref-1");
+
+        assertThat(ledger.nextQueuedBatch(10))
+                .extracting(CrawlerEntry::getReference)
+                .containsExactly("ref-1");
         assertThat(ledger.getQueueCount()).isZero();
         assertThat(ledger.getProcessingCount()).isEqualTo(1);
     }

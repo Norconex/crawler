@@ -27,6 +27,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -34,6 +35,7 @@ import org.h2.mvstore.DataUtils;
 import org.h2.mvstore.MVMap;
 import org.h2.mvstore.MVStoreException;
 
+import com.norconex.crawler.core.cluster.CacheEntryUpdate;
 import com.norconex.crawler.core.cluster.CacheMap;
 import com.norconex.crawler.core.cluster.QueryFilter;
 import com.norconex.crawler.core.util.SerialUtil;
@@ -241,22 +243,69 @@ public class MVStoreCacheMap<T> implements CacheMap<T> {
         return false;
     }
 
+    /**
+     * Compare-and-set on the stored JSON text, retried until it holds:
+     * atomic even against the unsynchronized {@link #put(String, Object)},
+     * and exact whatever the value class's <code>equals</code>.
+     * Synchronized like the other compound operations, which read and then
+     * write unconditionally: an update landing between the two would be
+     * overwritten.
+     */
+    @Override
+    public synchronized Optional<T> update(
+            String key, CacheEntryUpdate<T> update) {
+        Objects.requireNonNull(update, "update");
+        while (true) {
+            var json = read(key);
+            var next = update.apply(json == null ? null : deserialize(json));
+            if (next == null) {
+                return Optional.empty();
+            }
+            var nextJson = serialize(next);
+            if (compareAndSet(key, json, nextJson)) {
+                return Optional.of(next);
+            }
+        }
+    }
+
+    private boolean compareAndSet(
+            String key, String expectedJson, String newJson) {
+        indexLock.readLock().lock();
+        try {
+            var stored = expectedJson == null
+                    ? map.putIfAbsent(key, newJson) == null
+                    : map.replace(key, expectedJson, newJson);
+            if (stored) {
+                updateIndexes(expectedJson, newJson);
+            }
+            return stored;
+        } finally {
+            indexLock.readLock().unlock();
+        }
+    }
+
     @Override
     public List<T> query(QueryFilter filter) {
         var matching = new ArrayList<T>();
-        scan((k, json) -> {
-            var value = deserialize(json);
-            if (filter == null || filter.getFieldName() == null
-                    || matches(value, filter)) {
-                matching.add(value);
-            }
-        });
+        forEachMatching(filter, matching::add);
         return matching;
     }
 
     @Override
     public Iterator<T> queryIterator(QueryFilter filter) {
         return query(filter).iterator();
+    }
+
+    @Override
+    public void forEachMatching(
+            QueryFilter filter, Consumer<? super T> action) {
+        Objects.requireNonNull(action, "action");
+        scan((key, json) -> {
+            var value = deserialize(json);
+            if (matches(value, filter)) {
+                action.accept(value);
+            }
+        });
     }
 
     @Override
@@ -404,6 +453,8 @@ public class MVStoreCacheMap<T> implements CacheMap<T> {
         while (true) {
             var store = map.getStore();
             var pinned = store.registerVersionUsage();
+            MVStoreException readFailure;
+            boolean visiting = false;
             try {
                 var cursor = map.cursor(last);
                 while (cursor.hasNext()) {
@@ -411,15 +462,23 @@ public class MVStoreCacheMap<T> implements CacheMap<T> {
                     if (key.equals(last)) {
                         continue;
                     }
-                    visitor.accept(key, cursor.getValue());
+                    var json = cursor.getValue();
+                    visiting = true;
+                    visitor.accept(key, json);
+                    visiting = false;
                     last = key;
                 }
                 return;
             } catch (MVStoreException e) {
-                failures = onChunkNotFound(e, failures);
+                // A visitor may have performed side effects before throwing.
+                if (visiting) {
+                    throw e;
+                }
+                readFailure = e;
             } finally {
                 store.deregisterVersionUsage(pinned);
             }
+            failures = onChunkNotFound(readFailure, failures);
         }
     }
 

@@ -14,12 +14,17 @@
  */
 package com.norconex.crawler.core.cluster;
 
+import java.util.Collection;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public interface CacheMap<T> {
@@ -77,9 +82,72 @@ public interface CacheMap<T> {
     boolean replace(String key, T oldValue, T newValue);
 
     /**
+     * Atomically changes an entry as the given update decides from its
+     * current value. Unlike {@link #replace(String, Object, Object)}, nothing
+     * is compared with an expected value, so the outcome does not depend on
+     * how the cache stores or serializes values. See
+     * {@link CacheEntryUpdate} for what an update may do.
+     * <p>
+     * This default implementation retries a compare-and-set until it
+     * succeeds; implementations should override it with an atomic operation
+     * of their own.
+     * </p>
+     * @param key the entry key
+     * @param update decides the entry's new value
+     * @return the new value, or empty if the update left the entry unchanged
+     */
+    default Optional<T> update(String key, CacheEntryUpdate<T> update) {
+        Objects.requireNonNull(update, "update");
+        for (var attempt = 1;; attempt++) {
+            var current = get(key).orElse(null);
+            var next = update.apply(current);
+            if (next == null) {
+                return Optional.empty();
+            }
+            var stored = current == null
+                    ? putIfAbsent(key, next) == null
+                    : replace(key, current, next);
+            if (stored) {
+                return Optional.of(next);
+            }
+            if (attempt >= DEFAULT_UPDATE_MAX_ATTEMPTS) {
+                throw new IllegalStateException(("Could not update cache "
+                        + "entry '%s' after %s attempts: it kept changing, "
+                        + "or this cache cannot compare its values.")
+                                .formatted(key, attempt));
+            }
+        }
+    }
+
+    /**
+     * Atomically changes each of the given entries as the given update
+     * decides from its current value, the way
+     * {@link #update(String, CacheEntryUpdate)} does for one. Each entry is
+     * changed atomically on its own; the batch as a whole is not a
+     * transaction. Implementations may do it in fewer round trips than one
+     * per key.
+     * @param keys the entry keys (duplicates are updated once)
+     * @param update decides each entry's new value
+     * @return the new values of the entries that were changed, by key, in
+     *     the order of the given keys
+     */
+    default Map<String, T> updateAll(
+            Collection<String> keys, CacheEntryUpdate<T> update) {
+        Objects.requireNonNull(update, "update");
+        var updated = new LinkedHashMap<String, T>();
+        for (var key : new LinkedHashSet<>(keys)) {
+            update(key, update).ifPresent(v -> updated.put(key, v));
+        }
+        return updated;
+    }
+
+    /** Attempts made by the default {@link #update} before giving up. */
+    int DEFAULT_UPDATE_MAX_ATTEMPTS = 100;
+
+    /**
      * Queries the cache for entries matching the given query filter.
      * Note: This method loads all results into memory at once.
-     * For large result sets, consider using {@link #queryIterator} instead.
+     * For large result sets, prefer {@link #forEachMatching}.
      *
      * @param filter the query filter
      * @return a list of matching entries or an empty list (never null)
@@ -88,13 +156,27 @@ public interface CacheMap<T> {
 
     /**
      * Queries the cache for entries matching the given filter
-     * and returns an iterator for memory-efficient processing of results.
-     * This avoids loading all results into memory at once.
+     * and returns an iterator. Whether results are loaded eagerly depends on
+     * the cache implementation.
      *
      * @param filter the query filter
      * @return an iterator over the matching entries
      */
     Iterator<T> queryIterator(QueryFilter filter);
+
+    /**
+     * Visits matching entries synchronously. Implementations may override this
+     * method to stream results while keeping traversal resources scoped to the
+     * call. The consumer should not mutate the cache during traversal.
+     *
+     * @param filter the query filter
+     * @param action the action to perform for each matching entry
+     */
+    default void forEachMatching(
+            QueryFilter filter, Consumer<? super T> action) {
+        Objects.requireNonNull(action, "action");
+        queryIterator(filter).forEachRemaining(action);
+    }
 
     /**
      * Queries the cache for entries matching the given query filter
