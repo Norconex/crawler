@@ -171,6 +171,27 @@ class NativeOtherFieldNamesTest {
         assertThat(md.containsKey("xmpDM:album")).isFalse();
     }
 
+    @Test
+    void imageKeepsExifAndXmpNames() throws IOException {
+        var file = folder.resolve("pic.jpg");
+        try (var in = getClass()
+                .getResourceAsStream("/parser/image/importer-xmp.jpg")) {
+            Files.write(file, in.readAllBytes());
+        }
+        var md = importFile(file);
+        assertThat(md.getStrings("Exif IFD0:Software"))
+                .containsExactly("paint.net 4.0.9");
+        assertThat(md.getStrings("JPEG:Image Width"))
+                .containsExactly("125 pixels");
+        assertThat(md.getStrings("dc:creator"))
+                .containsExactly("Pascal Essiembre");
+        assertThat(md.getStrings("dc:subject"))
+                .containsExactly("XMP Parsing");
+        assertThat(md.keySet()).noneMatch(k -> k.startsWith("img:")
+                || k.startsWith("tiff:") || k.startsWith("xmp:"));
+        assertThat(md.containsKey("File Name")).isFalse();
+    }
+
     private static void frame(ByteArrayOutputStream out, String id, String text)
             throws IOException {
         var t = text.getBytes(StandardCharsets.ISO_8859_1);

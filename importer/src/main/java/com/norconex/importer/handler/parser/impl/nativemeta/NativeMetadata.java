@@ -41,7 +41,8 @@ public final class NativeMetadata {
                     new Ole2NativeMetadataReader(),
                     new RtfNativeMetadataReader(),
                     new EpubNativeMetadataReader(),
-                    new Mp3NativeMetadataReader());
+                    new Mp3NativeMetadataReader(),
+                    new ImageNativeMetadataReader());
 
     private NativeMetadata() {
     }
