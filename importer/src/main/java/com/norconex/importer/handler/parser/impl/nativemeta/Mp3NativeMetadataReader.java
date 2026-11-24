@@ -20,7 +20,9 @@ import static java.nio.charset.StandardCharsets.UTF_16BE;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.charset.Charset;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -31,7 +33,9 @@ import org.apache.tika.metadata.Metadata;
 import com.norconex.commons.lang.file.ContentType;
 
 /**
- * Reads the text frames of an ID3v2 tag at the start of an MP3 file, under
+ * Reads the ID3v1 tag at the end of an MP3 file ({@code ID3v1:Title},
+ * {@code ID3v1:Artist}, ...) and the text frames of an ID3v2 tag at its
+ * start, under
  * the frame identifier the tag used ({@code TIT2}, {@code TPE1},
  * {@code TALB}, ...). A user defined text ({@code TXXX}) or comment
  * ({@code COMM}) frame is named after its description, such as
@@ -47,6 +51,27 @@ final class Mp3NativeMetadataReader implements NativeMetadataReader {
     /** The tag is read up to this size, which leaves out large pictures. */
     private static final int MAX_TAG_BYTES = 4 * 1024 * 1024;
 
+    private static final int ID3V1_BYTES = 128;
+
+    /** ID3v1 genre numbers. */
+    private static final List<String> GENRES = List.of(
+            "Blues", "Classic Rock", "Country", "Dance", "Disco", "Funk",
+            "Grunge", "Hip-Hop", "Jazz", "Metal", "New Age", "Oldies",
+            "Other", "Pop", "R&B", "Rap", "Reggae", "Rock", "Techno",
+            "Industrial", "Alternative", "Ska", "Death Metal", "Pranks",
+            "Soundtrack", "Euro-Techno", "Ambient", "Trip-Hop", "Vocal",
+            "Jazz+Funk", "Fusion", "Trance", "Classical", "Instrumental",
+            "Acid", "House", "Game", "Sound Clip", "Gospel", "Noise",
+            "Alternative Rock", "Bass", "Soul", "Punk", "Space",
+            "Meditative", "Instrumental Pop", "Instrumental Rock", "Ethnic",
+            "Gothic", "Darkwave", "Techno-Industrial", "Electronic",
+            "Pop-Folk", "Eurodance", "Dream", "Southern Rock", "Comedy",
+            "Cult", "Gangsta", "Top 40", "Christian Rap", "Pop/Funk",
+            "Jungle", "Native American", "Cabaret", "New Wave", "Psychedelic",
+            "Rave", "Showtunes", "Trailer", "Lo-Fi", "Tribal", "Acid Punk",
+            "Acid Jazz", "Polka", "Retro", "Musical", "Rock & Roll",
+            "Hard Rock");
+
     /** Frames with a language after the encoding. */
     private static final Set<String> WITH_LANGUAGE =
             Set.of("COMM", "COM", "USLT", "ULT");
@@ -56,7 +81,7 @@ final class Mp3NativeMetadataReader implements NativeMetadataReader {
             "TXXX", "TXX", "COMM", "COM", "USLT", "ULT", "WXXX", "WXX");
 
     /** What the parser makes of the tag, written under its own names. */
-    private static final List<String> TIKA_DERIVED = List.of(
+    static final List<String> TIKA_DERIVED = List.of(
             "dc:title", "dc:creator", "dc:subject", "dc:description",
             "xmpDM:album", "xmpDM:artist", "xmpDM:albumArtist",
             "xmpDM:composer", "xmpDM:genre", "xmpDM:releaseDate",
@@ -71,20 +96,58 @@ final class Mp3NativeMetadataReader implements NativeMetadataReader {
     @Override
     public NativeFields read(TikaInputStream in, String charset)
             throws IOException {
+        var found = NativeFields.newMap();
+        readId3v2(in, found);
+        readId3v1(in.getPath(), found);
+        return found.isEmpty()
+                ? NativeFields.none()
+                : new NativeFields(found, Mp3NativeMetadataReader::supersede);
+    }
+
+    /** The 128 last bytes, when they start with {@code TAG}. */
+    private static void readId3v1(Path file, Map<String, List<String>> found)
+            throws IOException {
+        var tail = new byte[ID3V1_BYTES];
+        try (var raf = new RandomAccessFile(file.toFile(), "r")) {
+            if (raf.length() < ID3V1_BYTES) {
+                return;
+            }
+            raf.seek(raf.length() - ID3V1_BYTES);
+            raf.readFully(tail);
+        }
+        if (tail[0] != 'T' || tail[1] != 'A' || tail[2] != 'G') {
+            return;
+        }
+        add(found, "ID3v1:Title", new String(tail, 3, 30, ISO_8859_1));
+        add(found, "ID3v1:Artist", new String(tail, 33, 30, ISO_8859_1));
+        add(found, "ID3v1:Album", new String(tail, 63, 30, ISO_8859_1));
+        add(found, "ID3v1:Year", new String(tail, 93, 4, ISO_8859_1));
+        // v1.1: a zero byte then the track number, in the comment's end
+        var commentLen = tail[125] == 0 && tail[126] != 0 ? 28 : 30;
+        add(found, "ID3v1:Comment",
+                new String(tail, 97, commentLen, ISO_8859_1));
+        if (commentLen == 28) {
+            add(found, "ID3v1:Track", Integer.toString(tail[126] & 0xff));
+        }
+        var genre = tail[127] & 0xff;
+        if (genre < GENRES.size()) {
+            add(found, "ID3v1:Genre", GENRES.get(genre));
+        }
+    }
+
+    private static void readId3v2(
+            TikaInputStream in, Map<String, List<String>> found)
+            throws IOException {
         var head = NativeMetadata.peek(in, 10);
-        if (head == null || head.length < 10 || head[0] != 'I'
+        if (head.length < 10 || head[0] != 'I'
                 || head[1] != 'D' || head[2] != '3' || head[3] < 2
                 || head[3] > 4) {
-            return NativeFields.none();
+            return;
         }
         var version = head[3];
         var size = syncsafe(head, 6, 4);
         var bytes = NativeMetadata.peek(in,
                 (int) Math.min((long) size + 10, MAX_TAG_BYTES));
-        if (bytes == null) {
-            return NativeFields.none();
-        }
-        var found = NativeFields.newMap();
         var idLen = version == 2 ? 3 : 4;
         var headerLen = version == 2 ? 6 : 10;
         var end = Math.min(bytes.length, 10 + size);
@@ -106,9 +169,6 @@ final class Mp3NativeMetadataReader implements NativeMetadataReader {
                     start, frameSize);
             pos = start + frameSize;
         }
-        return found.isEmpty()
-                ? NativeFields.none()
-                : new NativeFields(found, Mp3NativeMetadataReader::supersede);
     }
 
     private static int frameSize(int version, byte[] b, int pos) {

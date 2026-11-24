@@ -231,4 +231,148 @@ class NativeTagVariantsTest {
         assertThat(md.containsKey("empty")).isFalse();
         assertThat(md.containsKey("nocontent")).isFalse();
     }
+
+    // ---- split documents -------------------------------------------------
+
+    @Test
+    void splitChildrenKeepTheirOwnNativeNamesAndTheParentHasNone()
+            throws IOException {
+        var zip = folder.resolve("two.zip");
+        try (var out = new java.util.zip.ZipOutputStream(
+                Files.newOutputStream(zip))) {
+            out.putNextEntry(new java.util.zip.ZipEntry("word.doc"));
+            try (var in = getClass()
+                    .getResourceAsStream("/parser/msoffice/word.doc")) {
+                out.write(in.readAllBytes());
+            }
+            out.closeEntry();
+        }
+        var config = new ImporterConfig();
+        var parser = new DefaultParser();
+        config.setHandlers(java.util.List.of(parser));
+        parser.getConfiguration().getEmbeddedConfig().setSplitContentTypes(
+                java.util.List.of(
+                        com.norconex.commons.lang.text.TextMatcher
+                                .regex(".*")));
+        try (var importer = new Importer(config)) {
+            var response = importer.importDocument(new ImporterRequest(zip));
+            assertThat(response.getNestedResponses()).hasSize(1);
+            var child = response.getNestedResponses().get(0).getDoc()
+                    .getMetadata();
+            assertThat(child.getStrings("Author"))
+                    .containsExactly("Pascal Essiembre");
+            assertThat(child.containsKey("dc:creator")).isFalse();
+            assertThat(response.getDoc().getMetadata().containsKey("Author"))
+                    .isFalse();
+        }
+    }
+
+    // ---- ID3v1, Vorbis comments --------------------------------------------
+
+    @Test
+    void id3v1TagAtTheEndOfAnMp3IsRead() throws IOException {
+        var content = new ByteArrayOutputStream();
+        content.write(mp3(3, 0, new byte[0]));
+        var tag = new byte[128];
+        System.arraycopy("TAG".getBytes(ISO_8859_1), 0, tag, 0, 3);
+        System.arraycopy("V1 Title".getBytes(ISO_8859_1), 0, tag, 3, 8);
+        System.arraycopy("V1 Artist".getBytes(ISO_8859_1), 0, tag, 33, 9);
+        System.arraycopy("V1 Album".getBytes(ISO_8859_1), 0, tag, 63, 8);
+        System.arraycopy("2001".getBytes(ISO_8859_1), 0, tag, 93, 4);
+        System.arraycopy("Remark".getBytes(ISO_8859_1), 0, tag, 97, 6);
+        tag[126] = 7; // track (v1.1)
+        tag[127] = 8; // Jazz
+        content.write(tag);
+        var md = importMp3(content.toByteArray());
+        assertThat(md.getStrings("ID3v1:Title")).containsExactly("V1 Title");
+        assertThat(md.getStrings("ID3v1:Artist"))
+                .containsExactly("V1 Artist");
+        assertThat(md.getStrings("ID3v1:Album")).containsExactly("V1 Album");
+        assertThat(md.getStrings("ID3v1:Year")).containsExactly("2001");
+        assertThat(md.getStrings("ID3v1:Comment")).containsExactly("Remark");
+        assertThat(md.getStrings("ID3v1:Track")).containsExactly("7");
+        assertThat(md.getStrings("ID3v1:Genre")).containsExactly("Jazz");
+    }
+
+    /** The reader alone: the parser may refuse hand-made audio files. */
+    private static Properties readNative(byte[] content, String type)
+            throws IOException {
+        var md = new Properties();
+        try (var in = org.apache.tika.io.TikaInputStream.get(content)) {
+            com.norconex.importer.handler.parser.impl.nativemeta.NativeMetadata
+                    .read(in,
+                            com.norconex.commons.lang.file.ContentType
+                                    .valueOf(type),
+                            null)
+                    .addTo(md);
+        }
+        return md;
+    }
+
+    private static byte[] vorbisComments(String... comments)
+            throws IOException {
+        var out = new ByteArrayOutputStream();
+        var vendor = "test vendor".getBytes(UTF_8);
+        out.write(le32(vendor.length));
+        out.write(vendor);
+        out.write(le32(comments.length));
+        for (var c : comments) {
+            var b = c.getBytes(UTF_8);
+            out.write(le32(b.length));
+            out.write(b);
+        }
+        return out.toByteArray();
+    }
+
+    private static byte[] le32(int n) {
+        return new byte[] { (byte) n, (byte) (n >> 8), (byte) (n >> 16),
+                (byte) (n >> 24) };
+    }
+
+    @Test
+    void flacCommentsKeepTheirNames() throws IOException {
+        var comments = vorbisComments("TITLE=Flac Title", "ARTIST=Flac Artist",
+                "artist=Second", "MyCustom=Value",
+                "METADATA_BLOCK_PICTURE=AAAA", "noequalsign", "EMPTY=");
+        var out = new ByteArrayOutputStream();
+        out.write("fLaC".getBytes(ISO_8859_1));
+        out.write(0); // STREAMINFO, not last
+        out.write(new byte[] { 0, 0, 34 });
+        var info = new byte[34];
+        info[0] = 0x10;
+        info[2] = 0x10; // block sizes
+        info[10] = 0x0A;
+        info[11] = (byte) 0xC4;
+        info[12] = 0x42;
+        info[13] = (byte) 0xF0; // 44100 Hz, 2 channels, 16 bits
+        out.write(info);
+        out.write(0x84); // VORBIS_COMMENT, last
+        out.write(new byte[] { (byte) (comments.length >> 16),
+                (byte) (comments.length >> 8), (byte) comments.length });
+        out.write(comments);
+        out.write(new byte[64]);
+        var md = readNative(out.toByteArray(), "audio/x-flac");
+        System.out
+                .println("KEYS " + md.keySet() + md.getStrings("Content-Type"));
+        assertThat(md.getStrings("TITLE")).containsExactly("Flac Title");
+        assertThat(md.getStrings("ARTIST")).containsExactly("Flac Artist");
+        assertThat(md.getStrings("artist")).containsExactly("Second");
+        assertThat(md.getStrings("MyCustom")).containsExactly("Value");
+        assertThat(md.containsKey("METADATA_BLOCK_PICTURE")).isFalse();
+        assertThat(md.containsKey("EMPTY")).isFalse();
+    }
+
+    @Test
+    void oggVorbisCommentsKeepTheirNames() throws IOException {
+        var out = new ByteArrayOutputStream();
+        out.write("OggS".getBytes(ISO_8859_1));
+        out.write(new byte[23]);
+        out.write(new byte[] { 3, 'v', 'o', 'r', 'b', 'i', 's' });
+        out.write(vorbisComments("TITLE=Ogg Title", "GENRE=Folk"));
+        out.write(1);
+        out.write(new byte[64]);
+        var md = readNative(out.toByteArray(), "audio/ogg");
+        assertThat(md.getStrings("TITLE")).containsExactly("Ogg Title");
+        assertThat(md.getStrings("GENRE")).containsExactly("Folk");
+    }
 }
