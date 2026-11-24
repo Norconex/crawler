@@ -34,6 +34,7 @@ import com.norconex.crawler.core.doc.pipelines.queue.QueuePipeline;
 import com.norconex.crawler.core.doc.pipelines.queue.stages.DepthValidationStage;
 import com.norconex.crawler.core.doc.pipelines.queue.stages.QueueReferenceStage;
 import com.norconex.crawler.core.fetch.FetchDirective;
+import com.norconex.crawler.fs.doc.pipelines.importer.stages.AclStage;
 import com.norconex.crawler.fs.doc.pipelines.importer.stages.FileFetchStage;
 import com.norconex.crawler.fs.doc.pipelines.importer.stages.FsMetadataFiltersStage;
 import com.norconex.crawler.fs.doc.pipelines.importer.stages.FolderPathsExtractorStage;
@@ -62,6 +63,8 @@ public final class FsPipelines {
                                 // the following is executed
                                 new FileFetchStage(
                                         METADATA),
+                                new AclStage(
+                                        METADATA),
                                 new FsMetadataFiltersStage(
                                         METADATA),
                                 // Child folders done right after filter to
@@ -76,6 +79,8 @@ public final class FsPipelines {
 
                                 //--- DOCUMENT ---
                                 new FileFetchStage(
+                                        DOCUMENT),
+                                new AclStage(
                                         DOCUMENT),
                                 new FsMetadataFiltersStage(
                                         DOCUMENT),

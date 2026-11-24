@@ -528,6 +528,7 @@ carries the reference and the filter or stage responsible.
 | `REJECTED_DUPLICATE` | Same checksum as another document this session. |
 | `REJECTED_IMPORT` | The Importer rejected it, usually via a `Reject` handler. |
 | `REJECTED_ERROR` | Something threw. |
+| `REJECTED_ACL` | A file's permissions were asked for but could not be read in full, and `rejectIncompleteAcl` is on. |
 
 To act on these, register an event listener — see
 [Extending the Crawler](./extending.md).

@@ -145,6 +145,9 @@
     <Logger name="CrawlerEvent.REJECTED_TOO_DEEP" level="WARN" additivity="false">
       <AppenderRef ref="Console"/>
     </Logger>
+    <Logger name="CrawlerEvent.REJECTED_ACL" level="WARN" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
     <Logger name="CrawlerEvent.URLS_EXTRACTED" level="WARN" additivity="false">
       <AppenderRef ref="Console"/>
     </Logger>
