@@ -18,6 +18,7 @@ import java.util.Iterator;
 
 import com.norconex.committer.core.CommitterException;
 import com.norconex.committer.core.CommitterRequest;
+import com.norconex.committer.core.acl.AclFormat;
 import com.norconex.committer.core.batch.AbstractBatchCommitter;
 import com.norconex.committer.core.batch.queue.impl.FsQueue;
 
@@ -104,6 +105,17 @@ public class AzureSearchCommitter
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private AzureSearchClient client;
+
+    /**
+     * Azure AI Search holds documents by field values, with no JSON field to search
+     * into, so permissions are sent as plain multi-valued fields unless the
+     * ACL format is set to say otherwise.
+     * @return {@link AclFormat#FLAT}
+     */
+    @Override
+    protected AclFormat defaultAclFormat() {
+        return AclFormat.FLAT;
+    }
 
     @Override
     protected void initBatchCommitter() throws CommitterException {

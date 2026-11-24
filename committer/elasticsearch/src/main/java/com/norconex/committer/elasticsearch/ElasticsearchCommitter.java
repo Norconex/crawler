@@ -48,6 +48,7 @@ import com.norconex.committer.core.CommitterRequest;
 import com.norconex.committer.core.CommitterUtil;
 import com.norconex.committer.core.DeleteRequest;
 import com.norconex.committer.core.UpsertRequest;
+import com.norconex.committer.core.acl.AclFormat;
 import com.norconex.committer.core.batch.AbstractBatchCommitter;
 import com.norconex.commons.lang.encrypt.EncryptionUtil;
 import com.norconex.commons.lang.io.IoUtil;
@@ -166,6 +167,17 @@ public class ElasticsearchCommitter
     @Getter
     private final ElasticsearchCommitterConfig configuration =
             new ElasticsearchCommitterConfig();
+
+    /**
+     * Elasticsearch holds documents by field values, with no JSON field to search
+     * into, so permissions are sent as plain multi-valued fields unless the
+     * ACL format is set to say otherwise.
+     * @return {@link AclFormat#FLAT}
+     */
+    @Override
+    protected AclFormat defaultAclFormat() {
+        return AclFormat.FLAT;
+    }
 
     @Override
     protected void initBatchCommitter() throws CommitterException {

@@ -87,6 +87,8 @@ import com.norconex.committer.core.CommitterRequest;
 import com.norconex.committer.core.CommitterUtil;
 import com.norconex.committer.core.DeleteRequest;
 import com.norconex.committer.core.UpsertRequest;
+import com.norconex.committer.core.acl.Acl;
+import com.norconex.committer.core.acl.AclCodec;
 import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig.AclInheritanceMapping;
 import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig.AclMapping;
 import com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitterConfig.MetadataMapping;
@@ -126,6 +128,7 @@ class GoogleCloudSearchClient {
     private final AtomicLong versionSequence = new AtomicLong();
     private final CloudSearch cloudSearch;
     private final LongSupplier clock;
+    private boolean standardAcl;
 
     GoogleCloudSearchClient(GoogleCloudSearchCommitterConfig config)
             throws CommitterException {
@@ -319,10 +322,25 @@ class GoogleCloudSearchClient {
         // No persistent connection to release for the Google API client.
     }
 
+    /**
+     * Whether the access control of an item comes from the standard ACL the
+     * crawler captured (when the document has one), in place of the fields
+     * mapped by hand.
+     * @param standardAcl {@code true} to use the standard ACL
+     */
+    void useStandardAcl(boolean standardAcl) {
+        this.standardAcl = standardAcl;
+    }
+
     private void queueUpsert(
             BatchRequest batch, UpsertRequest request,
             BatchFailureCollector failures)
             throws IOException, CommitterException {
+        Acl standard = null;
+        if (standardAcl) {
+            standard = AclCodec.read(request.getMetadata()).orElse(null);
+            request.getMetadata().remove(Acl.FIELD);
+        }
         var sourceId = CommitterUtil.extractSourceIdValue(
                 request, config.getSourceIdField(),
                 config.isKeepSourceIdField());
@@ -335,7 +353,9 @@ class GoogleCloudSearchClient {
                 .setVersion(encodeVersion(nextVersion()))
                 .setMetadata(buildMetadata(request, contentType))
                 .setStructuredData(buildStructuredData(request.getMetadata()))
-                .setAcl(buildAcl(request.getMetadata()));
+                .setAcl(standard != null
+                        ? GoogleCloudSearchAcls.toItemAcl(standard)
+                        : buildAcl(request.getMetadata()));
 
         var itemContent = buildItemContent(request, itemName, contentType);
         if (itemContent != null) {
