@@ -1,4 +1,4 @@
-/* Copyright 2017-2024 Norconex Inc.
+/* Copyright 2017-2026 Norconex Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
