@@ -14,11 +14,14 @@
  */
 package com.norconex.importer.handler.parser.impl.nativemeta;
 
-import static java.nio.charset.Charset.forName;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import org.apache.tika.io.TikaInputStream;
@@ -41,6 +44,15 @@ final class RtfNativeMetadataReader implements NativeMetadataReader {
 
     private static final Pattern DATE_PART =
             Pattern.compile("\\\\(yr|mo|dy|hr|min|sec)(\\d+)");
+    private static final Pattern GROUP_START =
+            Pattern.compile("^\\\\([a-z]+)(.*)$", Pattern.DOTALL);
+    /** The parameter and space following a control word. */
+    private static final Pattern PARAMETER = Pattern.compile("^-?\\d* ?");
+    private static final Pattern TOKEN = Pattern.compile(
+            "\\\\'([0-9a-fA-F]{2})|\\\\u(-?\\d+).?|\\\\([\\\\{}])"
+                    + "|\\\\[a-zA-Z]+-?\\d* ?|\\\\.|.",
+            Pattern.DOTALL);
+    private static final Charset WINDOWS_1252 = Charset.forName("windows-1252");
 
     @Override
     public boolean supports(ContentType contentType) {
@@ -51,10 +63,7 @@ final class RtfNativeMetadataReader implements NativeMetadataReader {
     public NativeFields read(TikaInputStream in, String charset)
             throws IOException {
         var bytes = NativeMetadata.peek(in, MAX_BYTES);
-        if (bytes == null || bytes.length == 0) {
-            return NativeFields.none();
-        }
-        var rtf = new String(bytes, ISO_8859_1);
+        var rtf = bytes == null ? "" : new String(bytes, ISO_8859_1);
         var start = rtf.indexOf("{\\info");
         if (start < 0) {
             return NativeFields.none();
@@ -63,37 +72,34 @@ final class RtfNativeMetadataReader implements NativeMetadataReader {
         var info = rtf.substring(start + "{\\info".length(), end);
 
         var found = NativeFields.newMap();
-        var i = 0;
-        while (i < info.length()) {
-            if (info.charAt(i) != '{') {
-                i++;
-                continue;
-            }
-            var groupEnd = endOfGroup(info, i);
-            var group = info.substring(i + 1, groupEnd);
-            i = groupEnd + 1;
-            var m = Pattern.compile("^\\\\([a-z]+)(.*)$", Pattern.DOTALL)
-                    .matcher(group);
-            if (!m.matches()) {
-                continue;
-            }
-            var name = m.group(1);
-            var rest = m.group(2);
-            var value = DATE_PART.matcher(rest).find()
-                    ? date(rest)
-                    : text(rest);
-            if (!value.isBlank()) {
-                NativeFields.add(found, name, value);
-            }
+        var open = info.indexOf('{');
+        while (open >= 0) {
+            var close = endOfGroup(info, open);
+            addGroup(found, info.substring(open + 1, close));
+            open = info.indexOf('{', close + 1);
         }
         return found.isEmpty()
                 ? NativeFields.none()
                 : new NativeFields(found, OoxmlNativeMetadataReader::supersede);
     }
 
+    private static void addGroup(Map<String, List<String>> found,
+            String group) {
+        var m = GROUP_START.matcher(group);
+        if (!m.matches()) {
+            return;
+        }
+        var rest = m.group(2);
+        var value = DATE_PART.matcher(rest).find() ? date(rest) : text(rest);
+        if (!value.isBlank()) {
+            NativeFields.add(found, m.group(1), value);
+        }
+    }
+
     private static int endOfGroup(String s, int open) {
         var depth = 0;
-        for (var i = open; i < s.length(); i++) {
+        var i = open;
+        while (i < s.length()) {
             var c = s.charAt(i);
             if (c == '\\') {
                 i++; // escaped brace or control symbol
@@ -102,12 +108,13 @@ final class RtfNativeMetadataReader implements NativeMetadataReader {
             } else if (c == '}' && --depth == 0) {
                 return i;
             }
+            i++;
         }
         return s.length();
     }
 
     private static String date(String rest) {
-        var parts = new java.util.HashMap<String, Integer>();
+        var parts = new HashMap<String, Integer>();
         var m = DATE_PART.matcher(rest);
         while (m.find()) {
             parts.put(m.group(1), Integer.parseInt(m.group(2)));
@@ -121,62 +128,19 @@ final class RtfNativeMetadataReader implements NativeMetadataReader {
     /** Plain text of the rest of a group: escapes resolved. */
     private static String text(String rest) {
         var sb = new StringBuilder();
-        var i = 0;
-        // one space ends the control word
-        if (!rest.isEmpty() && rest.charAt(0) == ' ') {
-            i = 1;
-        } else {
-            // control word parameter, such as \title12
-            while (i < rest.length() && (Character.isDigit(rest.charAt(i))
-                    || rest.charAt(i) == '-')) {
-                i++;
-            }
-            if (i < rest.length() && rest.charAt(i) == ' ') {
-                i++;
-            }
-        }
-        while (i < rest.length()) {
-            var c = rest.charAt(i);
-            if (c == '\\' && i + 1 < rest.length()) {
-                var n = rest.charAt(i + 1);
-                if (n == '\'' && i + 3 < rest.length()) {
-                    try {
-                        sb.append(new String(
-                                new byte[] { (byte) Integer.parseInt(
-                                        rest.substring(i + 2, i + 4), 16) },
-                                forName("windows-1252")));
-                    } catch (NumberFormatException e) {
-                        // not an escape
-                    }
-                    i += 4;
-                } else if (n == 'u') {
-                    var j = i + 2;
-                    while (j < rest.length() && (Character.isDigit(
-                            rest.charAt(j)) || rest.charAt(j) == '-')) {
-                        j++;
-                    }
-                    try {
-                        sb.append((char) Integer.parseInt(
-                                rest.substring(i + 2, j)));
-                    } catch (NumberFormatException e) {
-                        // not an escape
-                    }
-                    i = j < rest.length() ? j + 1 : j; // skip fallback char
-                } else if (n == '\\' || n == '{' || n == '}') {
-                    sb.append(n);
-                    i += 2;
-                } else {
-                    // another control word: ignored
-                    var j = i + 1;
-                    while (j < rest.length()
-                            && Character.isLetterOrDigit(rest.charAt(j))) {
-                        j++;
-                    }
-                    i = j < rest.length() && rest.charAt(j) == ' ' ? j + 1 : j;
-                }
-            } else {
-                sb.append(c);
-                i++;
+        var m = TOKEN.matcher(PARAMETER.matcher(rest).replaceFirst(""));
+        while (m.find()) {
+            if (m.group(1) != null) {
+                sb.append(new String(new byte[] {
+                        (byte) Integer.parseInt(m.group(1), 16) },
+                        WINDOWS_1252));
+            } else if (m.group(2) != null) {
+                sb.append((char) Integer.parseInt(m.group(2)));
+            } else if (m.group(3) != null) {
+                sb.append(m.group(3));
+            } else if (!m.group().startsWith("\\")) {
+                // anything else starting with a backslash is ignored
+                sb.append(m.group());
             }
         }
         return sb.toString().trim();

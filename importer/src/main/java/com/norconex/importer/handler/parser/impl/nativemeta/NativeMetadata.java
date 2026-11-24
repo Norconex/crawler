@@ -79,13 +79,13 @@ public final class NativeMetadata {
      * back as it was.
      * @param in the stream
      * @param max the most to read
-     * @return the bytes read, or {@code null} if the stream cannot be put back
+     * @return the bytes read, or none if the stream cannot be put back
      * @throws IOException problem reading
      */
     static byte[] peek(InputStream in, int max) throws IOException {
         if (!in.markSupported()) {
             LOG.debug("Stream does not support mark: no native metadata.");
-            return null;
+            return new byte[0];
         }
         in.mark(max + 1);
         try {

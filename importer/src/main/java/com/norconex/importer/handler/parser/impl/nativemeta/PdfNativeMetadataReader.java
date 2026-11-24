@@ -154,15 +154,13 @@ final class PdfNativeMetadataReader implements NativeMetadataReader {
             Metadata derivedFromXmp) {
         try {
             for (XmpProperty p : new XmpSaxFlattener().flatten(packet)) {
-                if (p.path.endsWith("xml:lang")
-                        || p.value == null || p.value.isBlank()) {
-                    continue; // xml:lang qualifiers and empty values
-                }
+                // not the xml:lang qualifiers, empty values or thumbnail
                 var name = TRAILING_INDEX.matcher(p.path).replaceFirst("");
-                if (name.equals(THUMBNAIL_PATH)) {
-                    continue;
+                if (!p.path.endsWith("xml:lang") && p.value != null
+                        && !p.value.isBlank()
+                        && !name.equals(THUMBNAIL_PATH)) {
+                    NativeFields.add(found, name, p.value);
                 }
-                NativeFields.add(found, name, p.value);
             }
             // what the parser makes of the same packet, to take it out
             new XmpExtractor().extract(packet, derivedFromXmp);

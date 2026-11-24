@@ -122,10 +122,8 @@ final class Ole2NativeMetadataReader implements NativeMetadataReader {
                     }
                 }
             }
-        } catch (IOException | RuntimeException e) {
-            // not a property-bearing file: the parser has its say
-            return NativeFields.none();
         } catch (Exception e) {
+            // not a property-bearing file: the parser has its say
             return NativeFields.none();
         }
         return found.isEmpty()
@@ -139,7 +137,7 @@ final class Ole2NativeMetadataReader implements NativeMetadataReader {
         if (name == null || value == null) {
             return;
         }
-        var text = value instanceof Date d
+        var text = value instanceof Date d // NOSONAR POI hands out dates
                 ? d.toInstant().toString()
                 : value.toString().trim();
         if (!text.isEmpty()) {

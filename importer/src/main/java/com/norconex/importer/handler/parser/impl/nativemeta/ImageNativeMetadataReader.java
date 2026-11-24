@@ -77,25 +77,27 @@ final class ImageNativeMetadataReader implements NativeMetadataReader {
         }
         var found = NativeFields.newMap();
         for (var dir : meta.getDirectories()) {
-            if (dir instanceof FileSystemDirectory) {
-                continue;
-            }
             if (dir instanceof XmpDirectory xmp) {
                 readXmp(xmp, found);
-                continue;
-            }
-            for (var tag : dir.getTags()) {
-                var description = tag.getDescription();
-                if (description != null && !description.isBlank()) {
-                    NativeFields.add(found,
-                            dir.getName() + ":" + tag.getTagName(),
-                            description.trim());
-                }
+            } else if (!(dir instanceof FileSystemDirectory)) {
+                readTags(dir, found);
             }
         }
         return found.isEmpty()
                 ? NativeFields.none()
                 : new NativeFields(found, ImageNativeMetadataReader::supersede);
+    }
+
+    private static void readTags(
+            com.drew.metadata.Directory dir,
+            java.util.Map<String, List<String>> found) {
+        for (var tag : dir.getTags()) {
+            var description = tag.getDescription();
+            if (description != null && !description.isBlank()) {
+                NativeFields.add(found, dir.getName() + ":" + tag.getTagName(),
+                        description.trim());
+            }
+        }
     }
 
     private static void readXmp(

@@ -24,10 +24,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.metadata.Metadata;
 import org.jsoup.Jsoup;
+import org.jsoup.nodes.Element;
 
 import com.norconex.commons.lang.file.ContentType;
 
@@ -56,6 +58,8 @@ final class HtmlNativeMetadataReader implements NativeMetadataReader {
     /** The head of a page is read up to this size, or to its end. */
     private static final int MAX_HEAD_BYTES = 1024 * 1024;
 
+    private static final String TITLE = "title";
+
     /** The parser's own prefix for names it did not map. */
     private static final String TIKA_PREFIX = "html:";
 
@@ -65,7 +69,7 @@ final class HtmlNativeMetadataReader implements NativeMetadataReader {
      */
     private static final Map<String, List<String>> TIKA_MAPPED = Map.of(
             "author", List.of("dc:creator"),
-            "title", List.of("dc:title"),
+            TITLE, List.of("dc:title"),
             "subject", List.of("dc:subject"),
             "keywords", List.of("meta:keyword", "dc:subject"),
             "description", List.of("dc:description"));
@@ -94,40 +98,32 @@ final class HtmlNativeMetadataReader implements NativeMetadataReader {
 
         // The <title> element has no tag naming a field, so it takes its
         // own name. It comes first; the parser reads only the first one.
-        var titleElement = doc.head().selectFirst("title");
+        var titleElement = doc.head().selectFirst(TITLE);
         var elementText = titleElement == null
                 ? ""
                 : titleElement.wholeText().trim();
         if (!elementText.isEmpty()) {
-            NativeFields.add(found, "title", elementText);
+            NativeFields.add(found, TITLE, elementText);
         }
-
-        for (var meta : doc.head().select("meta")) {
-            if (!meta.hasAttr("content")) {
-                continue;
-            }
-            String name;
-            if (meta.hasAttr("http-equiv")) {
-                name = meta.attr("http-equiv");
-            } else if (meta.hasAttr("name")) {
-                name = meta.attr("name");
-            } else if (meta.hasAttr("property")) {
-                name = meta.attr("property");
-            } else {
-                continue;
-            }
-            var value = meta.attr("content");
-            if (name.isBlank() || value.isBlank()) {
-                continue;
-            }
-            NativeFields.add(found, name, value);
-        }
+        doc.head().select("meta").forEach(meta -> addMeta(found, meta));
         if (found.isEmpty()) {
             return NativeFields.none();
         }
         var hasTitleElement = titleElement != null;
         return new NativeFields(found,
                 tika -> supersede(tika, found, hasTitleElement));
+    }
+
+    private static void addMeta(
+            Map<String, List<String>> found, Element meta) {
+        var name = Stream.of("http-equiv", "name", "property")
+                .filter(meta::hasAttr)
+                .map(meta::attr)
+                .findFirst().orElse("");
+        var value = meta.attr("content");
+        if (meta.hasAttr("content") && !name.isBlank() && !value.isBlank()) {
+            NativeFields.add(found, name, value);
+        }
     }
 
     /**

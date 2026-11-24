@@ -94,60 +94,82 @@ final class ZipXmlPart {
         var rootAttrs = new LinkedHashMap<String, String>();
         var nodes = new ArrayList<Node>();
 
-        var depth = 0;
-        String name = null;
-        Map<String, String> attrs = null;
-        var text = new StringBuilder();
-        var childText = new StringBuilder();
-        var childSeen = false;
-        var inFirstChild = false;
-        var firstChildDone = false;
-
+        var collector = new Collector(level, rootAttrs, nodes);
         while (reader.hasNext()) {
             switch (reader.next()) {
-                case XMLStreamConstants.START_ELEMENT -> {
-                    depth++;
-                    if (depth == 1) {
-                        attrsOf(reader, rootAttrs);
-                    } else if (depth == level) {
-                        name = qName(reader);
-                        attrs = new LinkedHashMap<>();
-                        attrsOf(reader, attrs);
-                        text.setLength(0);
-                        childText.setLength(0);
-                        childSeen = false;
-                        firstChildDone = false;
-                    } else if (depth == level + 1 && !childSeen) {
-                        childSeen = true;
-                        inFirstChild = true;
-                    }
-                }
+                case XMLStreamConstants.START_ELEMENT ->
+                        collector.start(reader);
                 case XMLStreamConstants.CHARACTERS,
-                        XMLStreamConstants.CDATA -> {
-                    if (depth == level) {
-                        text.append(reader.getText());
-                    } else if (depth == level + 1 && inFirstChild
-                            && !firstChildDone) {
-                        childText.append(reader.getText());
-                    }
-                }
-                case XMLStreamConstants.END_ELEMENT -> {
-                    if (depth == level + 1 && inFirstChild) {
-                        inFirstChild = false;
-                        firstChildDone = true;
-                    } else if (depth == level) {
-                        nodes.add(new Node(name, attrs,
-                                text.toString().trim(),
-                                childText.toString().trim()));
-                    }
-                    depth--;
-                }
+                        XMLStreamConstants.CDATA ->
+                        collector.characters(reader.getText());
+                case XMLStreamConstants.END_ELEMENT -> collector.end();
                 default -> {
+                    // nothing else holds properties
                 }
             }
         }
         reader.close();
         return new Part(rootAttrs, nodes);
+    }
+
+    /** Follows the elements going by and keeps those at the given level. */
+    private static final class Collector {
+        private final int level;
+        private final Map<String, String> rootAttrs;
+        private final List<Node> nodes;
+        private final StringBuilder text = new StringBuilder();
+        private final StringBuilder childText = new StringBuilder();
+        private int depth;
+        private String name;
+        private Map<String, String> attrs;
+        private boolean childSeen;
+        private boolean inFirstChild;
+        private boolean firstChildDone;
+
+        Collector(int level, Map<String, String> rootAttrs,
+                List<Node> nodes) {
+            this.level = level;
+            this.rootAttrs = rootAttrs;
+            this.nodes = nodes;
+        }
+
+        void start(XMLStreamReader reader) {
+            depth++;
+            if (depth == 1) {
+                attrsOf(reader, rootAttrs);
+            } else if (depth == level) {
+                name = qName(reader);
+                attrs = new LinkedHashMap<>();
+                attrsOf(reader, attrs);
+                text.setLength(0);
+                childText.setLength(0);
+                childSeen = false;
+                firstChildDone = false;
+            } else if (depth == level + 1 && !childSeen) {
+                childSeen = true;
+                inFirstChild = true;
+            }
+        }
+
+        void characters(String chars) {
+            if (depth == level) {
+                text.append(chars);
+            } else if (depth == level + 1 && inFirstChild
+                    && !firstChildDone) {
+                childText.append(chars);
+            }
+        }
+
+        void end() {
+            if (depth == level + 1 && inFirstChild) {
+                inFirstChild = false;
+                firstChildDone = true;
+            } else if (depth == level) {
+                nodes.add(new Node(name, attrs, text.toString().trim(),
+                        childText.toString().trim()));
+            }
+            depth--;
+        }
     }
 
     private static String qName(XMLStreamReader r) {

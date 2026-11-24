@@ -145,9 +145,11 @@ class NativeFieldNamesTest {
     @Test
     void onlyTheFirstTitleElementCountsAndItIsTrimmed() throws IOException {
         var md = importHtml(
-                "<html><head><title>\n   First   one \n</title>"
-                        + "<title>Second</title></head>"
-                        + "<body>x</body></html>");
+                """
+                <html><head><title>
+                   First   one
+                </title><title>Second</title></head>
+                <body>x</body></html>""");
         assertThat(md.getStrings("title")).containsExactly("First   one");
     }
 

@@ -15,6 +15,8 @@
 package com.norconex.importer.handler.parser.impl.nativemeta;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.metadata.Metadata;
@@ -44,13 +46,10 @@ final class EpubNativeMetadataReader implements NativeMetadataReader {
         if (container == null) {
             return NativeFields.none();
         }
-        String opfPath = null;
-        for (var node : container.nodes()) {
-            if (node.name().equals("rootfile")) {
-                opfPath = node.attributes().get("full-path");
-                break;
-            }
-        }
+        var opfPath = container.nodes().stream()
+                .filter(n -> n.name().equals("rootfile"))
+                .map(n -> n.attributes().get("full-path"))
+                .findFirst().orElse(null);
         if (opfPath == null) {
             return NativeFields.none();
         }
@@ -60,23 +59,24 @@ final class EpubNativeMetadataReader implements NativeMetadataReader {
             return NativeFields.none();
         }
         var found = NativeFields.newMap();
-        for (var node : opf.nodes()) {
-            // the manifest and the spine sit at the same level
-            var name = node.name();
-            if (name.equals("meta")) {
-                var attrs = node.attributes();
-                if (attrs.containsKey("property")) {
-                    add(found, attrs.get("property"), node.text());
-                } else if (attrs.containsKey("name")) {
-                    add(found, attrs.get("name"), attrs.get("content"));
-                }
-            } else if (name.indexOf(':') > 0 && !node.text().isEmpty()) {
-                add(found, name, node.text());
-            }
-        }
+        opf.nodes().forEach(node -> addNode(found, node));
         return found.isEmpty()
                 ? NativeFields.none()
                 : new NativeFields(found, EpubNativeMetadataReader::supersede);
+    }
+
+    private static void addNode(
+            Map<String, List<String>> found, ZipXmlPart.Node node) {
+        // the manifest and the spine sit at the same level
+        var name = node.name();
+        var attrs = node.attributes();
+        if (name.equals("meta") && attrs.containsKey("property")) {
+            add(found, attrs.get("property"), node.text());
+        } else if (name.equals("meta")) {
+            add(found, attrs.get("name"), attrs.get("content"));
+        } else if (name.contains(":")) {
+            add(found, name, node.text());
+        }
     }
 
     private static void add(

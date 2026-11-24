@@ -43,7 +43,7 @@ class NativeOfficeFieldNamesTest {
     @TempDir
     static Path folder;
 
-    private static Properties importFile(Path file) throws IOException {
+    private static Properties importFile(Path file) {
         try (var importer = new Importer(new ImporterConfig())) {
             var response = importer.importDocument(new ImporterRequest(file));
             assertThat(response.getDoc()).isNotNull();

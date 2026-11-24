@@ -76,24 +76,25 @@ final class EmailNativeMetadataReader implements NativeMetadataReader {
         var header = text(bytes, headerLength(bytes));
 
         var found = NativeFields.newMap();
-        for (var line : unfold(header)) {
-            var colon = line.indexOf(':');
-            if (colon <= 0) {
-                continue;
-            }
-            var name = line.substring(0, colon).trim();
-            var value = DecoderUtil.decodeEncodedWords(
-                    line.substring(colon + 1).trim(), DecodeMonitor.SILENT);
-            if (name.isEmpty() || name.indexOf(' ') >= 0
-                    || value.isBlank()) {
-                continue;
-            }
-            NativeFields.add(found, name, value);
-        }
+        unfold(header).forEach(line -> addHeader(found, line));
         if (found.isEmpty()) {
             return NativeFields.none();
         }
         return new NativeFields(found, EmailNativeMetadataReader::supersede);
+    }
+
+    private static void addHeader(
+            java.util.Map<String, List<String>> found, String line) {
+        var colon = line.indexOf(':');
+        if (colon <= 0) {
+            return;
+        }
+        var name = line.substring(0, colon).trim();
+        var value = DecoderUtil.decodeEncodedWords(
+                line.substring(colon + 1).trim(), DecodeMonitor.SILENT);
+        if (!name.isEmpty() && name.indexOf(' ') < 0 && !value.isBlank()) {
+            NativeFields.add(found, name, value);
+        }
     }
 
     private static void supersede(Metadata tika) {
