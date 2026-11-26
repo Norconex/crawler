@@ -28,30 +28,28 @@ class TikaUtil {
     private TikaUtil() {
     }
 
+    /**
+     * Copies what the parser produced into the document metadata, under
+     * the names the parser gave it, and nothing else: no field is renamed
+     * or duplicated here. That is the parser's own view of the document,
+     * not the author's. Formats that have a native metadata reader (see
+     * {@code nativemeta}) take the parser's entries out first and add what
+     * the author published separately.
+     * @param tikaMeta parser metadata
+     * @param metadata document metadata to add to
+     */
     static void metadataToProperties(
             Metadata tikaMeta, Properties metadata) {
-        var names = tikaMeta.names();
-        for (String name : names) {
+        for (String name : tikaMeta.names()) {
             if (TikaCoreProperties.RESOURCE_NAME_KEY.getName().equals(name)) {
                 continue;
             }
-            // When Tika 3.x returns dc: prefixed metadata (e.g. dc:title),
-            // also store it under the bare field name (e.g. title) to preserve
-            // backward compatibility with callers expecting the plain name.
-            var tikaValues = tikaMeta.getValues(name);
-            var fieldNames = new java.util.ArrayList<String>();
-            fieldNames.add(name);
-            if (name.startsWith("dc:")) {
-                fieldNames.add(name.substring(3));
-            }
-            for (String fieldName : fieldNames) {
-                var nxValues = metadata.getStrings(fieldName);
-                for (String tikaValue : tikaValues) {
-                    if (!containsSameValue(fieldName, nxValues, tikaValue)) {
-                        metadata.add(fieldName, tikaValue);
-                    } else {
-                        metadata.set(fieldName, tikaValue);
-                    }
+            var nxValues = metadata.getStrings(name);
+            for (String tikaValue : tikaMeta.getValues(name)) {
+                if (!containsSameValue(name, nxValues, tikaValue)) {
+                    metadata.add(name, tikaValue);
+                } else {
+                    metadata.set(name, tikaValue);
                 }
             }
         }

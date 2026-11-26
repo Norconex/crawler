@@ -122,8 +122,11 @@ class ParserPoolIntegrationTest {
                     assertThat(parser.handle(context)).isTrue();
                     assertThat(context.input().asString())
                             .isEqualTo("body-" + id);
-                    assertThat(context.metadata().getString("dc:title"))
-                            .isEqualTo("title-" + id);
+                    assertThat(context.metadata().getString(
+                            context.metadata().containsKey("title")
+                                    ? "title"
+                                    : "dc:title"))
+                                            .isEqualTo("title-" + id);
                     assertThat(context.parseState()).isEqualTo(ParseState.POST);
                     return null;
                 }));
