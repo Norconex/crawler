@@ -134,7 +134,8 @@ final class Ole2NativeMetadataReader implements NativeMetadataReader {
     private static void add(
             Map<String, java.util.List<String>> found,
             String name, Object value) {
-        if (name == null || value == null) {
+        // binary values (such as a link base) are not text fields
+        if (name == null || value == null || value instanceof byte[]) {
             return;
         }
         var text = value instanceof Date d // NOSONAR POI hands out dates

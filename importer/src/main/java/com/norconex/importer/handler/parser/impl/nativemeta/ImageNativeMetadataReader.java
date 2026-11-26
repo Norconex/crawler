@@ -79,7 +79,8 @@ final class ImageNativeMetadataReader implements NativeMetadataReader {
         for (var dir : meta.getDirectories()) {
             if (dir instanceof XmpDirectory xmp) {
                 readXmp(xmp, found);
-            } else if (!(dir instanceof FileSystemDirectory)) {
+            } else if (!(dir instanceof FileSystemDirectory)
+                    && !(dir instanceof com.drew.metadata.file.FileTypeDirectory)) {
                 readTags(dir, found);
             }
         }
