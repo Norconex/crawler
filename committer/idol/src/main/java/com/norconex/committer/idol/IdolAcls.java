@@ -14,8 +14,8 @@
  */
 package com.norconex.committer.idol;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.norconex.committer.core.acl.Acl;
 import com.norconex.committer.core.acl.AclAccess;
@@ -45,33 +45,44 @@ final class IdolAcls {
                     + "document has " + acl.levels().size();
         }
         for (var entry : acl.levels().get(0).entries()) {
-            if (entry.access() == AclAccess.DENY
-                    && syntax == IdolAclSyntax.SIMPLE) {
-                return "the simple IDOL syntax cannot express the denial of "
-                        + entry.principalText();
-            }
-            if (entry.kind() == AclKind.SPECIAL
-                    && syntax == IdolAclSyntax.SIMPLE) {
-                return "the simple IDOL syntax cannot express "
-                        + entry.principalText();
-            }
-            if (entry.kind() == AclKind.ROLE) {
-                return "IDOL has no equivalent for the role "
-                        + entry.principalText();
-            }
-            if (entry.kind() == AclKind.SPECIAL && !isEveryone(entry)) {
-                return "IDOL has no equivalent for "
-                        + entry.principalText();
-            }
-            if (entry.kind() == AclKind.SPECIAL
-                    && entry.access() == AclAccess.DENY) {
-                return "IDOL cannot deny everyone";
-            }
-            if (entry.id().contains(",")) {
-                return entry.principalText() + " has a comma in its name";
+            var why = entryProblem(entry, syntax);
+            if (why != null) {
+                return why;
             }
         }
         return null;
+    }
+
+    private static String entryProblem(AclEntry entry, IdolAclSyntax syntax) {
+        var denied = entry.access() == AclAccess.DENY;
+        var simple = syntax == IdolAclSyntax.SIMPLE;
+        if (entry.kind() == AclKind.SPECIAL) {
+            return specialProblem(entry, denied, simple);
+        }
+        if (simple && denied) {
+            return "the simple IDOL syntax cannot express the denial of "
+                    + entry.principalText();
+        }
+        if (entry.kind() == AclKind.ROLE) {
+            return "IDOL has no equivalent for the role "
+                    + entry.principalText();
+        }
+        return entry.id().contains(",")
+                ? entry.principalText() + " has a comma in its name"
+                : null;
+    }
+
+    private static String specialProblem(
+            AclEntry entry, boolean denied, boolean simple) {
+        if (simple) {
+            return "the simple IDOL syntax cannot express "
+                    + entry.principalText();
+        }
+        if (!List.of(AclEntry.SPECIAL_EVERYONE, AclEntry.SPECIAL_AUTHENTICATED)
+                .contains(entry.id())) {
+            return "IDOL has no equivalent for " + entry.principalText();
+        }
+        return denied ? "IDOL cannot deny everyone" : null;
     }
 
     /**
@@ -81,36 +92,32 @@ final class IdolAcls {
      * @return the text of the access control list field
      */
     static String write(Acl acl, IdolAclSyntax syntax) {
-        var users = new ArrayList<String>();
-        var groups = new ArrayList<String>();
-        var noUsers = new ArrayList<String>();
-        var noGroups = new ArrayList<String>();
-        var everyone = false;
-        for (var entry : acl.levels().get(0).entries()) {
-            if (entry.kind() == AclKind.SPECIAL) {
-                everyone = true;
-                continue;
-            }
-            var denied = entry.access() == AclAccess.DENY;
-            // An id of unknown kind is matched against users and groups.
-            if (entry.kind() != AclKind.GROUP) {
-                (denied ? noUsers : users).add(entry.id());
-            }
-            if (entry.kind() != AclKind.USER) {
-                (denied ? noGroups : groups).add(entry.id());
-            }
+        var entries = acl.levels().get(0).entries();
+        var core = ":U:" + names(entries, false, false)
+                + ":G:" + names(entries, true, false);
+        if (syntax == IdolAclSyntax.SIMPLE) {
+            return core;
         }
-        var core = ":U:" + String.join(",", users)
-                + ":G:" + String.join(",", groups);
-        return syntax == IdolAclSyntax.SIMPLE
-                ? core
-                : (everyone ? "1" : "0") + core
-                        + ":NU:" + String.join(",", noUsers)
-                        + ":NG:" + String.join(",", noGroups);
+        var everyone = entries.stream()
+                .anyMatch(e -> e.kind() == AclKind.SPECIAL);
+        return (everyone ? "1" : "0") + core
+                + ":NU:" + names(entries, false, true)
+                + ":NG:" + names(entries, true, true);
     }
 
-    private static boolean isEveryone(AclEntry entry) {
-        return List.of(AclEntry.SPECIAL_EVERYONE,
-                AclEntry.SPECIAL_AUTHENTICATED).contains(entry.id());
+    /**
+     * The ids of the users or of the groups, allowed or denied, separated by
+     * commas. An id of unknown kind is matched against users and groups, so
+     * it is in both.
+     */
+    private static String names(
+            List<AclEntry> entries, boolean groups, boolean denied) {
+        var wanted = groups ? AclKind.USER : AclKind.GROUP;
+        return entries.stream()
+                .filter(e -> e.kind() != AclKind.SPECIAL
+                        && e.kind() != wanted
+                        && (e.access() == AclAccess.DENY) == denied)
+                .map(AclEntry::id)
+                .collect(Collectors.joining(","));
     }
 }

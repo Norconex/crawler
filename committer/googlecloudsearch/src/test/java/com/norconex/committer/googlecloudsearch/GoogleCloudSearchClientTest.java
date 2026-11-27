@@ -414,6 +414,60 @@ class GoogleCloudSearchClientTest {
     }
 
     @Test
+    void theStandardAclBecomesTheItemsAccessAndIsNotIndexedAsAField()
+            throws Exception {
+        var transport = new RecordingTransport();
+        transport.enqueue(
+                jsonResponse(
+                        successfulBatchResponseHeader(),
+                        successfulBatchResponseBody(
+                                "operations/index-1")));
+        var config = newConfig().setUploadFormat(UploadFormat.TEXT);
+        var cloudSearch = new CloudSearch.Builder(
+                transport, GsonFactory.getDefaultInstance(),
+                noOpInitializer())
+                        .setApplicationName(config.getApplicationName())
+                        .setRootUrl("https://mock.local/")
+                        .build();
+        var client = new GoogleCloudSearchClient(
+                config, cloudSearch, () -> 1000L);
+        client.useStandardAcl(true);
+
+        var metadata = new Properties();
+        metadata.set(GoogleCloudSearchClient.FIELD_CONTENT_TYPE,
+                "text/plain");
+        com.norconex.committer.core.acl.AclCodec.write(metadata,
+                com.norconex.committer.core.acl.Acl.complete(List.of(
+                        new com.norconex.committer.core.acl.AclLevel("file",
+                                List.of(com.norconex.committer.core.acl.AclEntry
+                                        .allow(
+                                                com.norconex.committer.core.acl.AclKind.USER,
+                                                null, "pat@example.com")))),
+                        List.of(), null));
+        List<CommitterRequest> requests = new ArrayList<>();
+        requests.add(new UpsertRequest(REFERENCE, metadata,
+                new ByteArrayInputStream("x".getBytes(UTF_8))));
+
+        client.post(requests.iterator());
+
+        var batchBody = transport.getRequests().get(0)
+                .getContentAsString();
+        assertThat(batchBody)
+                .contains("pat@example.com")
+                .doesNotContain("crawler.acl");
+    }
+
+    @Test
+    void theCommitterHasNativeAccessControlAndSaysWhatItCannotExpress() {
+        var committer = new GoogleCloudSearchCommitter();
+        assertThat(committer.supportsNativeAcl()).isTrue();
+        assertThat(committer.nativeAclProblem(
+                com.norconex.committer.core.acl.Acl.complete(
+                        List.of(), List.of(), null)))
+                                .contains("single level");
+    }
+
+    @Test
     void sourceRepositoryUrlFallsBackToReferenceWhenMappedFieldMissing()
             throws Exception {
         var transport = new RecordingTransport();
