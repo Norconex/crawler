@@ -58,6 +58,10 @@ Controls whether the crawler performs a full document fetch (e.g., HTTP `GET`). 
 
 Filters applied to documents after their full content has been downloaded. Documents that do not pass the filters are rejected and not sent to the Importer or Committers. Folders are never tested by these filters (see `folderReferenceFilters` and `folderMetadataFilters`).
 
+### documentTimeout
+
+The longest a crawl thread may spend on one document: fetching it, importing it, and sending it (and the documents found in it) to committers. Past it, the crawler gives up on the document: it is recorded as an error (firing `REJECTED_ERROR`), nothing more of it is sent to committers, and the thread is interrupted, then replaced by a new one if it does not let go of the document within a minute (or the document timeout, if shorter). Should a node end up with as many such threads it could not free as it has crawl threads, the crawl is stopped, to be resumed on the next start. Default is 1 hour, long enough for very large documents. A zero or empty value disables it.
+
 ### eventListeners
 
 One or more event listeners that react to crawler lifecycle events (e.g., document fetched, crawl started, crawl completed). Useful for custom monitoring, alerting, or triggering side effects.
@@ -165,6 +169,10 @@ A list of document consumers invoked before the document is sent to the importer
 ### referenceFilters
 
 Filters applied to document references (URLs or file paths) to control which ones are fetched. Documents whose references do not pass the filters are skipped. Only files are tested: folders have their own filters (see `folderReferenceFilters`). Start references are never filtered.
+
+### rejectIncompleteAcl
+
+Whether a file whose permissions were asked for (see the fetchers' `acl` setting) but could not be read in full is rejected right after it is fetched. It is then not parsed or imported and no committer is reached; any version sent before is deleted. The `REJECTED_ACL` event carries what could not be read. Default is `false`: such a file goes on, and committers hold it back or send it, as their `acl` setting says. Folders are not tested, as they are never sent anywhere.
 
 ### spoiledReferenceStrategizer
 

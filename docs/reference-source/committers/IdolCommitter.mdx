@@ -46,6 +46,14 @@ acl.owners      = user:ad:CORP:pascal
 
 A person may see the document if they match an allow value of every level and no deny value of any.
 
+### aclField
+
+The field the permissions of a document are written to when they are sent in IDOL's own format (the `acl` format `NATIVE`, the default unless sending to a Connector Framework Server). IDOL must know that field holds an access control list, with the `ACLType` field property. Default is `AUTONOMYMETADATA`, where IDOL connectors put it.
+
+### aclSyntax
+
+The text the permissions are written as, following the security type set up on the IDOL server: `NT` (the default) writes `<everyone>:U:<users>:G:<groups>:NU:<denied users>:NG:<denied groups>`, the first part being `1` when everyone may read and `0` otherwise, and each list separated by commas; `SIMPLE` writes `:U:<users>:G:<groups>`. IDOL checks one list, so a document with several levels of permissions, a role, or (in the `SIMPLE` syntax) a denial is withheld rather than sent with other access than it had.
+
 ### cfs
 
 The URL points to a Connector Framework Server (CFS).
@@ -73,6 +81,10 @@ Configures the committer queue used to batch documents before sending them to th
 ### restrictions
 
 Defines filter conditions that restrict which documents this committer processes. Documents not matching the restrictions are ignored by this committer.
+
+### securityType
+
+The value of the `SECURITYTYPE` field written along with the permissions: the name of a security type of the IDOL server. When empty (the default) the field is not written, which suits a server that sets the type itself.
 
 ### sourceContentField
 

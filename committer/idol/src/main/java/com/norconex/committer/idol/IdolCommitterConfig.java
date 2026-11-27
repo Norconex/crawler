@@ -1,4 +1,4 @@
-/* Copyright 2020-2025 Norconex Inc.
+/* Copyright 2020-2026 Norconex Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,4 +75,27 @@ public class IdolCommitterConfig extends BaseBatchCommitterConfig
      * order to use the document content stream instead of a field (default).
      */
     private String sourceContentField;
+
+    /**
+     * The field the access control list of a document is written to, when
+     * permissions are sent in the committer's own format (see
+     * {@code acl.format}). IDOL must know it holds an ACL (the
+     * {@code ACLType} field property). Default is
+     * {@code AUTONOMYMETADATA}, where IDOL connectors put it.
+     */
+    private String aclField = "AUTONOMYMETADATA";
+
+    /**
+     * The text the ACL is written as: it follows the security type set up on
+     * the IDOL server. Default is {@link IdolAclSyntax#NT}.
+     */
+    private IdolAclSyntax aclSyntax = IdolAclSyntax.NT;
+
+    /**
+     * The value of the {@code SECURITYTYPE} field written along with the ACL
+     * (the name of a security type of the IDOL server). When {@code null}
+     * (default) no such field is written, which suits a server that sets
+     * the type itself.
+     */
+    private String securityType;
 }

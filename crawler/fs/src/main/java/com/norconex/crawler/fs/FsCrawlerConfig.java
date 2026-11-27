@@ -93,6 +93,17 @@ public class FsCrawlerConfig extends CrawlerConfig {
     private final List<MetadataFilter> folderMetadataFilters =
             new ArrayList<>();
 
+    /**
+     * Whether a file whose permissions were asked for (see the fetchers'
+     * {@code acl} setting) but could not be read in full is rejected right
+     * after it is fetched, firing {@code REJECTED_ACL} with what could not be
+     * read, and deleting any version sent before. It then goes no further:
+     * it is not parsed or imported, and no committer is reached.
+     * Default is {@code false}: such a file goes on, and committers hold it
+     * back (or send it, as they are set to).
+     */
+    private boolean rejectIncompleteAcl;
+
     public FsCrawlerConfig() {
         setFetchers(List.<Fetcher>of(new LocalFetcher()));
         setMetadataChecksummer(new FsMetadataChecksummer());

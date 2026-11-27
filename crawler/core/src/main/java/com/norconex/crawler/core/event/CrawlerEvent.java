@@ -141,6 +141,12 @@ public class CrawlerEvent extends Event {
      */
     public static final String REJECTED_ERROR = "REJECTED_ERROR";
     /**
+     * A document was rejected because its permissions (access control list)
+     * were asked for but could not be read in full. The event message says
+     * what could not be read.
+     */
+    public static final String REJECTED_ACL = "REJECTED_ACL";
+    /**
      * A document pre-import processor was executed properly.
      */
     public static final String DOCUMENT_PREIMPORTED = "DOCUMENT_PREIMPORTED";

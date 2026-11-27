@@ -20,6 +20,8 @@ import org.apache.commons.lang3.StringUtils;
 
 import com.norconex.committer.core.CommitterException;
 import com.norconex.committer.core.CommitterRequest;
+import com.norconex.committer.core.acl.Acl;
+import com.norconex.committer.core.acl.AclFormat;
 import com.norconex.committer.core.batch.AbstractBatchCommitter;
 
 import lombok.EqualsAndHashCode;
@@ -112,6 +114,25 @@ public class GoogleCloudSearchCommitter
             }
         }
         client = new GoogleCloudSearchClient(configuration);
+        client.useStandardAcl(aclFormat() == AclFormat.NATIVE);
+    }
+
+    /**
+     * Cloud Search has access control of its own: by default the
+     * permissions the crawler captured (the {@value Acl#FIELD} field) become
+     * the item's readers, denied readers and owners. Set the ACL format to
+     * JSON to send the field as it is instead, and keep mapping fields by
+     * hand with the ACL mappings.
+     * @return {@code true}
+     */
+    @Override
+    protected boolean supportsNativeAcl() {
+        return true;
+    }
+
+    @Override
+    protected String nativeAclProblem(Acl acl) {
+        return GoogleCloudSearchAcls.problem(acl);
     }
 
     private static void validateOptionalNonNegative(String name, int value)
