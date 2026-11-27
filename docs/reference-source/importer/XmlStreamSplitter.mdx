@@ -62,6 +62,13 @@ Discard the original document after the split is performed.
 
 Matches document fields based on specified patterns and methods
 
+### ignoreParentMetadata
+
+Whether the documents this splitter makes start without the metadata of the document they were split from. By default
+(`false`) they get a copy of it, so a field of the whole document (an author, a department) stays on each part, and a
+condition on such a field applies to the parts too. Either way, a part gets the fields the splitter itself sets on
+it (its reference).
+
 ### label
 
 An optional, user-supplied label for this step in the importer pipeline. It has no effect on processing — it exists purely to help identify this step, for example in large configurations or in the visual configurator.

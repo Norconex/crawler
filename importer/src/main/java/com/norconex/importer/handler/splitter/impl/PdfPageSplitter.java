@@ -107,7 +107,9 @@ public class PdfPageSplitter
 
                 // metadata
                 var pageMeta = new Properties();
-                pageMeta.loadFromMap(docCtx.metadata());
+                if (!configuration.isIgnoreParentMetadata()) {
+                    pageMeta.loadFromMap(docCtx.metadata());
+                }
 
                 var pageDoc = new Doc(pageRef);
 

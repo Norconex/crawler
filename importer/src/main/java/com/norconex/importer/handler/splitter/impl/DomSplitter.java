@@ -147,7 +147,9 @@ public class DomSplitter extends AbstractDocumentSplitter<DomSplitterConfig> {
         var docs = docCtx.childDocs();
         for (Element elm : elms) {
             var childMeta = new Properties();
-            childMeta.loadFromMap(docCtx.metadata());
+            if (!configuration.isIgnoreParentMetadata()) {
+                childMeta.loadFromMap(docCtx.metadata());
+            }
             var childContent = elm.outerHtml();
             var childEmbedRef = elm.cssSelector();
             var childRef = docCtx.reference() + "!" + childEmbedRef;

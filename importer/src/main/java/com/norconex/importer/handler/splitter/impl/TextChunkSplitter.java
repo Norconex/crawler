@@ -212,7 +212,9 @@ public class TextChunkSplitter
                 + (index + 1);
 
         var chunkMeta = new Properties();
-        chunkMeta.loadFromMap(docCtx.metadata());
+        if (!configuration.isIgnoreParentMetadata()) {
+            chunkMeta.loadFromMap(docCtx.metadata());
+        }
         chunkMeta.set(
                 DocMetaConstants.EMBEDDED_REFERENCE,
                 Integer.toString(index + 1));

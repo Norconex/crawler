@@ -138,7 +138,8 @@ public class XmlStreamSplitter
                     docCtx, Arrays.asList(
                             StringUtils.split(
                                     configuration.getPath(), '/')),
-                    docCtx.childDocs());
+                    docCtx.childDocs(),
+                    configuration.isIgnoreParentMetadata());
             XmlUtil.createSaxParserFactory().newSAXParser().parse(is, h);
         } catch (SAXException | IOException | ParserConfigurationException e) {
             throw new DocHandlerException(
@@ -151,6 +152,7 @@ public class XmlStreamSplitter
         private final List<String> splitPath;
         private final List<Doc> splitDocs;
         private final DocHandlerContext xmlDoc;
+        private final boolean ignoreParentMetadata;
         private final List<String> currentPath = new ArrayList<>();
         private PrintWriter w;
         private CachedOutputStream out;
@@ -158,10 +160,12 @@ public class XmlStreamSplitter
         public XmlHandler(
                 DocHandlerContext xmlDoc,
                 List<String> splitPath,
-                List<Doc> splitDocs) {
+                List<Doc> splitDocs,
+                boolean ignoreParentMetadata) {
             this.xmlDoc = xmlDoc;
             this.splitDocs = splitDocs;
             this.splitPath = splitPath;
+            this.ignoreParentMetadata = ignoreParentMetadata;
         }
 
         @Override
@@ -207,7 +211,9 @@ public class XmlStreamSplitter
                     if (currentPath.equals(splitPath)) {
                         w.flush();
                         var childMeta = new Properties();
-                        childMeta.loadFromMap(xmlDoc.metadata());
+                        if (!ignoreParentMetadata) {
+                            childMeta.loadFromMap(xmlDoc.metadata());
+                        }
                         var embedRef = Integer.toString(splitDocs.size());
                         @SuppressWarnings("resource")
                         var childDoc = new Doc(

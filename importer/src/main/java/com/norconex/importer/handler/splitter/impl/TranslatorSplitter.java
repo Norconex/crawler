@@ -362,7 +362,8 @@ public class TranslatorSplitter
 
         var childMeta = new Properties();
 
-        if (!configuration.isIgnoreNonTranslatedFields()) {
+        if (!configuration.isIgnoreNonTranslatedFields()
+                && !configuration.isIgnoreParentMetadata()) {
             childMeta.loadFromMap(docCtx.metadata());
         }
 
