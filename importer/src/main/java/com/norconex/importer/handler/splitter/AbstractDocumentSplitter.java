@@ -15,6 +15,7 @@
 package com.norconex.importer.handler.splitter;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 import com.norconex.importer.handler.ConfigurableDocHandler;
 import com.norconex.importer.handler.DocHandlerContext;
@@ -30,7 +31,20 @@ public abstract class AbstractDocumentSplitter<
 
     @Override
     public final boolean handle(DocHandlerContext docCtx) throws IOException {
+        var position = docCtx.handlerPosition(this);
+        if (!getConfiguration().isApplyToOwnParts()
+                && docCtx.splitTrail().contains(position)) {
+            // A part this splitter made, back through the flow: left as it is.
+            return true;
+        }
+        var before = docCtx.childDocs().size();
         split(docCtx);
+        var parts = docCtx.childDocs();
+        for (var i = before; i < parts.size(); i++) {
+            var trail = new ArrayList<>(docCtx.splitTrail());
+            trail.add(position);
+            parts.get(i).setSplitTrail(trail);
+        }
         if (!docCtx.childDocs().isEmpty()
                 && getConfiguration().isDiscardOriginal()) {
             docCtx.rejectedBy(this);

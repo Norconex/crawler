@@ -51,6 +51,10 @@ authentication properties are ignored.
 
 API key for the translation service. Used by **google** and **yandex**.
 
+### applyToOwnParts
+
+Whether this splitter also applies to the parts it made itself, at any depth, when they come back through the flow. Every part goes through all the handlers again, from the first, so a part that still matches what this splitter splits (a translation, which is a document in another language) would otherwise be split again. By default (`false`) this splitter leaves its own parts as they are. Parts made by other splitters are not affected, and conditions still decide whether a part reaches this splitter.
+
 ### clientId
 
 Client ID for the **microsoft** API, obtained on Microsoft Azure Marketplace

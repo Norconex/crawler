@@ -46,4 +46,16 @@ public class BaseDocumentSplitterConfig extends BaseDocHandlerConfig {
      *     metadata of the document they were split from
      */
     private boolean ignoreParentMetadata;
+
+    /**
+     * Whether this splitter also applies to the parts it made itself, at any
+     * depth, when they come back through the flow (every part goes through
+     * all the handlers again, from the first). By default it leaves its own
+     * parts as they are. Parts made by other splitters are not affected, and
+     * conditions still decide whether a part reaches this splitter.
+     * @param applyToOwnParts <code>true</code> for this splitter to split
+     *     the parts it made, too
+     * @return <code>true</code> when this splitter applies to its own parts
+     */
+    private boolean applyToOwnParts;
 }

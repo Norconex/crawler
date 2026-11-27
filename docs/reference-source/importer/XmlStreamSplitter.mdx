@@ -50,6 +50,10 @@ To restrict this splitter by anything other than content type — a URL pattern,
 
 ## Properties
 
+### applyToOwnParts
+
+Whether this splitter also applies to the parts it made itself, at any depth, when they come back through the flow. Every part goes through all the handlers again, from the first, so a part that still matches what this splitter splits would otherwise be split again. By default (`false`) this splitter leaves its own parts as they are. Parts made by other splitters are not affected, and conditions still decide whether a part reaches this splitter.
+
 ### contentTypeMatcher
 
 The content type of the XML document.
