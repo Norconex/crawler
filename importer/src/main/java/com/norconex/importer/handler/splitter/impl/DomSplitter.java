@@ -29,6 +29,7 @@ import com.norconex.importer.handler.CommonRestrictions;
 import com.norconex.importer.handler.DocHandlerContext;
 import com.norconex.importer.handler.DocHandlerException;
 import com.norconex.importer.handler.splitter.AbstractDocumentSplitter;
+import com.norconex.importer.handler.splitter.ParentMetadata;
 import com.norconex.importer.util.DomUtil;
 import com.norconex.importer.util.MatchUtil;
 
@@ -147,9 +148,8 @@ public class DomSplitter extends AbstractDocumentSplitter<DomSplitterConfig> {
         var docs = docCtx.childDocs();
         for (Element elm : elms) {
             var childMeta = new Properties();
-            if (!configuration.isIgnoreParentMetadata()) {
-                childMeta.loadFromMap(docCtx.metadata());
-            }
+            ParentMetadata.copy(childMeta, docCtx.metadata(),
+                    configuration.getParentMetadataMatcher());
             var childContent = elm.outerHtml();
             var childEmbedRef = elm.cssSelector();
             var childRef = docCtx.reference() + "!" + childEmbedRef;

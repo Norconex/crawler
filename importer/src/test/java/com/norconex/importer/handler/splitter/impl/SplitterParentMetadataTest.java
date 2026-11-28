@@ -53,9 +53,12 @@ class SplitterParentMetadataTest {
      */
     static Stream<Arguments> splitters() {
         BiFunction<Boolean, BaseDocumentSplitterConfig,
-                BaseDocumentSplitterConfig> ignore =
-                        (on, cfg) -> (BaseDocumentSplitterConfig) cfg
-                                .setIgnoreParentMetadata(on);
+                BaseDocumentSplitterConfig> ignore = (on, cfg) -> {
+                    if (on) {
+                        cfg.getParentMetadataMatcher().setPattern("");
+                    }
+                    return cfg;
+                };
         return Stream.of(
                 Arguments.of("csv", (Splitter) on -> {
                     var s = new CsvSplitter();
@@ -82,8 +85,11 @@ class SplitterParentMetadataTest {
                         "PdfPageSplitterTest.pdf")),
                 Arguments.of("chunks", (Splitter) on -> {
                     var s = new TextChunkSplitter();
-                    s.getConfiguration().setMaxChunkSize(50).setChunkOverlap(0)
-                            .setIgnoreParentMetadata(on);
+                    s.getConfiguration().setMaxChunkSize(50).setChunkOverlap(0);
+                    if (on) {
+                        s.getConfiguration().getParentMetadataMatcher()
+                                .setPattern("");
+                    }
                     return s;
                 }, (Input) () -> text("Paragraph number one is here.\n\n"
                         + "Paragraph number two is here.\n\n"
@@ -117,11 +123,33 @@ class SplitterParentMetadataTest {
     }
 
     @Test
-    void ignoringTheParentsMetadataIsOffByDefaultLikeEveryOtherBoolean() {
+    void everyFieldIsCopiedByDefault() {
         assertThat(new CsvSplitter().getConfiguration()
-                .isIgnoreParentMetadata()).isFalse();
-        assertThat(new TextChunkSplitterConfig().isIgnoreParentMetadata())
-                .isFalse();
+                .getParentMetadataMatcher().getPattern()).isEqualTo(".*");
+        assertThat(new TextChunkSplitterConfig().getParentMetadataMatcher()
+                .getPattern()).isEqualTo(".*");
+    }
+
+    @Test
+    void partsCanGetOnlyTheFieldsTheMatcherMatches() throws IOException {
+        var splitter = new CsvSplitter();
+        splitter.getConfiguration().getParentMetadataMatcher()
+                .copyFrom(TextMatcher.regex("depart.*"));
+        var meta = new Properties();
+        meta.set(FIELD, "Sales");
+        meta.set("secret", "x");
+        try (var in = text("a,b\nc,d\ne,f")) {
+            var ctx = TestUtil.newHandlerContext("doc", in, meta);
+            splitter.handle(ctx);
+            assertThat(ctx.childDocs()).hasSizeGreaterThan(1)
+                    .allSatisfy(part -> {
+                        assertThat(part.getMetadata().getString(FIELD))
+                                .isEqualTo("Sales");
+                        assertThat(part.getMetadata().containsKey("secret"))
+                                .isFalse();
+                    });
+        }
+
     }
 
     private static List<Doc> split(DocHandler splitter, Input input)
@@ -141,7 +169,7 @@ class SplitterParentMetadataTest {
 
     @FunctionalInterface
     interface Splitter {
-        DocHandler make(boolean ignoreParentMetadata);
+        DocHandler make(boolean copyNoParentField);
     }
 
     @FunctionalInterface

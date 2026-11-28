@@ -29,6 +29,7 @@ import com.norconex.importer.doc.DocMetaConstants;
 import com.norconex.importer.handler.DocHandlerContext;
 import com.norconex.importer.handler.DocHandlerException;
 import com.norconex.importer.handler.splitter.AbstractDocumentSplitter;
+import com.norconex.importer.handler.splitter.ParentMetadata;
 import com.norconex.importer.util.MatchUtil;
 
 import lombok.Data;
@@ -107,9 +108,8 @@ public class PdfPageSplitter
 
                 // metadata
                 var pageMeta = new Properties();
-                if (!configuration.isIgnoreParentMetadata()) {
-                    pageMeta.loadFromMap(docCtx.metadata());
-                }
+                ParentMetadata.copy(pageMeta, docCtx.metadata(),
+                        configuration.getParentMetadataMatcher());
 
                 var pageDoc = new Doc(pageRef);
 

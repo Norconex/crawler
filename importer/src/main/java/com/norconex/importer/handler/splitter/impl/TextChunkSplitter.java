@@ -28,6 +28,7 @@ import com.norconex.importer.doc.DocMetaConstants;
 import com.norconex.importer.handler.ConfigurableDocHandler;
 import com.norconex.importer.handler.DocHandlerContext;
 import com.norconex.importer.handler.DocHandlerException;
+import com.norconex.importer.handler.splitter.ParentMetadata;
 
 import lombok.Data;
 
@@ -212,9 +213,8 @@ public class TextChunkSplitter
                 + (index + 1);
 
         var chunkMeta = new Properties();
-        if (!configuration.isIgnoreParentMetadata()) {
-            chunkMeta.loadFromMap(docCtx.metadata());
-        }
+        ParentMetadata.copy(chunkMeta, docCtx.metadata(),
+                configuration.getParentMetadataMatcher());
         chunkMeta.set(
                 DocMetaConstants.EMBEDDED_REFERENCE,
                 Integer.toString(index + 1));

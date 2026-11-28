@@ -35,12 +35,14 @@ import org.xml.sax.helpers.DefaultHandler;
 import com.norconex.commons.lang.io.CachedOutputStream;
 import com.norconex.commons.lang.map.Properties;
 import com.norconex.commons.lang.xml.XmlUtil;
+import com.norconex.commons.lang.text.TextMatcher;
 import com.norconex.importer.doc.Doc;
 import com.norconex.importer.doc.DocMetaConstants;
 import com.norconex.importer.handler.CommonRestrictions;
 import com.norconex.importer.handler.DocHandlerContext;
 import com.norconex.importer.handler.DocHandlerException;
 import com.norconex.importer.handler.splitter.AbstractDocumentSplitter;
+import com.norconex.importer.handler.splitter.ParentMetadata;
 import com.norconex.importer.util.MatchUtil;
 
 import lombok.Data;
@@ -139,7 +141,7 @@ public class XmlStreamSplitter
                             StringUtils.split(
                                     configuration.getPath(), '/')),
                     docCtx.childDocs(),
-                    configuration.isIgnoreParentMetadata());
+                    configuration.getParentMetadataMatcher());
             XmlUtil.createSaxParserFactory().newSAXParser().parse(is, h);
         } catch (SAXException | IOException | ParserConfigurationException e) {
             throw new DocHandlerException(
@@ -152,7 +154,7 @@ public class XmlStreamSplitter
         private final List<String> splitPath;
         private final List<Doc> splitDocs;
         private final DocHandlerContext xmlDoc;
-        private final boolean ignoreParentMetadata;
+        private final TextMatcher parentMetadataMatcher;
         private final List<String> currentPath = new ArrayList<>();
         private PrintWriter w;
         private CachedOutputStream out;
@@ -161,11 +163,11 @@ public class XmlStreamSplitter
                 DocHandlerContext xmlDoc,
                 List<String> splitPath,
                 List<Doc> splitDocs,
-                boolean ignoreParentMetadata) {
+                TextMatcher parentMetadataMatcher) {
             this.xmlDoc = xmlDoc;
             this.splitDocs = splitDocs;
             this.splitPath = splitPath;
-            this.ignoreParentMetadata = ignoreParentMetadata;
+            this.parentMetadataMatcher = parentMetadataMatcher;
         }
 
         @Override
@@ -211,9 +213,8 @@ public class XmlStreamSplitter
                     if (currentPath.equals(splitPath)) {
                         w.flush();
                         var childMeta = new Properties();
-                        if (!ignoreParentMetadata) {
-                            childMeta.loadFromMap(xmlDoc.metadata());
-                        }
+                        ParentMetadata.copy(childMeta, xmlDoc.metadata(),
+                                parentMetadataMatcher);
                         var embedRef = Integer.toString(splitDocs.size());
                         @SuppressWarnings("resource")
                         var childDoc = new Doc(
