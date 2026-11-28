@@ -53,31 +53,34 @@ public class ConditionDeserializer
                 if (!"class".equals(name)) {
                     p.nextToken(); // Move to the START_ARRAY or other token
 
+                    var group = AnyOf.NAME.equals(name)
+                            || NoneOf.NAME.equals(name)
+                            || AllOf.NAME.equals(name);
+                    if (group && p.currentToken() == JsonToken.START_OBJECT) {
+                        // a group of one, which XML does not write as an array
+                        List<Condition> conditions = new ArrayList<>();
+                        var condition = deserializeWithType(
+                                p, ctxt, typeDeserializer);
+                        if (condition != null) {
+                            conditions.add(condition);
+                        }
+                        p.nextToken(); // move to object end
+                        return newGroup(name, conditions);
+                    }
                     if (p.currentToken() == JsonToken.START_ARRAY) {
                         // Deserialize the array of conditions
                         List<Condition> conditions = new ArrayList<>();
                         while (p.nextToken() != JsonToken.END_ARRAY) {
-                            var condition =
-                                    ctxt.readValue(p, Condition.class);
+                            // a condition of the group may be a group itself
+                            var condition = deserializeWithType(
+                                    p, ctxt, typeDeserializer);
                             if (condition != null) {
                                 conditions.add(condition);
                             }
                         }
                         p.nextToken(); // move to object end
 
-                        // Return a new `ConditionGroup`
-                        if (AnyOf.NAME.equals(name)) {
-                            return new AnyOf(conditions);
-                        }
-                        if (NoneOf.NAME.equals(name)) {
-                            return new NoneOf(conditions);
-                        }
-                        if (AllOf.NAME.equals(name)) {
-                            return new AllOf(conditions);
-                        }
-
-                        // should not reach here
-                        return null;
+                        return newGroup(name, conditions);
                     }
                 }
             }
@@ -85,5 +88,15 @@ public class ConditionDeserializer
 
         // Fallback: Direct deserialization (unwrapped)
         return ctxt.readValue(p, Condition.class);
+    }
+
+    private static Condition newGroup(String name, List<Condition> conditions) {
+        if (AnyOf.NAME.equals(name)) {
+            return new AnyOf(conditions);
+        }
+        if (NoneOf.NAME.equals(name)) {
+            return new NoneOf(conditions);
+        }
+        return new AllOf(conditions);
     }
 }

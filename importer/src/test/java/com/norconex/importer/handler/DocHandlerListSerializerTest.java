@@ -125,6 +125,30 @@ class DocHandlerListSerializerTest {
                     - handler: {class: Reject}
             """;
 
+    private static final String NESTED_GROUP = """
+            handlers:
+              - if:
+                  condition:
+                    allOf:
+                      - {class: BlankCondition, fieldMatcher: {pattern: a}}
+                      - anyOf:
+                          - {class: BlankCondition, fieldMatcher: {pattern: b}}
+                          - noneOf:
+                              - {class: BlankCondition, fieldMatcher: {pattern: c}}
+                              - {class: BlankCondition, fieldMatcher: {pattern: d}}
+                  then:
+                    - handler: {class: Reject}
+            """;
+    private static final String GROUP_OF_ONE = """
+            handlers:
+              - if:
+                  condition:
+                    noneOf:
+                      - {class: BlankCondition, fieldMatcher: {pattern: a}}
+                  then:
+                    - handler: {class: Reject}
+            """;
+
     static List<org.junit.jupiter.params.provider.Arguments> shapes() {
         return List.of(
                 org.junit.jupiter.params.provider.Arguments.of(
@@ -147,7 +171,11 @@ class DocHandlerListSerializerTest {
                         "condition group", CONDITION_GROUP, 1),
                 org.junit.jupiter.params.provider.Arguments.of(
                         "condition group after handler",
-                        GROUP_AFTER_HANDLER, 2));
+                        GROUP_AFTER_HANDLER, 2),
+                org.junit.jupiter.params.provider.Arguments.of(
+                        "groups inside groups", NESTED_GROUP, 1),
+                org.junit.jupiter.params.provider.Arguments.of(
+                        "group of one", GROUP_OF_ONE, 1));
     }
 
     @ParameterizedTest(name = "{0} [JSON]")
