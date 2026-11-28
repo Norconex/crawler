@@ -1,4 +1,4 @@
-/* Copyright 2023 Norconex Inc.
+/* Copyright 2023-2026 Norconex Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,4 +32,30 @@ public class BaseDocumentSplitterConfig extends BaseDocHandlerConfig {
      *     after effective split, <code>false</code> otherwise.
      */
     private boolean discardOriginal;
+
+    /**
+     * Whether the documents this splitter makes start without the metadata
+     * of the document they were split from. By default they get a copy of
+     * it, so a field of the whole document (an author, a department) stays
+     * on each of its parts, and a condition on such a field applies to them
+     * too. Either way, a split document gets the fields the splitter itself
+     * sets on it.
+     * @param ignoreParentMetadata <code>true</code> for split documents to
+     *     have only the fields the splitter sets on them
+     * @return <code>true</code> when split documents do not get the
+     *     metadata of the document they were split from
+     */
+    private boolean ignoreParentMetadata;
+
+    /**
+     * Whether this splitter also applies to the parts it made itself, at any
+     * depth, when they come back through the flow (every part goes through
+     * all the handlers again, from the first). By default it leaves its own
+     * parts as they are. Parts made by other splitters are not affected, and
+     * conditions still decide whether a part reaches this splitter.
+     * @param applyToOwnParts <code>true</code> for this splitter to split
+     *     the parts it made, too
+     * @return <code>true</code> when this splitter applies to its own parts
+     */
+    private boolean applyToOwnParts;
 }

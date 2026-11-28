@@ -19,6 +19,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import com.norconex.commons.lang.event.EventManager;
 import com.norconex.commons.lang.file.ContentType;
@@ -95,10 +96,42 @@ public class DocHandlerContext {
     @Default
     private DocHandlerCache cache = DocHandlerCache.NOOP;
 
+    /**
+     * Where each handler of the importer is (see {@link HandlerPositions}).
+     * Empty when a handler is used on its own, outside of an importer.
+     */
+    @NonNull
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @Default
+    private Map<DocHandler, String> handlerPositions = Map.of();
+
     private Object rejectedBy;
 
     public Properties metadata() {
         return doc.getMetadata();
+    }
+
+    /**
+     * The position of a handler of the importer (see
+     * {@link HandlerPositions}). A handler used outside of an importer has
+     * none, and gets one of its own that holds for as long as it exists.
+     * @param handler a handler
+     * @return its position
+     */
+    public String handlerPosition(DocHandler handler) {
+        var position = handlerPositions.get(handler);
+        return position != null ? position
+                : "@" + Integer.toHexString(System.identityHashCode(handler));
+    }
+
+    /**
+     * The positions of the splitters this document came out of, the first
+     * split first. Empty for a document that is not a part of another.
+     * @return the splitters' positions
+     */
+    public List<String> splitTrail() {
+        return doc.getSplitTrail();
     }
 
     public String reference() {

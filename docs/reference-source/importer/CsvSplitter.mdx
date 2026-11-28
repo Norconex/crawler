@@ -21,6 +21,10 @@ This functionality can be applied as either a `pre-parse` or `post-parse` handle
 
 ## Properties
 
+### applyToOwnParts
+
+Whether this splitter also applies to the parts it made itself, at any depth, when they come back through the flow. Every part goes through all the handlers again, from the first, so a part that still matches what this splitter splits would otherwise be split again. By default (`false`) this splitter leaves its own parts as they are. Parts made by other splitters are not affected, and conditions still decide whether a part reaches this splitter.
+
 ### contentColumns
 
 Lists the columns whose values will form the document content.
@@ -36,6 +40,13 @@ Sets the character used to escape special characters within field values.
 ### fieldMatcher
 
 Matches document fields based on specified patterns and methods
+
+### ignoreParentMetadata
+
+Whether the documents this splitter makes start without the metadata of the document they were split from. By default
+(`false`) they get a copy of it, so a field of the whole document (an author, a department) stays on each part, and a
+condition on such a field applies to the parts too. Either way, a part gets the fields the splitter itself sets on
+it (the row's columns, and its reference).
 
 ### label
 

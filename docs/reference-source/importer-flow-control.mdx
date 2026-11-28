@@ -39,6 +39,16 @@ A common pattern is:
 2. branch into `then` and `else` handler blocks
 3. continue normal importer processing
 
+## Split Documents Go Through the Flow Again
+
+A document a splitter or the parser makes out of another one (a row of a CSV file, a page of a PDF, a file in a zip, a
+chunk of text) is a document of its own, and goes through all the handlers again, from the first. The handlers work out
+for themselves what applies to it: a handler meant for HTML leaves anything else alone, so the same flow handles an HTML
+page whether it was crawled as it is or found in a zip.
+
+A handler that should only see whole documents, or only parts, needs a condition. A splitter is the one exception: it
+leaves the parts it made itself as they are, unless its `applyToOwnParts` is `true`.
+
 ## Configuration Shape
 
 `handlers` is a **list**, and every entry in it is an object with a single key:

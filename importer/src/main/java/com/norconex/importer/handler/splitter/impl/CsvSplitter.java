@@ -145,7 +145,9 @@ public class CsvSplitter extends AbstractDocumentSplitter<CsvSplitterConfig> {
             String childEmbedRef) {
         var contentStr = new StringBuilder();
         var childMeta = new Properties();
-        childMeta.loadFromMap(docCtx.metadata());
+        if (!configuration.isIgnoreParentMetadata()) {
+            childMeta.loadFromMap(docCtx.metadata());
+        }
 
         for (var i = 0; i < rowColumns.length; i++) {
             var colPos = i + 1;

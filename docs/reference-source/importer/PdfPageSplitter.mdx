@@ -43,6 +43,10 @@ Should be used as a pre-parse handler.
 
 ## Properties
 
+### applyToOwnParts
+
+Whether this splitter also applies to the parts it made itself, at any depth, when they come back through the flow. Every part goes through all the handlers again, from the first, so a part that still matches what this splitter splits would otherwise be split again. By default (`false`) this splitter leaves its own parts as they are. Parts made by other splitters are not affected, and conditions still decide whether a part reaches this splitter.
+
 ### contentTypeMatcher
 
 Restricts processing to documents whose content type matches the specified pattern. When not set, the handler applies to all content types.
@@ -50,6 +54,13 @@ Restricts processing to documents whose content type matches the specified patte
 ### discardOriginal
 
 Discard the original document after the split is performed.
+
+### ignoreParentMetadata
+
+Whether the documents this splitter makes start without the metadata of the document they were split from. By default
+(`false`) they get a copy of it, so a field of the whole document (an author, a department) stays on each part, and a
+condition on such a field applies to the parts too. Either way, a part gets the fields the splitter itself sets on
+it (its page number and the number of pages).
 
 ### label
 

@@ -63,6 +63,15 @@ public class Doc implements Closeable {
     @ToString.Exclude
     private List<String> parentReferences = new ArrayList<>();
 
+    /**
+     * If this document is a part a splitter made, the positions (see
+     * {@link com.norconex.importer.handler.HandlerPositions}) of the
+     * splitters it came out of, the first split first. Not metadata: it only
+     * serves while the document is being imported.
+     */
+    @ToString.Exclude
+    private List<String> splitTrail = new ArrayList<>();
+
     @ToString.Exclude
     private Properties metadata = new Properties();
 
@@ -96,6 +105,7 @@ public class Doc implements Closeable {
         contentType = doc.contentType;
         metadata = doc.metadata;
         parentReferences = doc.parentReferences;
+        splitTrail = doc.splitTrail;
         reference = doc.reference;
     }
 
@@ -105,6 +115,15 @@ public class Doc implements Closeable {
 
     public Doc setParentReferences(List<String> parentReferences) {
         CollectionUtil.setAll(this.parentReferences, parentReferences);
+        return this;
+    }
+
+    public List<String> getSplitTrail() {
+        return Collections.unmodifiableList(splitTrail);
+    }
+
+    public Doc setSplitTrail(List<String> splitTrail) {
+        CollectionUtil.setAll(this.splitTrail, splitTrail);
         return this;
     }
 

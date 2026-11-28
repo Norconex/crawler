@@ -22,6 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import org.apache.commons.lang3.StringUtils;
@@ -41,6 +42,7 @@ import com.norconex.importer.handler.DocHandler;
 import com.norconex.importer.handler.DocHandlerCache;
 import com.norconex.importer.handler.DocHandlerContext;
 import com.norconex.importer.handler.DocHandlerException;
+import com.norconex.importer.handler.HandlerPositions;
 import com.norconex.importer.response.ImporterResponse;
 import com.norconex.importer.response.ImporterResponse.Status;
 import com.norconex.importer.response.ImporterResponseProcessor;
@@ -91,6 +93,7 @@ public class Importer implements Closeable {
     @EqualsAndHashCode.Exclude
     @JsonIgnore
     private boolean initialized;
+    private Map<DocHandler, String> handlerPositions = Map.of();
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     @JsonIgnore
@@ -360,6 +363,7 @@ public class Importer implements Closeable {
                 .doc(doc)
                 .eventManager(eventManager)
                 .cache(cache)
+                .handlerPositions(handlerPositions)
                 .build();
         try {
             for (DocHandler handler : configuration.getHandlers()) {
@@ -403,6 +407,7 @@ public class Importer implements Closeable {
             return;
         }
         initialized = true;
+        handlerPositions = HandlerPositions.of(configuration.getHandlers());
         //TODO check if visitAll is the best for this
         BeanUtil.visitAll(
                 configuration.getHandlers(),

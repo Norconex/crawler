@@ -96,4 +96,18 @@ public class TextChunkSplitterConfig extends BaseDocHandlerConfig {
      *     effective split, <code>false</code> (the default) when discarding it
      */
     private boolean keepOriginal;
+
+    /**
+     * Whether the documents this splitter makes start without the metadata
+     * of the document they were split from. By default they get a copy of
+     * it, so a field of the whole document (an author, a department) stays
+     * on each of its parts, and a condition on such a field applies to them
+     * too. Either way, a split document gets the fields the splitter itself
+     * sets on it.
+     * @param ignoreParentMetadata <code>true</code> for split documents to
+     *     have only the fields the splitter sets on them
+     * @return <code>true</code> when split documents do not get the
+     *     metadata of the document they were split from
+     */
+    private boolean ignoreParentMetadata;
 }

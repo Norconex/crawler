@@ -51,6 +51,10 @@ authentication properties are ignored.
 
 API key for the translation service. Used by **google** and **yandex**.
 
+### applyToOwnParts
+
+Whether this splitter also applies to the parts it made itself, at any depth, when they come back through the flow. Every part goes through all the handlers again, from the first, so a part that still matches what this splitter splits (a translation, which is a document in another language) would otherwise be split again. By default (`false`) this splitter leaves its own parts as they are. Parts made by other splitters are not affected, and conditions still decide whether a part reaches this splitter.
+
 ### clientId
 
 Client ID for the **microsoft** API, obtained on Microsoft Azure Marketplace
@@ -73,6 +77,13 @@ Matches document fields based on specified patterns and methods. Use this to res
 Whether child documents should carry only the fields that were actually
 translated. Default is `false`, which copies every field of the parent onto each
 child. Set it to `true` to keep the children lean.
+
+### ignoreParentMetadata
+
+Whether the documents this splitter makes start without the metadata of the document they were split from. By default
+(`false`) they get a copy of it, so a field of the whole document (an author, a department) stays on each part, and a
+condition on such a field applies to the parts too. Either way, a part gets the fields the splitter itself sets on
+it (its language, the language it was translated from, and the translated fields). Setting it to `true` has the same effect as `ignoreNonTranslatedFields`.
 
 ### label
 
