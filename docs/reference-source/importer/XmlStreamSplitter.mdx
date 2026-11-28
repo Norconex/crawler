@@ -54,10 +54,6 @@ To restrict this splitter by anything other than content type — a URL pattern,
 
 Whether this splitter also applies to the parts it made itself, at any depth, when they come back through the flow. Every part goes through all the handlers again, from the first, so a part that still matches what this splitter splits would otherwise be split again. By default (`false`) this splitter leaves its own parts as they are. Parts made by other splitters are not affected, and conditions still decide whether a part reaches this splitter.
 
-### contentTypeMatcher
-
-The content type of the XML document.
-
 ### discardOriginal
 
 Discard the original document after the split is performed.
@@ -77,6 +73,14 @@ The fields of the document being split that the documents this splitter makes ge
 ### path
 
 The path to the element to split on.
+
+### unless
+
+A condition a document must not meet for this handler to run. See [Flow Control](../importer-flow-control#when-and-unless-on-a-handler).
+
+### when
+
+A condition a document must meet for this handler to run. By default it is a [ContentTypeCondition](./ContentTypeCondition) for HTML, XHTML and XML types (text/html, application/xhtml+xml, application/xml, image/svg+xml and the other types of the `CommonMatchers.DOM_CONTENT_TYPES` set), so this handler does nothing to documents of any other content type. Setting `when` replaces that default: to keep the content type check as well, repeat it in an [AllOf](./AllOf). See [Flow Control](../importer-flow-control#when-and-unless-on-a-handler).
 
 ## Examples
 

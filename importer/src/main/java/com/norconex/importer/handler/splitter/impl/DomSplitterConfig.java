@@ -1,4 +1,4 @@
-/* Copyright 2015-2024 Norconex Inc.
+/* Copyright 2015-2026 Norconex Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import java.nio.charset.Charset;
 import com.norconex.commons.lang.text.TextMatcher;
 import com.norconex.importer.handler.CommonMatchers;
 import com.norconex.importer.handler.CommonRestrictions;
+import com.norconex.importer.handler.condition.impl.ContentTypeCondition;
 import com.norconex.importer.handler.splitter.BaseDocumentSplitterConfig;
 import com.norconex.importer.util.DomUtil;
 
@@ -80,6 +81,15 @@ import lombok.experimental.Accessors;
 public class DomSplitterConfig extends BaseDocumentSplitterConfig {
 
     /**
+     * Creates a configuration that applies to the content types this handler is
+     * made for, until <code>when</code> is set.
+     */
+    public DomSplitterConfig() {
+        setWhen(new ContentTypeCondition(
+                CommonMatchers.domContentTypes()));
+    }
+
+    /**
      * The CSS-like selector (see class documentation) identifying which
      * elements to split.
      * @param selector the selector
@@ -115,26 +125,4 @@ public class DomSplitterConfig extends BaseDocumentSplitterConfig {
         return this;
     }
 
-    /**
-     * The matcher of content types to apply splitting on. No attempt to
-     * split documents of any other content types will be made. Default is
-     * {@link CommonMatchers#DOM_CONTENT_TYPES}.
-     * @param contentTypeMatcher content type matcher
-     * @return content type matcher
-     */
-    private final TextMatcher contentTypeMatcher =
-            CommonMatchers.domContentTypes();
-
-    /**
-     * The matcher of content types to apply splitting on. No attempt to
-     * split documents of any other content types will be made. Default is
-     * {@link CommonMatchers#DOM_CONTENT_TYPES}.
-     * @param contentTypeMatcher content type matcher
-     * @return this
-     */
-    public DomSplitterConfig
-            setContentTypeMatcher(TextMatcher contentTypeMatcher) {
-        this.contentTypeMatcher.copyFrom(contentTypeMatcher);
-        return this;
-    }
 }

@@ -1,4 +1,4 @@
-/* Copyright 2019-2024 Norconex Inc.
+/* Copyright 2019-2026 Norconex Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 package com.norconex.importer.handler.transformer.impl;
 
 import com.norconex.importer.handler.BaseDocHandlerConfig;
+import com.norconex.importer.handler.condition.impl.ContentTypeCondition;
 
 import com.norconex.commons.lang.convert.DimensionConverter;
 import com.norconex.commons.lang.text.TextMatcher;
@@ -66,6 +67,15 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class ImageTransformerConfig extends BaseDocHandlerConfig {
 
+    /**
+     * Creates a configuration that applies to the content types this handler is
+     * made for, until <code>when</code> is set.
+     */
+    public ImageTransformerConfig() {
+        setWhen(new ContentTypeCondition(
+                CommonMatchers.imageIOStandardContentTypes()));
+    }
+
     public static final String DEFAULT_TARGET_FORMAT = "png";
 
     //TODO Maybe: default == null == keep same as source,
@@ -74,29 +84,6 @@ public class ImageTransformerConfig extends BaseDocHandlerConfig {
     private Double rotation;
     private final Scale scale = new Scale();
     private final Crop crop = new Crop();
-
-    /**
-     * The matcher of content types to apply transformation on. No attempt to
-     * transform documents of any other content types will be made. Default is
-     * {@link CommonMatchers#IMAGE_IO_CONTENT_TYPES}.
-     * @param contentTypeMatcher content type matcher
-     * @return content type matcher
-     */
-    private final TextMatcher contentTypeMatcher =
-            CommonMatchers.imageIOStandardContentTypes();
-
-    /**
-     * The matcher of content types to apply transformation on. No attempt to
-     * transform documents of any other content types will be made. Default is
-     * {@link CommonMatchers#IMAGE_IO_CONTENT_TYPES}.
-     * @param contentTypeMatcher content type matcher
-     * @return this
-     */
-    public ImageTransformerConfig
-            setContentTypeMatcher(TextMatcher contentTypeMatcher) {
-        this.contentTypeMatcher.copyFrom(contentTypeMatcher);
-        return this;
-    }
 
     @Data
     public static class Scale {

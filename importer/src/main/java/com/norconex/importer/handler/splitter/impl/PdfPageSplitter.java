@@ -30,7 +30,6 @@ import com.norconex.importer.handler.DocHandlerContext;
 import com.norconex.importer.handler.DocHandlerException;
 import com.norconex.importer.handler.splitter.AbstractDocumentSplitter;
 import com.norconex.importer.handler.splitter.ParentMetadata;
-import com.norconex.importer.util.MatchUtil;
 
 import lombok.Data;
 
@@ -75,11 +74,7 @@ public class PdfPageSplitter
     public void split(DocHandlerContext docCtx) throws DocHandlerException {
 
         // Make sure we are not splitting a page that was already split
-        if (!MatchUtil.matchesContentType(
-                configuration.getContentTypeMatcher(),
-                docCtx.contentType())
-                || (docCtx.metadata().getInteger(
-                        DOC_PDF_PAGE_NO, 0) > 0)) {
+        if (docCtx.metadata().getInteger(DOC_PDF_PAGE_NO, 0) > 0) {
             return;
         }
 

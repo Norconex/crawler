@@ -28,6 +28,7 @@ import com.norconex.commons.lang.bean.BeanMapper;
 import com.norconex.commons.lang.map.Properties;
 import com.norconex.commons.lang.text.TextMatcher;
 import com.norconex.importer.TestUtil;
+import com.norconex.importer.handler.condition.impl.ContentTypeCondition;
 import com.norconex.importer.doc.Doc;
 
 @Timeout(30)
@@ -95,8 +96,8 @@ class DomSplitterTest {
     void testWriteRead() {
         var splitter = new DomSplitter();
         splitter.getConfiguration().setSelector("blah");
-        splitter.getConfiguration().setContentTypeMatcher(
-                TextMatcher.basic("value").partial().ignoreCase());
+        splitter.getConfiguration().setWhen(new ContentTypeCondition(
+                TextMatcher.basic("value").partial().ignoreCase()));
         BeanMapper.DEFAULT.assertWriteRead(splitter);
     }
 }

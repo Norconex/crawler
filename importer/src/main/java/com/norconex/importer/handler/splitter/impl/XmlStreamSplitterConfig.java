@@ -1,4 +1,4 @@
-/* Copyright 2020-2024 Norconex Inc.
+/* Copyright 2020-2026 Norconex Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package com.norconex.importer.handler.splitter.impl;
 import com.norconex.commons.lang.text.TextMatcher;
 import com.norconex.importer.handler.CommonMatchers;
 import com.norconex.importer.handler.CommonRestrictions;
+import com.norconex.importer.handler.condition.impl.ContentTypeCondition;
 import com.norconex.importer.handler.splitter.BaseDocumentSplitterConfig;
 
 import lombok.Data;
@@ -82,17 +83,16 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class XmlStreamSplitterConfig extends BaseDocumentSplitterConfig {
 
-    private String path;
-
     /**
-     * The matcher of content types to apply splitting on. No attempt to
-     * split documents of any other content types will be made. Default is
-     * {@link CommonMatchers#DOM_CONTENT_TYPES}.
-     * @param contentTypeMatcher content type matcher
-     * @return content type matcher
+     * Creates a configuration that applies to the content types this handler is
+     * made for, until <code>when</code> is set.
      */
-    private final TextMatcher contentTypeMatcher =
-            CommonMatchers.domContentTypes();
+    public XmlStreamSplitterConfig() {
+        setWhen(new ContentTypeCondition(
+                CommonMatchers.domContentTypes()));
+    }
+
+    private String path;
 
     /**
      * Matcher of one or more fields to use as the source of content to split
@@ -101,19 +101,6 @@ public class XmlStreamSplitterConfig extends BaseDocumentSplitterConfig {
      * @return field matcher
      */
     private final TextMatcher fieldMatcher = new TextMatcher();
-
-    /**
-     * The matcher of content types to apply splitting on. No attempt to
-     * split documents of any other content types will be made. Default is
-     * {@link CommonMatchers#DOM_CONTENT_TYPES}.
-     * @param contentTypeMatcher content type matcher
-     * @return this
-     */
-    public XmlStreamSplitterConfig setContentTypeMatcher(
-            TextMatcher contentTypeMatcher) {
-        this.contentTypeMatcher.copyFrom(contentTypeMatcher);
-        return this;
-    }
 
     public XmlStreamSplitterConfig setFieldMatcher(TextMatcher fieldMatcher) {
         this.fieldMatcher.copyFrom(fieldMatcher);

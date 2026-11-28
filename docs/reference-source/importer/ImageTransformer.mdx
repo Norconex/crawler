@@ -28,12 +28,6 @@ supports are processed; see `contentTypeMatcher`.
 
 ## Properties
 
-### contentTypeMatcher
-
-The content types this handler applies to. Documents of any other type pass
-through untouched. Defaults to the standard ImageIO-readable types (JPEG, PNG,
-GIF, BMP, WBMP), so widen it only for a format you know ImageIO can read.
-
 ### crop
 
 Region of the image to keep, given as a top-left corner plus a size. Applied
@@ -58,6 +52,14 @@ distorted to reach it. Applied first. See [Scale](./Scale).
 Format the transformed image is written in — `png` (the default), `jpg`, `gif`,
 `bmp`, `wbmp`, or any other format ImageIO can write. Set it to convert images
 as well as resize them.
+
+### unless
+
+A condition a document must not meet for this handler to run. See [Flow Control](../importer-flow-control#when-and-unless-on-a-handler).
+
+### when
+
+A condition a document must meet for this handler to run. By default it is a [ContentTypeCondition](./ContentTypeCondition) for the images ImageIO reads (JPEG, PNG, GIF, BMP, WBMP), so this handler does nothing to documents of any other content type. Setting `when` replaces that default: to keep the content type check as well, repeat it in an [AllOf](./AllOf). See [Flow Control](../importer-flow-control#when-and-unless-on-a-handler).
 
 ## Examples
 

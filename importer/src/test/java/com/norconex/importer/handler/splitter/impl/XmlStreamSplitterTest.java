@@ -30,8 +30,10 @@ import org.junit.jupiter.api.Timeout;
 import com.norconex.commons.lang.bean.BeanMapper;
 import com.norconex.commons.lang.map.Properties;
 import com.norconex.commons.lang.text.TextMatcher;
+import com.norconex.commons.lang.file.ContentType;
 import com.norconex.importer.TestUtil;
 import com.norconex.importer.doc.Doc;
+import com.norconex.importer.handler.condition.impl.ContentTypeCondition;
 
 @Timeout(30)
 class XmlStreamSplitterTest {
@@ -56,9 +58,7 @@ class XmlStreamSplitterTest {
     void testStreamSplit() throws IOException {
 
         var splitter = new XmlStreamSplitter();
-        splitter.getConfiguration()
-                .setPath("/animals/species/animal")
-                .setContentTypeMatcher(TextMatcher.regex(".*"));
+        splitter.getConfiguration().setPath("/animals/species/animal");
         var docs = split(sampleXML, splitter);
 
         Assertions.assertEquals(2, docs.size());
@@ -69,9 +69,7 @@ class XmlStreamSplitterTest {
     @Test
     void testErrorsAndEmpty() throws IOException {
         var splitter = new XmlStreamSplitter();
-        splitter.getConfiguration()
-                .setPath("/a/b/c")
-                .setContentTypeMatcher(TextMatcher.regex(".*"));
+        splitter.getConfiguration().setPath("/a/b/c");
 
         // test failing stream
         assertThatExceptionOfType(IOException.class)
@@ -79,14 +77,28 @@ class XmlStreamSplitterTest {
                         //NOSONAR
                         () -> splitter.handle(TestUtil.newHandlerContext()));
 
-        // Test non applicable
-        splitter.getConfiguration().setContentTypeMatcher(
-                TextMatcher.basic("IdontExists"));
-        var docCtx = TestUtil.newHandlerContext(
-                "N/A",
-                TestUtil.toCachedInputStream(sampleXML));
-        splitter.handle(docCtx);
+        // Test non applicable: not for this content type, so not run
+        splitter.getConfiguration().setWhen(new ContentTypeCondition(
+                TextMatcher.basic("IdontExists")));
+        var docCtx = TestUtil.newHandlerContext("N/A",
+                TestUtil.toCachedInputStream(sampleXML),
+                ContentType.valueOf("application/xml"));
+        assertThat(docCtx.executeDocHandler(splitter)).isTrue();
         assertThat(docCtx.childDocs()).isEmpty();
+
+        // And the default is for XML, HTML and the like
+        var byDefault = new XmlStreamSplitter();
+        byDefault.getConfiguration().setPath("/animals/species/animal");
+        var xmlCtx = TestUtil.newHandlerContext("N/A",
+                TestUtil.toCachedInputStream(sampleXML),
+                ContentType.valueOf("application/xml"));
+        assertThat(xmlCtx.executeDocHandler(byDefault)).isTrue();
+        assertThat(xmlCtx.childDocs()).hasSize(2);
+        var textCtx = TestUtil.newHandlerContext("N/A",
+                TestUtil.toCachedInputStream(sampleXML),
+                ContentType.valueOf("image/png"));
+        assertThat(textCtx.executeDocHandler(byDefault)).isTrue();
+        assertThat(textCtx.childDocs()).isEmpty();
     }
 
     private List<Doc> split(String text, XmlStreamSplitter splitter)
@@ -104,8 +116,8 @@ class XmlStreamSplitterTest {
         var splitter = new XmlStreamSplitter();
         splitter.getConfiguration()
                 .setPath("blah")
-                .setContentTypeMatcher(
-                        TextMatcher.basic("value").partial().ignoreCase());
+                .setWhen(new ContentTypeCondition(
+                        TextMatcher.basic("value").partial().ignoreCase()));
         assertThatNoException()
                 .isThrownBy(() -> BeanMapper.DEFAULT.assertWriteRead(splitter));
     }

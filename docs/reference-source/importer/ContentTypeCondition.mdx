@@ -1,0 +1,29 @@
+---
+component: ContentTypeCondition
+module: importer
+locale: en
+propertyCoverage: all
+---
+
+# ContentTypeCondition
+
+## Summary
+
+Evaluates to true when a document's content type matches a configured text expression.
+
+## Notes
+
+Evaluates to true when a document's content type (without its character set, for example `text/html`) matches a
+configured text expression. A document with no known content type meets it. Several handlers use it as the default of
+their [`when`](../importer-flow-control#when-and-unless-on-a-handler) property, so they apply to the content types they
+are made for: replace `when` to change that.
+
+## Properties
+
+### label
+
+An optional, user-supplied label for this step in the importer pipeline. It has no effect on processing — it exists purely to help identify this step, for example in large configurations or in the visual configurator.
+
+### valueMatcher
+
+Matches the document content type based on specified patterns and methods.

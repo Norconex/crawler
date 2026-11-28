@@ -27,7 +27,6 @@ import com.norconex.commons.lang.img.MutableImage;
 import com.norconex.importer.ImporterConfig;
 import com.norconex.importer.handler.CommonRestrictions;
 import com.norconex.importer.handler.DocHandlerContext;
-import com.norconex.importer.util.MatchUtil;
 
 import lombok.Data;
 
@@ -77,12 +76,6 @@ public class ImageTransformer
 
     @Override
     public boolean handle(DocHandlerContext docCtx) throws IOException {
-
-        // only proceed if we are dealing with a supported content type
-        if (!MatchUtil.matchesContentType(
-                configuration.getContentTypeMatcher(), docCtx.contentType())) {
-            return true;
-        }
 
         try (var input = docCtx.input().asInputStream();
                 var output = docCtx.output().asOutputStream();) {
