@@ -38,6 +38,7 @@ import com.norconex.importer.doc.DocMetaConstants;
 import com.norconex.importer.handler.DocHandlerContext;
 import com.norconex.importer.handler.DocHandlerException;
 import com.norconex.importer.handler.splitter.AbstractDocumentSplitter;
+import com.norconex.importer.handler.splitter.ParentMetadata;
 import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReaderBuilder;
 
@@ -145,9 +146,8 @@ public class CsvSplitter extends AbstractDocumentSplitter<CsvSplitterConfig> {
             String childEmbedRef) {
         var contentStr = new StringBuilder();
         var childMeta = new Properties();
-        if (!configuration.isIgnoreParentMetadata()) {
-            childMeta.loadFromMap(docCtx.metadata());
-        }
+        ParentMetadata.copy(childMeta, docCtx.metadata(),
+                configuration.getParentMetadataMatcher());
 
         for (var i = 0; i < rowColumns.length; i++) {
             var colPos = i + 1;

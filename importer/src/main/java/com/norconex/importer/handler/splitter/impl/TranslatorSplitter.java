@@ -44,6 +44,7 @@ import com.norconex.importer.doc.DocMetaConstants;
 import com.norconex.importer.handler.DocHandlerContext;
 import com.norconex.importer.handler.DocHandlerException;
 import com.norconex.importer.handler.splitter.AbstractDocumentSplitter;
+import com.norconex.importer.handler.splitter.ParentMetadata;
 
 import lombok.AccessLevel;
 import lombok.Data;
@@ -362,9 +363,9 @@ public class TranslatorSplitter
 
         var childMeta = new Properties();
 
-        if (!configuration.isIgnoreNonTranslatedFields()
-                && !configuration.isIgnoreParentMetadata()) {
-            childMeta.loadFromMap(docCtx.metadata());
+        if (!configuration.isIgnoreNonTranslatedFields()) {
+            ParentMetadata.copy(childMeta, docCtx.metadata(),
+                    configuration.getParentMetadataMatcher());
         }
 
         var fieldMatcher = configuration.getFieldMatcher();

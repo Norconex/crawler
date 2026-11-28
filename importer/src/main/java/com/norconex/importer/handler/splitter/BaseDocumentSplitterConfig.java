@@ -14,6 +14,7 @@
  */
 package com.norconex.importer.handler.splitter;
 
+import com.norconex.commons.lang.text.TextMatcher;
 import com.norconex.importer.handler.BaseDocHandlerConfig;
 
 import lombok.Data;
@@ -34,18 +35,17 @@ public class BaseDocumentSplitterConfig extends BaseDocHandlerConfig {
     private boolean discardOriginal;
 
     /**
-     * Whether the documents this splitter makes start without the metadata
-     * of the document they were split from. By default they get a copy of
-     * it, so a field of the whole document (an author, a department) stays
-     * on each of its parts, and a condition on such a field applies to them
-     * too. Either way, a split document gets the fields the splitter itself
-     * sets on it.
-     * @param ignoreParentMetadata <code>true</code> for split documents to
-     *     have only the fields the splitter sets on them
-     * @return <code>true</code> when split documents do not get the
-     *     metadata of the document they were split from
+     * The fields of the document being split that the documents this
+     * splitter makes get a copy of, matched on the field name. By default
+     * (<code>.*</code>) they get all of them, so a field of the whole
+     * document (an author, a department) stays on each of its parts, and a
+     * condition on such a field applies to them too. Narrow it to copy only
+     * some, or leave the pattern blank to copy none. Either way, a split
+     * document gets the fields the splitter itself sets on it.
+     * @param parentMetadataMatcher matches the names of the fields to copy
+     * @return matches the names of the fields to copy
      */
-    private boolean ignoreParentMetadata;
+    private final TextMatcher parentMetadataMatcher = TextMatcher.regex(".*");
 
     /**
      * Whether this splitter also applies to the parts it made itself, at any

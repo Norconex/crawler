@@ -58,13 +58,6 @@ the next one. They count toward `maxChunkSize`, and must not be more than half
 of it. Default is 100, so a `maxChunkSize` under 200 needs a smaller overlap
 set as well. Set to 0 to disable.
 
-### ignoreParentMetadata
-
-Whether the documents this splitter makes start without the metadata of the document they were split from. By default
-(`false`) they get a copy of it, so a field of the whole document (an author, a department) stays on each part, and a
-condition on such a field applies to the parts too. Either way, a part gets the fields the splitter itself sets on
-it (`document.chunk.index`, `document.chunk.count`).
-
 ### keepOriginal
 
 Keep the original document, next to its chunks, after it was split. Only
@@ -82,6 +75,10 @@ An optional, user-supplied label for this step in the importer pipeline. It has 
 The maximum number of characters a chunk should have, the overlap with the
 previous chunk included. A chunk may be shorter when a clean break
 (paragraph, sentence, or word) is found before this limit. Must be at least 1; anything lower is rejected. Default is 1000.
+
+### parentMetadataMatcher
+
+The fields of the document being split that the documents this splitter makes get a copy of, matched on the field name. By default (`.*`) they get all of them, so a field of the whole document (an author, a department) stays on each part, and a condition on such a field applies to the parts too. Narrow it to copy only some (for example `title|author`), or leave the pattern blank to copy none. Either way, a part gets the fields the splitter itself sets on it (`document.chunk.index`, `document.chunk.count`).
 
 ### referenceChunkPrefix
 
