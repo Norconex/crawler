@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import com.norconex.commons.lang.config.Configurable;
 import com.norconex.commons.lang.event.EventManager;
 import com.norconex.commons.lang.file.ContentType;
 import com.norconex.commons.lang.io.CachedOutputStream;
@@ -232,6 +233,9 @@ public class DocHandlerContext {
      */
     public boolean executeDocHandler(DocHandler docHandler)
             throws IOException {
+        if (!appliesTo(docHandler)) {
+            return true;
+        }
         var keepGoing = true;
         fireEvent(this, ImporterEvent.IMPORTER_HANDLER_BEGIN);
         try {
@@ -248,6 +252,22 @@ public class DocHandlerContext {
         }
         fireEvent(this, ImporterEvent.IMPORTER_HANDLER_END);
         return keepGoing;
+    }
+
+    /**
+     * Whether a handler runs for this document, given the <code>when</code>
+     * and <code>unless</code> conditions of its configuration, if it has any.
+     */
+    private boolean appliesTo(DocHandler docHandler) throws IOException {
+        if (!(docHandler instanceof Configurable<?> configurable)
+                || !(configurable
+                        .getConfiguration() instanceof BaseDocHandlerConfig cfg)) {
+            return true;
+        }
+        if (cfg.getWhen() != null && !cfg.getWhen().test(this)) {
+            return false;
+        }
+        return cfg.getUnless() == null || !cfg.getUnless().test(this);
     }
 
     private void fireEvent(DocHandlerContext ctx, String eventName) {
