@@ -39,7 +39,11 @@ public class ConditionSerializer extends ValueSerializer<Condition> {
 
             gen.writeStartArray();
             for (Condition condition : group.conditions) {
-                if (condition != null) {
+                if (condition instanceof ConditionGroup
+                        && !((ConditionGroup) condition).conditions.isEmpty()) {
+                    // a group inside a group is written the same way
+                    serializeWithType(condition, gen, serializers, typeSer);
+                } else if (condition != null) {
                     gen.writePOJO(condition);
                 }
             }

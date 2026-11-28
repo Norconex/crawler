@@ -64,7 +64,44 @@ as needed. In XML the entries become elements of the same names —
 `<handler>`, `<if>`, `<ifNot>` — inside `<handlers>`.
 
 A `condition` is either a single condition identified by its `class`, or one of
-the `allOf` / `anyOf` / `noneOf` groupings, each holding a list of conditions.
+the `allOf` / `anyOf` / `noneOf` groupings, each holding a list of conditions,
+which can be groupings in turn.
+
+## When and Unless on a Handler
+
+For one handler that should only apply to some documents, `if` is more than is
+needed. Any handler can say, on itself, the conditions it applies under:
+
+| Property | The handler runs…                                |
+| -------- | ------------------------------------------------ |
+| `when`   | only for documents that meet this condition      |
+| `unless` | only for documents that do not meet this condition |
+
+Each takes a condition the same way `if` does: a single condition identified by
+its `class`, or an `allOf` / `anyOf` / `noneOf` grouping. With both, a document
+must meet `when` and not meet `unless`. A handler it does not apply to is
+skipped as if it was not there, and the document goes on to the next handler
+untouched.
+
+```yaml
+handlers:
+  - handler:
+      class: DomTransformer
+      when:
+        class: ReferenceCondition
+        valueMatcher: { method: REGEX, pattern: '.*/docs/.*' }
+      # ...
+  - handler:
+      class: Reject
+      message: Not a document to keep
+      unless:
+        class: TextCondition
+        fieldMatcher: { pattern: document.contentType }
+        valueMatcher: { pattern: 'application/pdf' }
+```
+
+Use `if` or `ifNot` instead for several handlers under the same condition, or
+to do something else when the condition does not hold.
 
 ## Example
 
