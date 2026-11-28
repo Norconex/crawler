@@ -44,45 +44,6 @@ This functionality can be applied as either a `pre-parse` or `post-parse` handle
 
 Whether this splitter also applies to the parts it made itself, at any depth, when they come back through the flow. Every part goes through all the handlers again, from the first, so a part that still matches what this splitter splits (a `div` inside a `div`, with `div` as the selector) would otherwise be split again. By default (`false`) this splitter leaves its own parts as they are. Parts made by other splitters are not affected, and conditions still decide whether a part reaches this splitter.
 
-### contentTypeMatcher
-
-By default, this filter applies only to documents with content types specified by the [CommonRestrictions.domContentTypes(String)](https://opensource.norconex.com/importer/v3/apidocs/com/norconex/importer/handler/CommonRestrictions.html#domContentTypes(java.lang.String)) method. You can also define your own content types if they represent files containing HTML or XML-like markup tags.
-
-#### Common content-types:
-- application/atom+xml
-- application/mathml+xml
-- application/rss+xml
-- application/vnd.wap.xhtml+xml
-- application/x-asp
-- application/xhtml+xml
-- application/xml
-- application/xslt+xml
-- image/svg+xml
-- text/html
-- text/xml
-
-### Options:
-
-- `ignoreCase` with pattern "Paul" will match both "Paul" and "paul". 
-- `ignoreDiacritic` with the pattern "cafe" will match both "café" and "cafe".  
-
-- `matchEmpty` specifies that `null` or `empty` strings are treated as positive matches.
-
-- `method` defines the matching strategy (`BASIC`, `WILDCARD`, `CSV` or `REGEX`) with correlated `pattern`. Match/replace methods are case-sensitive by default. 
-
-- `negateMatches` excludes target that match the pattern and includes all others.
-
-- `partial` with the pattern "Paul" will match "Paul" in the sentence "I am Paul."
-
-- `pattern` specifies the text or pattern used for matching fields, with its behavior determined by the selected `method`. If no pattern is provided (i.e. the pattern is null), the matcher is treated as matching all input text by default, but it will not perform any replacements 
-      
-- `replaceAll` replacing all instances of the `pattern` in the field, not just the first match; for example, replacing "foo" bu "bar" in "foo and foo" results in "bar and bar".
-
-- `trim` leading and trailing spaces are removed from the field before matching; for example, "Paul" will match successfully even if the field contains " Paul ".
-
-#### Empty and null values
-Null or empty strings are not matched by default. To have those considered as positive matches, set matchEmpty to true. To have blank values (containing white spaces only) considered as positive matches, also set trim to true. When matching empties, doing replacement on a null value behaves as if the value is an empty string.
-
 ### discardOriginal
 
 Discard the original document after the split is performed.
@@ -110,6 +71,14 @@ XPath expression for splitting nodes.
 ### sourceCharset
 
 Sets the character encoding of the source document to ensure proper reading and processing.
+
+### unless
+
+A condition a document must not meet for this handler to run. See [Flow Control](../importer-flow-control#when-and-unless-on-a-handler).
+
+### when
+
+A condition a document must meet for this handler to run. By default it is a [ContentTypeCondition](./ContentTypeCondition) for HTML, XHTML and XML types (text/html, application/xhtml+xml, application/xml, image/svg+xml and the other types of the `CommonMatchers.DOM_CONTENT_TYPES` set), so this handler does nothing to documents of any other content type. Setting `when` replaces that default: to keep the content type check as well, repeat it in an [AllOf](./AllOf). See [Flow Control](../importer-flow-control#when-and-unless-on-a-handler).
 
 ## Examples
 

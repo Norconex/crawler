@@ -180,12 +180,6 @@ public class DomTransformer
     @Override
     public boolean handle(DocHandlerContext docCtx) throws IOException {
 
-        // only proceed if we are dealing with a supported content type
-        if (!configuration.getContentTypeMatcher().matches(
-                docCtx.contentType().toString())) {
-            return true;
-        }
-
         ChunkedTextReader.builder()
                 .charset(configuration.getSourceCharset())
                 .fieldMatcher(configuration.getFieldMatcher())

@@ -73,8 +73,7 @@ class SplitterParentMetadataTest {
                         "<html><body><p>one</p><p>two</p></body></html>")),
                 Arguments.of("xml", (Splitter) on -> {
                     var s = new XmlStreamSplitter();
-                    ignore.apply(on, s.getConfiguration().setPath("/a/b")
-                            .setContentTypeMatcher(TextMatcher.regex(".*")));
+                    ignore.apply(on, s.getConfiguration().setPath("/a/b"));
                     return s;
                 }, (Input) () -> text("<a><b>one</b><b>two</b></a>")),
                 Arguments.of("pdf", (Splitter) on -> {

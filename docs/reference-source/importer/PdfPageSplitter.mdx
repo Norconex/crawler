@@ -47,10 +47,6 @@ Should be used as a pre-parse handler.
 
 Whether this splitter also applies to the parts it made itself, at any depth, when they come back through the flow. Every part goes through all the handlers again, from the first, so a part that still matches what this splitter splits would otherwise be split again. By default (`false`) this splitter leaves its own parts as they are. Parts made by other splitters are not affected, and conditions still decide whether a part reaches this splitter.
 
-### contentTypeMatcher
-
-Restricts processing to documents whose content type matches the specified pattern. When not set, the handler applies to all content types.
-
 ### discardOriginal
 
 Discard the original document after the split is performed.
@@ -70,6 +66,14 @@ Defines the prefix added before the page number in a document reference. Default
 - https://norconex.com/tests/pdf/dummy.pdf#1
 - https://norconex.com/tests/pdf/dummy.pdf#2
 - https://norconex.com/tests/pdf/dummy.pdf#3
+
+### unless
+
+A condition a document must not meet for this handler to run. See [Flow Control](../importer-flow-control#when-and-unless-on-a-handler).
+
+### when
+
+A condition a document must meet for this handler to run. By default it is a [ContentTypeCondition](./ContentTypeCondition) for PDF (`application/pdf`), so this handler does nothing to documents of any other content type. Setting `when` replaces that default: to keep the content type check as well, repeat it in an [AllOf](./AllOf). See [Flow Control](../importer-flow-control#when-and-unless-on-a-handler).
 
 ## Examples
 

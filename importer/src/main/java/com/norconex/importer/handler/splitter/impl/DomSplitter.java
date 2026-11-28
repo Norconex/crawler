@@ -31,7 +31,6 @@ import com.norconex.importer.handler.DocHandlerException;
 import com.norconex.importer.handler.splitter.AbstractDocumentSplitter;
 import com.norconex.importer.handler.splitter.ParentMetadata;
 import com.norconex.importer.util.DomUtil;
-import com.norconex.importer.util.MatchUtil;
 
 import lombok.Data;
 
@@ -94,11 +93,6 @@ public class DomSplitter extends AbstractDocumentSplitter<DomSplitterConfig> {
 
     @Override
     public void split(DocHandlerContext docCtx) throws DocHandlerException {
-
-        if (!MatchUtil.matchesContentType(
-                configuration.getContentTypeMatcher(), docCtx.contentType())) {
-            return;
-        }
 
         // Fields
         if (configuration.getFieldMatcher().isSet()) {

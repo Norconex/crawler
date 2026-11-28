@@ -43,7 +43,6 @@ import com.norconex.importer.handler.DocHandlerContext;
 import com.norconex.importer.handler.DocHandlerException;
 import com.norconex.importer.handler.splitter.AbstractDocumentSplitter;
 import com.norconex.importer.handler.splitter.ParentMetadata;
-import com.norconex.importer.util.MatchUtil;
 
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -113,11 +112,6 @@ public class XmlStreamSplitter
 
     @Override
     public void split(DocHandlerContext docCtx) throws IOException {
-
-        if (!MatchUtil.matchesContentType(
-                configuration.getContentTypeMatcher(), docCtx.contentType())) {
-            return;
-        }
 
         if (configuration.getFieldMatcher().isSet()) {
             // Fields

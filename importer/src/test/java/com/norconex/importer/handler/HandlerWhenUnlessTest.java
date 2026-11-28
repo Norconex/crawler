@@ -328,6 +328,8 @@ class HandlerWhenUnlessTest {
      * Every handler that has a configuration honours it, so none can be left
      * out by a handler that does not go through the importer's loop.
      */
+    // scanning the classpath for every handler takes a while
+    @Timeout(120)
     @Test
     void everyConfigurableHandlerHonoursWhen() throws Exception {
         var handlerTypes = ClassFinder.findSubTypes(DocHandler.class).stream()

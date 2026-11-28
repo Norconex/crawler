@@ -15,6 +15,7 @@
 package com.norconex.importer.handler.splitter.impl;
 
 import com.norconex.commons.lang.text.TextMatcher;
+import com.norconex.importer.handler.condition.impl.ContentTypeCondition;
 import com.norconex.importer.handler.splitter.BaseDocumentSplitterConfig;
 
 import lombok.Data;
@@ -49,29 +50,15 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class PdfPageSplitterConfig extends BaseDocumentSplitterConfig {
 
+    /**
+     * Creates a configuration that applies to the content types this handler is
+     * made for, until <code>when</code> is set.
+     */
+    public PdfPageSplitterConfig() {
+        setWhen(new ContentTypeCondition(
+                TextMatcher.basic("application/pdf")));
+    }
+
     private String referencePagePrefix =
             PdfPageSplitter.DEFAULT_REFERENCE_PAGE_PREFIX;
-
-    /**
-     * The matcher of content types to apply splitting on. No attempt to
-     * split documents of any other content types will be made. Default is
-     * <code>application/pdf</code>.
-     * @param contentTypeMatcher content type matcher
-     * @return content type matcher
-     */
-    private final TextMatcher contentTypeMatcher =
-            TextMatcher.basic("application/pdf");
-
-    /**
-     * The matcher of content types to apply splitting on. No attempt to
-     * split documents of any other content types will be made. Default is
-     * <code>application/pdf</code>.
-     * @param contentTypeMatcher content type matcher
-     * @return this
-     */
-    public PdfPageSplitterConfig
-            setContentTypeMatcher(TextMatcher contentTypeMatcher) {
-        this.contentTypeMatcher.copyFrom(contentTypeMatcher);
-        return this;
-    }
 }

@@ -254,6 +254,24 @@ public final class TestUtil {
                 .build();
     }
 
+    /**
+     * A handler context for a document of the given content type.
+     * @param ref document reference
+     * @param in document content
+     * @param contentType document content type
+     * @return handler context
+     */
+    public static DocHandlerContext newHandlerContext(
+            String ref, InputStream in, ContentType contentType) {
+        var doc = newDoc(ref, in, new Properties());
+        doc.setContentType(contentType);
+        return DocHandlerContext.builder()
+                .doc(doc)
+                .parseState(ParseState.PRE)
+                .eventManager(new EventManager())
+                .build();
+    }
+
     public static DocHandlerContext newHandlerContext(String ref, String body) {
         return newHandlerContext(ref,
                 new ByteArrayInputStream(body.getBytes()));

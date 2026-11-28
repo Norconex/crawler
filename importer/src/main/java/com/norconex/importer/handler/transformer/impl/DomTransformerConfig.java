@@ -24,6 +24,7 @@ import com.norconex.commons.lang.collection.CollectionUtil;
 import com.norconex.commons.lang.map.PropertySetter;
 import com.norconex.commons.lang.text.TextMatcher;
 import com.norconex.importer.handler.BaseDocHandlerConfig;
+import com.norconex.importer.handler.condition.impl.ContentTypeCondition;
 import com.norconex.importer.handler.CommonMatchers;
 import com.norconex.importer.handler.CommonRestrictions;
 import com.norconex.importer.util.DomUtil;
@@ -168,22 +169,21 @@ import lombok.experimental.Accessors;
 public class DomTransformerConfig extends BaseDocHandlerConfig {
 
     /**
+     * Creates a configuration that applies to the content types this handler is
+     * made for, until <code>when</code> is set.
+     */
+    public DomTransformerConfig() {
+        setWhen(new ContentTypeCondition(
+                CommonMatchers.domContentTypes()));
+    }
+
+    /**
      * Matcher of one or more fields to use as the source of content to
      * transforms, instead of the original document content.
      * @param fieldMatcher field matcher
      * @return field matcher
      */
     private final TextMatcher fieldMatcher = new TextMatcher();
-
-    /**
-     * The matcher of content types to apply transformation on. No attempt to
-     * transform documents of any other content types will be made. Default is
-     * {@link CommonMatchers#DOM_CONTENT_TYPES}.
-     * @param contentTypeMatcher content type matcher
-     * @return content type matcher
-     */
-    private final TextMatcher contentTypeMatcher =
-            CommonMatchers.domContentTypes();
 
     /**
      * The presumed source character set.
@@ -208,19 +208,6 @@ public class DomTransformerConfig extends BaseDocHandlerConfig {
 
     public DomTransformerConfig setFieldMatcher(TextMatcher fieldMatcher) {
         this.fieldMatcher.copyFrom(fieldMatcher);
-        return this;
-    }
-
-    /**
-     * The matcher of content types to apply transformation on. No attempt to
-     * transform documents of any other content types will be made. Default is
-     * {@link CommonMatchers#DOM_CONTENT_TYPES}.
-     * @param contentTypeMatcher content type matcher
-     * @return this
-     */
-    public DomTransformerConfig
-            setContentTypeMatcher(TextMatcher contentTypeMatcher) {
-        this.contentTypeMatcher.copyFrom(contentTypeMatcher);
         return this;
     }
 
